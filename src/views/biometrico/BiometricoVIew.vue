@@ -1,0 +1,697 @@
+<template>
+  <div class="container">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="logo">
+        <h2><i class="fas fa-fingerprint"></i> Control Asistencia</h2>
+        <p>UGEL Sucre</p>
+      </div>
+      <ul class="nav-links">
+        <li>
+          <router-link to="/dashboard"
+            ><i class="fas fa-tachometer-alt"></i> Dashboard</router-link
+          >
+        </li>
+        <li>
+          <router-link to="/biometrico" class="active"
+            ><i class="fas fa-user-clock"></i> Registro Asistencia</router-link
+          >
+        </li>
+        <li>
+          <router-link to="/personal"
+            ><i class="fas fa-users"></i> Gestión Personal</router-link
+          >
+        </li>
+        <li>
+          <router-link to="/papeletas"
+            ><i class="fas fa-chart-bar"></i> Papeletas</router-link
+          >
+        </li>
+        <li>
+          <router-link to="/incidencias"
+            ><i class="fas fa-question-circle"></i> Registro
+            Incidencias</router-link
+          >
+        </li>
+        <li>
+          <router-link to="/reportes"
+            ><i class="fas fa-chart-bar"></i> Reportes</router-link
+          >
+        </li>
+        <li>
+          <router-link to="/configuracion"
+            ><i class="fas fa-cog"></i> Configuración</router-link
+          >
+        </li>
+      </ul>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <!-- Header -->
+      <div class="header">
+        <div class="search-bar">
+          <input type="text" placeholder="Buscar empleado..." />
+        </div>
+        <div class="user-info">
+          <img
+            src="https://ui-avatars.com/api/?name=Supervisor+User&background=3498db&color=fff"
+            alt="Usuario"
+          />
+          <div>
+            <div class="user-name">Supervisor User</div>
+            <div class="user-role">Supervisor</div>
+            <div>
+              <button @click="logout" class="logout-btn" title="Cerrar Sesión">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke-width="1.5"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Page Content -->
+      <div class="page-content">
+        <div class="page-title">
+          <h1>Registro de Asistencia</h1>
+          <div class="current-date" id="current-date"></div>
+        </div>
+
+        <!-- Sección Biométrica -->
+        <div class="biometric-section">
+          <div class="biometric-container">
+            <div class="biometric-icon">
+              <i class="fas fa-fingerprint"></i>
+            </div>
+            <div class="biometric-message">
+              Coloque su dedo en el lector biométrico para registrar su
+              asistencia
+            </div>
+            <button class="biometric-btn" id="biometric-scan">
+              <i class="fas fa-fingerprint"></i>
+              Escanear Huella Digital
+            </button>
+            <div class="current-time" id="current-time"></div>
+          </div>
+        </div>
+
+        <!-- Acciones Rápidas -->
+        <div class="quick-actions">
+          <div class="action-card entrada" data-action="entrada">
+            <div class="action-icon">
+              <i class="fas fa-sign-in-alt"></i>
+            </div>
+            <div class="action-title">Registrar Entrada</div>
+            <div class="action-desc">Marcar hora de ingreso</div>
+          </div>
+
+          <div class="action-card salida" data-action="salida">
+            <div class="action-icon">
+              <i class="fas fa-sign-out-alt"></i>
+            </div>
+            <div class="action-title">Registrar Salida</div>
+            <div class="action-desc">Marcar hora de salida</div>
+          </div>
+
+          <div class="action-card emergencia" data-action="emergencia">
+            <div class="action-icon">
+              <i class="fas fa-first-aid"></i>
+            </div>
+            <div class="action-title">Salida Emergencia</div>
+            <div class="action-desc">Registro especial</div>
+          </div>
+        </div>
+
+        <!-- Registros del Día -->
+        <div class="records-container">
+          <div class="records-header">
+            <h2 style="color: var(--primary)">Registros de Hoy</h2>
+            <div class="date-selector">
+              <input type="date" id="filter-date" value="2023-05-15" />
+              <button class="btn btn-primary">
+                <i class="fas fa-sync-alt"></i> Actualizar
+              </button>
+            </div>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Empleado</th>
+                <th>Entrada</th>
+                <th>Salida</th>
+                <th>Horas Trabajadas</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <div class="employee-info">
+                    <div class="employee-avatar">JP</div>
+                    <div>
+                      <div>Juan Pérez</div>
+                      <small>Administración</small>
+                    </div>
+                  </div>
+                </td>
+                <td>08:05 AM</td>
+                <td>--:--</td>
+                <td>--:--</td>
+                <td><span class="status status-tardanza">Tardanza</span></td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="employee-info">
+                    <div class="employee-avatar">MG</div>
+                    <div>
+                      <div>María García</div>
+                      <small>Recursos Humanos</small>
+                    </div>
+                  </div>
+                </td>
+                <td>07:55 AM</td>
+                <td>--:--</td>
+                <td>--:--</td>
+                <td><span class="status status-presente">Presente</span></td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="employee-info">
+                    <div class="employee-avatar">CL</div>
+                    <div>
+                      <div>Carlos López</div>
+                      <small>Contabilidad</small>
+                    </div>
+                  </div>
+                </td>
+                <td>--:--</td>
+                <td>--:--</td>
+                <td>--:--</td>
+                <td><span class="status status-ausente">Ausente</span></td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="employee-info">
+                    <div class="employee-avatar">AR</div>
+                    <div>
+                      <div>Ana Rodríguez</div>
+                      <small>Logística</small>
+                    </div>
+                  </div>
+                </td>
+                <td>08:10 AM</td>
+                <td>--:--</td>
+                <td>--:--</td>
+                <td><span class="status status-tardanza">Tardanza</span></td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="employee-info">
+                    <div class="employee-avatar">LM</div>
+                    <div>
+                      <div>Luis Martínez</div>
+                      <small>Sistemas</small>
+                    </div>
+                  </div>
+                </td>
+                <td>07:50 AM</td>
+                <td>--:--</td>
+                <td>--:--</td>
+                <td><span class="status status-presente">Presente</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Confirmación -->
+  <div class="modal" id="confirmation-modal">
+    <div class="modal-content modal-success">
+      <div class="modal-icon">
+        <i class="fas fa-check-circle"></i>
+      </div>
+      <h3 class="modal-title" id="modal-title">Asistencia Registrada</h3>
+      <p class="modal-message" id="modal-message">
+        Su registro de entrada ha sido guardado exitosamente.
+      </p>
+      <div class="modal-actions">
+        <button class="btn btn-primary" id="modal-close">Aceptar</button>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { useRouter } from "vue-router";
+
+const router = useRouter();
+
+const logout = () => {
+  localStorage.removeItem("token");
+  router.push({ name: "Login" });
+};
+</script>
+
+<style>
+:root {
+  --primary: #2c5aa0;
+  --secondary: #3498db;
+  --success: #27ae60;
+  --warning: #f39c12;
+  --danger: #e74c3c;
+  --light: #ecf0f1;
+  --dark: #34495e;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+  background-color: #f5f7fa;
+  color: #333;
+}
+
+.container {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* Sidebar */
+.sidebar {
+  width: 250px;
+  background-color: var(--primary);
+  color: white;
+  transition: all 0.3s;
+}
+
+.logo {
+  padding: 20px;
+  text-align: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.logo h2 {
+  font-size: 1.5rem;
+}
+
+.nav-links {
+  padding: 20px 0;
+}
+
+.nav-links li {
+  list-style: none;
+}
+
+.nav-links a {
+  display: flex;
+  align-items: center;
+  padding: 15px 20px;
+  color: white;
+  text-decoration: none;
+  transition: all 0.3s;
+}
+
+.nav-links a:hover,
+.nav-links a.active {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-left: 4px solid var(--secondary);
+}
+
+.nav-links i {
+  margin-right: 10px;
+  font-size: 1.2rem;
+}
+
+/* Main Content */
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header */
+.header {
+  background-color: white;
+  padding: 15px 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+}
+
+.user-info img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  margin-right: 10px;
+}
+
+/* Page Content */
+.page-content {
+  padding: 30px;
+  flex: 1;
+}
+
+.page-title {
+  margin-bottom: 20px;
+  color: var(--primary);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Biometric Section */
+.biometric-section {
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  color: white;
+  border-radius: 10px;
+  padding: 30px;
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.biometric-container {
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.biometric-icon {
+  font-size: 4rem;
+  margin-bottom: 20px;
+  color: white;
+}
+
+.biometric-message {
+  font-size: 1.2rem;
+  margin-bottom: 25px;
+}
+
+.biometric-btn {
+  background-color: white;
+  color: var(--primary);
+  border: none;
+  padding: 15px 30px;
+  border-radius: 50px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.biometric-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.current-time {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-top: 15px;
+}
+
+.current-date {
+  font-size: 1rem;
+  opacity: 0.9;
+}
+
+/* Quick Actions */
+.quick-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.action-card {
+  background-color: white;
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.action-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.action-icon {
+  font-size: 2.5rem;
+  margin-bottom: 15px;
+}
+
+.action-card.entrada .action-icon {
+  color: var(--success);
+}
+
+.action-card.salida .action-icon {
+  color: var(--danger);
+}
+
+.action-card.descanso .action-icon {
+  color: var(--warning);
+}
+
+.action-card.emergencia .action-icon {
+  color: var(--secondary);
+}
+
+.action-title {
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+
+.action-desc {
+  font-size: 0.9rem;
+  color: #7f8c8d;
+}
+
+/* Today's Records */
+.records-container {
+  background-color: white;
+  border-radius: 8px;
+  padding: 25px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.records-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.date-selector {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  color: var(--dark);
+}
+
+.status {
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.status-presente {
+  background-color: #e8f5e9;
+  color: var(--success);
+}
+
+.status-tardanza {
+  background-color: #fff8e1;
+  color: var(--warning);
+}
+
+.status-ausente {
+  background-color: #ffebee;
+  color: var(--danger);
+}
+
+.status-descanso {
+  background-color: #e3f2fd;
+  color: var(--secondary);
+}
+
+.employee-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.employee-avatar {
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  background-color: var(--secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+}
+
+/* Modal */
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-content {
+  background-color: white;
+  border-radius: 10px;
+  padding: 30px;
+  max-width: 500px;
+  width: 90%;
+  text-align: center;
+}
+
+.modal-icon {
+  font-size: 4rem;
+  margin-bottom: 20px;
+}
+
+.modal-success .modal-icon {
+  color: var(--success);
+}
+
+.modal-warning .modal-icon {
+  color: var(--warning);
+}
+
+.modal-title {
+  font-size: 1.5rem;
+  margin-bottom: 15px;
+  color: var(--primary);
+}
+
+.modal-message {
+  margin-bottom: 25px;
+  color: #7f8c8d;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+}
+
+.btn {
+  padding: 12px 25px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: all 0.3s;
+}
+
+.btn-primary {
+  background-color: var(--secondary);
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #2980b9;
+}
+
+.btn-secondary {
+  background-color: #95a5a6;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background-color: #7f8c8d;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .container {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    height: auto;
+  }
+
+  .nav-links {
+    display: flex;
+    overflow-x: auto;
+  }
+
+  .nav-links li {
+    flex: 0 0 auto;
+  }
+
+  .nav-links a {
+    padding: 15px;
+  }
+
+  .records-header {
+    flex-direction: column;
+    gap: 15px;
+    align-items: flex-start;
+  }
+
+  .quick-actions {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
