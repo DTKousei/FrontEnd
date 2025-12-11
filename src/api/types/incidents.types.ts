@@ -1,30 +1,177 @@
-export interface TipoIncidencia {
-  id: number;
+// ==============================
+// TIPOS DE DATOS - API DE INCIDENCIAS
+// ==============================
+
+export interface Estado {
+  id: string; // UUID
   nombre: string;
   descripcion?: string;
-  gravedad: 'leve' | 'moderada' | 'grave' | 'critica';
+  incidencias?: Incidencia[];
+}
+
+export interface TipoIncidencia {
+  id: string; // UUID
+  nombre: string;
+  codigo: string;
+  requiere_aprobacion: boolean;
+  requiere_documento: boolean;
+  descuenta_salario: boolean;
+  esta_activo: boolean;
+  creado_en: string;
+  incidencias?: Incidencia[];
 }
 
 export interface Incidencia {
-  id: number;
-  titulo: string;
+  id: string; // UUID
+  empleado_id: string;
+  tipo_incidencia_id: string;
+  fecha_inicio: string; // ISO 8601: YYYY-MM-DD
+  fecha_fin: string; // ISO 8601: YYYY-MM-DD
   descripcion: string;
-  usuario_id: number; // El empleado involucrado
-  reportado_por_id: number; // Quien reporta
-  tipo_incidencia_id: number;
-  fecha_incidencia: string;
-  estado: 'pendiente' | 'en_proceso' | 'resuelta' | 'rechazada' | 'aprobada'; // "aprobada/rechazada" based on prompt PATCH
-  archivos_adjuntos?: string[]; // URLs
+  url_documento: string;
+  estado_id: string;
+  aprobado_por: string | null;
+  aprobado_en: string | null;
+  motivo_rechazo: string | null;
+  creado_en: string;
+  tipo_incidencia?: {
+    id: string;
+    nombre: string;
+    codigo: string;
+    requiere_aprobacion?: boolean;
+    requiere_documento?: boolean;
+    descuenta_salario?: boolean;
+    esta_activo?: boolean;
+    creado_en?: string;
+  };
+  estado?: {
+    id: string;
+    nombre: string;
+    descripcion?: string;
+  };
 }
 
-export interface CreateIncidenciaDto {
-  titulo: string;
-  descripcion: string;
-  usuario_id: number;
-  tipo_incidencia_id: number;
-  fecha_incidencia: string;
+export interface PaginationInfo {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }
 
-export interface UpdateIncidenciaDto extends Partial<CreateIncidenciaDto> {
-  estado?: string;
+export interface IncidenciasResponse {
+  data: Incidencia[];
+  pagination: PaginationInfo;
+}
+
+// ==============================
+// REQUEST DTOs
+// ==============================
+
+export interface CreateEstadoRequest {
+  nombre: string;
+  descripcion?: string;
+}
+
+export interface UpdateEstadoRequest {
+  nombre?: string;
+  descripcion?: string;
+}
+
+export interface CreateTipoIncidenciaRequest {
+  nombre: string;
+  codigo: string;
+  requiere_aprobacion: boolean;
+  requiere_documento: boolean;
+  descuenta_salario: boolean;
+  esta_activo: boolean;
+}
+
+export interface UpdateTipoIncidenciaRequest {
+  nombre?: string;
+  codigo?: string;
+  requiere_aprobacion?: boolean;
+  requiere_documento?: boolean;
+  descuenta_salario?: boolean;
+  esta_activo?: boolean;
+}
+
+export interface CreateIncidenciaRequest {
+  empleado_id: string;
+  tipo_incidencia_id: string;
+  fecha_inicio: string; // YYYY-MM-DD
+  fecha_fin: string; // YYYY-MM-DD
+  descripcion: string;
+  estado_id: string;
+  documento: File; // PDF file
+}
+
+export interface UpdateIncidenciaRequest {
+  empleado_id?: string;
+  tipo_incidencia_id?: string;
+  fecha_inicio?: string; // YYYY-MM-DD
+  fecha_fin?: string; // YYYY-MM-DD
+  descripcion?: string;
+  estado_id?: string;
+  documento?: File; // PDF file (opcional)
+}
+
+export interface AprobarIncidenciaRequest {
+  aprobado_por: string;
+}
+
+export interface RechazarIncidenciaRequest {
+  motivo_rechazo: string;
+}
+
+// ==============================
+// RESPONSE DTOs
+// ==============================
+
+export interface EstadoResponse {
+  message: string;
+  data: Estado;
+}
+
+export interface EstadosResponse {
+  data: Estado[];
+}
+
+export interface TipoIncidenciaResponse {
+  message: string;
+  data: TipoIncidencia;
+}
+
+export interface TiposIncidenciaResponse {
+  data: TipoIncidencia[];
+}
+
+export interface IncidenciaResponse {
+  message: string;
+  data: Incidencia;
+}
+
+export interface ErrorResponse {
+  error: string;
+  message: string;
+  details?: Array<{
+    msg: string;
+    param: string;
+    location: string;
+  }>;
+}
+
+// ==============================
+// FILTERS & PARAMS
+// ==============================
+
+export interface ListIncidenciasParams {
+  page?: number;
+  limit?: number;
+  empleado_id?: string;
+  estado_id?: string;
+  tipo_incidencia_id?: string;
+}
+
+export interface ListTiposIncidenciaParams {
+  esta_activo?: boolean;
 }
