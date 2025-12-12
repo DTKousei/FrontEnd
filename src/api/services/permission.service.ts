@@ -1,128 +1,285 @@
 import { papeletaApi as api } from '@/api/config';
-import type { 
-  Permiso, 
-  TipoPermiso, 
+import type {
+  // Tipos de Permiso
+  TipoPermiso,
+  TipoPermisoResponse,
+  TiposPermisoResponse,
+  CreateTipoPermisoRequest,
+  UpdateTipoPermisoRequest,
+  
+  // Estados
   Estado,
-  FiltrosPermisos,
-  RespuestaPaginada,
-  RespuestaSimple,
-  FirmaTradicionalRequest,
+  EstadosResponse,
+  
+  // Permisos
+  Permiso,
+  PermisoResponse,
+  PermisosListResponse,
+  CreatePermisoRequest,
+  CreatePermisoPersonalRequest,
+  CreateComisionServicioRequest,
+  ListPermisosParams,
+  
+  // Firmas
+  TipoFirma,
+  FirmaBase64Request,
   FirmaDigitalRequest,
-  VerificacionFirma,
-  NuevoPermiso,
-  NuevoTipoPermiso
+  VerificarFirmaResponse,
+  
+  // PDF
+  UploadPDFResponse,
+  
+  // Respuestas generales
+  ApiError,
 } from '@/api/types/permissions.types';
 
 export const permissionService = {
-  // --- Permission Types (Permiso Tipos) - CRUD COMPLETO ---
-  getAllTypes(activo?: boolean) {
-    const params = activo !== undefined ? { activo } : {};
-    return api.get<RespuestaPaginada<TipoPermiso>>('/permiso-tipos', { params });
-  },
+  // ==============================
+  // ENDPOINTS - TIPOS DE PERMISO
+  // ==============================
   
-  getTypeById(id: string) {
-    return api.get<RespuestaSimple<TipoPermiso>>(`/permiso-tipos/${id}`);
-  },
-  
-  createType(data: NuevoTipoPermiso) {
-    return api.post<RespuestaSimple<TipoPermiso>>('/permiso-tipos', data);
-  },
-  
-  updateType(id: string, data: Partial<NuevoTipoPermiso>) {
-    return api.put<RespuestaSimple<TipoPermiso>>(`/permiso-tipos/${id}`, data);
-  },
-  
-  deleteType(id: string) {
-    return api.delete<RespuestaSimple<{ message: string }>>(`/permiso-tipos/${id}`);
+  /**
+   * Listar tipos de permisos
+   * @param params - Filtros opcionales
+   */
+  getTiposPermiso(params?: { activo?: boolean }) {
+    return api.get<TiposPermisoResponse>('/permiso-tipos', { params });
   },
 
-  // --- Estados - CRUD COMPLETO ---
-  getAllStates() {
-    return api.get<RespuestaPaginada<Estado>>('/estados');
-  },
-  
-  getStateById(id: string) {
-    return api.get<RespuestaSimple<Estado>>(`/estados/${id}`);
-  },
-  
-  createState(data: { nombre: string; codigo: string; descripcion: string }) {
-    return api.post<RespuestaSimple<Estado>>('/estados', data);
-  },
-  
-  updateState(id: string, data: Partial<{ nombre: string; codigo: string; descripcion: string }>) {
-    return api.put<RespuestaSimple<Estado>>(`/estados/${id}`, data);
-  },
-  
-  deleteState(id: string) {
-    return api.delete<RespuestaSimple<{ message: string }>>(`/estados/${id}`);
+  /**
+   * Obtener tipo de permiso por ID
+   */
+  getTipoPermisoById(id: string) {
+    return api.get<TipoPermisoResponse>(`/permiso-tipos/${id}`);
   },
 
-  // --- Permissions (Papeletas) - CRUD COMPLETO ---
-  getAll(filtros?: FiltrosPermisos) {
-    return api.get<RespuestaPaginada<Permiso>>('/permisos', { params: filtros });
-  },
-  
-  getById(id: string) {
-    return api.get<RespuestaSimple<Permiso>>(`/permisos/${id}`);
-  },
-  
-  create(data: NuevoPermiso) {
-    return api.post<RespuestaSimple<Permiso>>('/permisos', data);
-  },
-  
-  update(id: string, data: Partial<NuevoPermiso>) {
-    return api.put<RespuestaSimple<Permiso>>(`/permisos/${id}`, data);
-  },
-  
-  delete(id: string) {
-    return api.delete<RespuestaSimple<{ message: string }>>(`/permisos/${id}`);
+  /**
+   * Crear nuevo tipo de permiso
+   */
+  createTipoPermiso(data: CreateTipoPermisoRequest) {
+    return api.post<TipoPermisoResponse>('/permiso-tipos', data);
   },
 
-  // --- Firmas Tradicionales (foto/scanner) ---
-  signTraditional(id: string, data: FirmaTradicionalRequest) {
-    return api.patch<RespuestaSimple<Permiso> & { firmas_completas: boolean }>(
-      `/permisos/${id}/firmar`, 
-      data
-    );
+  // ==============================
+  // ENDPOINTS - ESTADOS
+  // ==============================
+  
+  /**
+   * Listar todos los estados
+   */
+  getEstados() {
+    return api.get<EstadosResponse>('/estados');
   },
 
-  // --- Firmas Digitales ONPE ---
-  signDigital(id: string, data: FirmaDigitalRequest) {
-    return api.patch<
-      RespuestaSimple<Permiso> & { 
-        certificado: any;
-        qr_verificacion: string;
-        url_verificacion: string;
-        firmas_completas: boolean;
-      }
-    >(`/permisos/${id}/firmar-digital`, data);
+  // ==============================
+  // ENDPOINTS - PERMISOS (PAEPLETAS)
+  // ==============================
+  
+  /**
+   * Crear un nuevo permiso (personal o comisión de servicio)
+   */
+  createPermiso(data: CreatePermisoRequest) {
+    return api.post<PermisoResponse>('/permisos', data);
   },
 
-  // --- Verificación de Firma ---
-  verifySignature(id: string, tipoFirma: 'solicitante' | 'jefe_area' | 'rrhh' | 'institucion') {
-    return api.get<RespuestaSimple<VerificacionFirma>>(
-      `/permisos/${id}/verificar-firma/${tipoFirma}`
-    );
+  /**
+   * Crear permiso personal (conveniencia)
+   */
+  createPermisoPersonal(data: CreatePermisoPersonalRequest) {
+    return this.createPermiso(data);
   },
 
-  // --- PDF ---
-  getPdf(id: string) {
-    return api.get(`/permisos/${id}/pdf`, { 
-      responseType: 'blob' 
+  /**
+   * Crear comisión de servicio (conveniencia)
+   */
+  createComisionServicio(data: CreateComisionServicioRequest) {
+    return this.createPermiso(data);
+  },
+
+  /**
+   * Listar permisos con filtros
+   */
+  getPermisos(params?: ListPermisosParams) {
+    return api.get<PermisosListResponse>('/permisos', { params });
+  },
+
+  /**
+   * Obtener permiso por ID
+   */
+  getPermisoById(id: string) {
+    return api.get<PermisoResponse>(`/permisos/${id}`);
+  },
+
+  // ==============================
+  // ENDPOINTS - FIRMAS TRADICIONALES
+  // ==============================
+  
+  /**
+   * Firmar con imagen Base64
+   */
+  firmarPermiso(id: string, data: FirmaBase64Request) {
+    return api.patch<PermisoResponse>(`/permisos/${id}/firmar`, data);
+  },
+
+  /**
+   * Firmar como solicitante (Base64)
+   */
+  firmarComoSolicitante(id: string, firmaBase64: string) {
+    return this.firmarPermiso(id, {
+      tipo_firma: 'solicitante',
+      firma: firmaBase64,
     });
   },
+
+  /**
+   * Firmar como jefe de área (Base64)
+   */
+  firmarComoJefeArea(id: string, firmaBase64: string) {
+    return this.firmarPermiso(id, {
+      tipo_firma: 'jefe_area',
+      firma: firmaBase64,
+    });
+  },
+
+  /**
+   * Firmar como RRHH (Base64)
+   */
+  firmarComoRRHH(id: string, firmaBase64: string) {
+    return this.firmarPermiso(id, {
+      tipo_firma: 'rrhh',
+      firma: firmaBase64,
+    });
+  },
+
+  /**
+   * Firmar como institución (Base64)
+   */
+  firmarComoInstitucion(id: string, firmaBase64: string) {
+    return this.firmarPermiso(id, {
+      tipo_firma: 'institucion',
+      firma: firmaBase64,
+    });
+  },
+
+  // ==============================
+  // ENDPOINTS - FIRMAS DIGITALES ONPE
+  // ==============================
   
-  uploadSignedPdf(id: string, file: File) {
+  /**
+   * Firmar con certificado digital ONPE
+   */
+  firmarDigitalmente(id: string, data: FirmaDigitalRequest) {
+    return api.patch<PermisoResponse>(`/permisos/${id}/firmar-digital`, data);
+  },
+
+  /**
+   * Firmar digitalmente como solicitante (ONPE)
+   */
+  firmarDigitalmenteSolicitante(id: string, data: Omit<FirmaDigitalRequest, 'tipo_firma'>) {
+    return this.firmarDigitalmente(id, {
+      tipo_firma: 'solicitante',
+      ...data,
+    });
+  },
+
+  /**
+   * Firmar digitalmente como jefe de área (ONPE)
+   */
+  firmarDigitalmenteJefeArea(id: string, data: Omit<FirmaDigitalRequest, 'tipo_firma'>) {
+    return this.firmarDigitalmente(id, {
+      tipo_firma: 'jefe_area',
+      ...data,
+    });
+  },
+
+  /**
+   * Firmar digitalmente como RRHH (ONPE)
+   */
+  firmarDigitalmenteRRHH(id: string, data: Omit<FirmaDigitalRequest, 'tipo_firma'>) {
+    return this.firmarDigitalmente(id, {
+      tipo_firma: 'rrhh',
+      ...data,
+    });
+  },
+
+  /**
+   * Firmar digitalmente como institución (ONPE)
+   */
+  firmarDigitalmenteInstitucion(id: string, data: Omit<FirmaDigitalRequest, 'tipo_firma'>) {
+    return this.firmarDigitalmente(id, {
+      tipo_firma: 'institucion',
+      ...data,
+    });
+  },
+
+  /**
+   * Verificar firma digital
+   */
+  verificarFirma(id: string, tipoFirma: TipoFirma) {
+    return api.get<VerificarFirmaResponse>(`/permisos/${id}/verificar-firma/${tipoFirma}`);
+  },
+
+  // ==============================
+  // ENDPOINTS - PDF
+  // ==============================
+  
+  /**
+   * Generar y descargar PDF de la papeleta
+   */
+  generarPDF(id: string) {
+    return api.get(`/permisos/${id}/pdf`, {
+      responseType: 'blob',
+    });
+  },
+
+  /**
+   * Cargar PDF firmado físicamente
+   */
+  uploadPDF(id: string, pdfFile: File) {
     const formData = new FormData();
-    formData.append('pdf', file);
-    return api.post<RespuestaSimple<{ pdf_firmado_path: string }> & { 
-      archivo: { 
-        nombre: string; 
-        ruta: string; 
-        tamano: number; 
-      } 
-    }>(`/permisos/${id}/upload-pdf`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
+    formData.append('pdf', pdfFile, pdfFile.name);
+
+    return api.post<UploadPDFResponse>(`/permisos/${id}/upload-pdf`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
     });
-  }
+  },
 };
+
+// Interfaz opcional para el servicio completo
+export interface PermissionService {
+  // Tipos de Permiso
+  getTiposPermiso(params?: { activo?: boolean }): Promise<{ data: TiposPermisoResponse }>;
+  getTipoPermisoById(id: string): Promise<{ data: TipoPermisoResponse }>;
+  createTipoPermiso(data: CreateTipoPermisoRequest): Promise<{ data: TipoPermisoResponse }>;
+  
+  // Estados
+  getEstados(): Promise<{ data: EstadosResponse }>;
+  
+  // Permisos
+  createPermiso(data: CreatePermisoRequest): Promise<{ data: PermisoResponse }>;
+  createPermisoPersonal(data: CreatePermisoPersonalRequest): Promise<{ data: PermisoResponse }>;
+  createComisionServicio(data: CreateComisionServicioRequest): Promise<{ data: PermisoResponse }>;
+  getPermisos(params?: ListPermisosParams): Promise<{ data: PermisosListResponse }>;
+  getPermisoById(id: string): Promise<{ data: PermisoResponse }>;
+  
+  // Firmas tradicionales
+  firmarPermiso(id: string, data: FirmaBase64Request): Promise<{ data: PermisoResponse }>;
+  firmarComoSolicitante(id: string, firmaBase64: string): Promise<{ data: PermisoResponse }>;
+  firmarComoJefeArea(id: string, firmaBase64: string): Promise<{ data: PermisoResponse }>;
+  firmarComoRRHH(id: string, firmaBase64: string): Promise<{ data: PermisoResponse }>;
+  firmarComoInstitucion(id: string, firmaBase64: string): Promise<{ data: PermisoResponse }>;
+  
+  // Firmas digitales ONPE
+  firmarDigitalmente(id: string, data: FirmaDigitalRequest): Promise<{ data: PermisoResponse }>;
+  firmarDigitalmenteSolicitante(id: string, data: Omit<FirmaDigitalRequest, 'tipo_firma'>): Promise<{ data: PermisoResponse }>;
+  firmarDigitalmenteJefeArea(id: string, data: Omit<FirmaDigitalRequest, 'tipo_firma'>): Promise<{ data: PermisoResponse }>;
+  firmarDigitalmenteRRHH(id: string, data: Omit<FirmaDigitalRequest, 'tipo_firma'>): Promise<{ data: PermisoResponse }>;
+  firmarDigitalmenteInstitucion(id: string, data: Omit<FirmaDigitalRequest, 'tipo_firma'>): Promise<{ data: PermisoResponse }>;
+  verificarFirma(id: string, tipoFirma: TipoFirma): Promise<{ data: VerificarFirmaResponse }>;
+  
+  // PDF
+  generarPDF(id: string): Promise<{ data: Blob }>;
+  uploadPDF(id: string, pdfFile: File): Promise<{ data: UploadPDFResponse }>;
+}
