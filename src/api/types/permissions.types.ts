@@ -60,12 +60,29 @@ export interface Estado {
   actualizado_en: string;
 }
 
+export interface CreateEstadoRequest {
+  nombre: string;
+  codigo: string;
+  descripcion?: string;
+}
+
+export interface UpdateEstadoRequest {
+  nombre: string;
+  codigo: string;
+  descripcion?: string;
+}
+
 export interface EstadosResponse {
   success: boolean;
   data: Estado[];
   total: number;
 }
 
+export interface EstadoResponse {
+  success: boolean;
+  data: Estado[];
+  total: number;
+}
 // ========== PERMISOS (PAEPLETAS) ==========
 
 export interface Permiso {
@@ -187,6 +204,17 @@ export interface CreateComisionServicioRequest {
 }
 
 export type CreatePermisoRequest = CreatePermisoPersonalRequest | CreateComisionServicioRequest;
+
+export interface UpdatePermisoRequest {
+  empleado_id?: string;
+  tipo_permiso_id?: string;
+  estado_id?: string;
+  fecha_hora_inicio?: string;
+  fecha_hora_fin?: string;
+  motivo?: string;
+  justificacion?: string;
+  institucion_visitada?: string;
+}
 
 export interface PermisoResponse {
   success: boolean;

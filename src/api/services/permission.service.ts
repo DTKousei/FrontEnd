@@ -1,23 +1,25 @@
 import { papeletaApi as api } from '@/api/config';
 import type {
   // Tipos de Permiso
-  TipoPermiso,
   TipoPermisoResponse,
   TiposPermisoResponse,
   CreateTipoPermisoRequest,
   UpdateTipoPermisoRequest,
   
   // Estados
-  Estado,
+  // Estado, // Removed unused
+  EstadoResponse,
   EstadosResponse,
+  CreateEstadoRequest,
+  UpdateEstadoRequest,
   
   // Permisos
-  Permiso,
   PermisoResponse,
   PermisosListResponse,
   CreatePermisoRequest,
   CreatePermisoPersonalRequest,
   CreateComisionServicioRequest,
+  UpdatePermisoRequest,
   ListPermisosParams,
   
   // Firmas
@@ -28,9 +30,6 @@ import type {
   
   // PDF
   UploadPDFResponse,
-  
-  // Respuestas generales
-  ApiError,
 } from '@/api/types/permissions.types';
 
 export const permissionService = {
@@ -60,6 +59,20 @@ export const permissionService = {
     return api.post<TipoPermisoResponse>('/permiso-tipos', data);
   },
 
+  /**
+   * Editar un tipo de permiso
+   */
+  updateTipoPermiso(id: string, data: UpdateTipoPermisoRequest) {
+    return api.put<TipoPermisoResponse>(`/permiso-tipos/${id}`, data);
+  },
+
+  /**
+   * Eliminar un tipo de permiso
+   */
+  deleteTipoPermiso(id: string) {
+    return api.delete<{ success: boolean; message: string }>(`/permiso-tipos/${id}`);
+  },
+
   // ==============================
   // ENDPOINTS - ESTADOS
   // ==============================
@@ -69,6 +82,34 @@ export const permissionService = {
    */
   getEstados() {
     return api.get<EstadosResponse>('/estados');
+  },
+
+  /**
+   * Verificar un estado (Obtener por ID)
+   */
+  getEstadoById(id: string) {
+    return api.get<EstadoResponse>(`/estados/${id}`);
+  },
+
+  /**
+   * Crear estado
+   */
+  createEstado(data: CreateEstadoRequest) {
+    return api.post<EstadoResponse>('/estados', data);
+  },
+
+  /**
+   * Actualizar estado
+   */
+  updateEstado(id: string, data: UpdateEstadoRequest) {
+    return api.put<EstadoResponse>(`/estados/${id}`, data);
+  },
+
+  /**
+   * Eliminar estado
+   */
+  deleteEstado(id: string) {
+    return api.delete<{ success: boolean; message: string }>(`/estados/${id}`);
   },
 
   // ==============================
@@ -108,6 +149,20 @@ export const permissionService = {
    */
   getPermisoById(id: string) {
     return api.get<PermisoResponse>(`/permisos/${id}`);
+  },
+
+  /**
+   * Actualizar permiso
+   */
+  updatePermiso(id: string, data: UpdatePermisoRequest) {
+    return api.put<PermisoResponse>(`/permisos/${id}`, data);
+  },
+
+  /**
+   * Eliminar permiso
+   */
+  deletePermiso(id: string) {
+    return api.delete<{ success: boolean; message: string }>(`/permisos/${id}`);
   },
 
   // ==============================
