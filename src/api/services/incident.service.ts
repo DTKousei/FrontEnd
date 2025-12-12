@@ -134,13 +134,17 @@ export const incidentService = {
     const formData = new FormData();
     
     // Agregar campos al FormData
-    Object.entries(data).forEach(([key, value]) => {
-      if (key === 'documento') {
-        formData.append(key, value, value.name);
-      } else {
-        formData.append(key, String(value));
-      }
-    });
+    formData.append('empleado_id', data.empleado_id);
+    formData.append('tipo_incidencia_id', data.tipo_incidencia_id);
+    formData.append('fecha_inicio', data.fecha_inicio);
+    formData.append('fecha_fin', data.fecha_fin);
+    formData.append('descripcion', data.descripcion);
+    formData.append('estado_id', data.estado_id);
+    
+    // El archivo es obligatorio en la creación según el tipo, pero manejamos si existe por seguridad
+    if (data.documento instanceof File) {
+      formData.append('documento', data.documento, data.documento.name);
+    }
 
     return api.post<IncidenciaResponse>('/incidencias', formData, {
       headers: {
@@ -157,16 +161,18 @@ export const incidentService = {
   updateIncidencia(id: string, data: UpdateIncidenciaRequest) {
     const formData = new FormData();
     
-    // Agregar solo los campos proporcionados
-    Object.entries(data).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        if (key === 'documento') {
-          formData.append(key, value, value.name);
-        } else {
-          formData.append(key, String(value));
-        }
-      }
-    });
+    // Agregar solo los campos proporcionados y válidos
+    if (data.empleado_id) formData.append('empleado_id', data.empleado_id);
+    if (data.tipo_incidencia_id) formData.append('tipo_incidencia_id', data.tipo_incidencia_id);
+    if (data.fecha_inicio) formData.append('fecha_inicio', data.fecha_inicio);
+    if (data.fecha_fin) formData.append('fecha_fin', data.fecha_fin);
+    if (data.descripcion) formData.append('descripcion', data.descripcion);
+    if (data.estado_id) formData.append('estado_id', data.estado_id);
+    
+    // Manejo seguro del archivo
+    if (data.documento instanceof File) {
+      formData.append('documento', data.documento, data.documento.name);
+    }
 
     return api.put<IncidenciaResponse>(`/incidencias/${id}`, formData, {
       headers: {

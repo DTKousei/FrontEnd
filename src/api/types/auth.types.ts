@@ -74,3 +74,30 @@ export interface VerifyTokenResponse {
   user: User;
 }
 
+// Respuesta para lista de roles
+export interface RolesResponse {
+  success: boolean;
+  data: Role[];
+  message?: string;
+}
+
+// Respuesta para un solo rol
+export interface RoleResponse {
+  success: boolean;
+  data: Role;
+  message?: string;
+}
+
+// Respuesta para lista de permisos (del sistema/roles, no papeletas)
+export interface PermissionsResponse {
+  success: boolean;
+  data: Permission[];
+  message?: string;
+}
+
+// Respuesta para un solo permiso
+export interface PermissionResponse {
+  success: boolean;
+  data: Permission;
+  message?: string;
+}
