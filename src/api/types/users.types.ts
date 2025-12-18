@@ -19,6 +19,9 @@ export interface BiometricUser {
   departamento?: string;
   cargo?: string;
   fecha_creacion: string; // ISO timestamp
+  fecha_nacimiento?: string;
+  direccion?: string;
+  comentarios?: string;
 }
 
 /**
@@ -34,6 +37,9 @@ export interface CreateUserData {
   telefono?: string;
   departamento?: string;
   cargo?: string;
+  fecha_nacimiento?: string;
+  direccion?: string;
+  comentarios?: string;
 }
 
 /**
@@ -49,6 +55,16 @@ export interface UpdateUserData {
   telefono?: string;
   departamento?: string;
   cargo?: string;
+  fecha_nacimiento?: string;
+  direccion?: string;
+  comentarios?: string;
+}
+
+/**
+ * Interfaz de búsqueda por user_id
+ */
+export interface UserSearchByUserId {
+    user_id: string;
 }
 
 /**

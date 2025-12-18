@@ -325,7 +325,7 @@ export interface PaginationInfo {
 
 // ========== ERRORES ==========
 
-export interface ApiError {
+export interface PermissionApiError {
   success: false;
   error: string;
   details?: Array<{

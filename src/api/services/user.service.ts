@@ -19,6 +19,11 @@ export const userService = {
     return api.get<BiometricUser>(`/usuarios/${id}`);
   },
 
+  // GET /api/usuarios/user_id/{user_id}
+  getByUserId(user_id: string) {
+    return api.get<BiometricUser>(`/usuarios/user_id/${user_id}`);
+  },
+
   // POST /api/usuarios
   create(data: CreateUserData) {
     return api.post<BiometricUser>('/usuarios', data);

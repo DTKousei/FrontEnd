@@ -1,50 +1,8 @@
 <template>
   <div class="container">
     <!-- Sidebar -->
-    <div class="sidebar">
-      <div class="logo">
-        <h2><i class="fas fa-fingerprint"></i> Control Asistencia</h2>
-        <p>UGEL Sucre</p>
-      </div>
-      <ul class="nav-links">
-        <li>
-          <router-link to="/dashboard" class="active"
-            ><i class="fas fa-tachometer-alt"></i> Dashboard</router-link
-          >
-        </li>
-        <li>
-          <router-link to="/biometrico"
-            ><i class="fas fa-user-clock"></i> Registro Asistencia</router-link
-          >
-        </li>
-        <li>
-          <router-link to="/personal"
-            ><i class="fas fa-users"></i> Gestión Personal</router-link
-          >
-        </li>
-        <li>
-          <router-link to="/papeletas"
-            ><i class="fas fa-chart-bar"></i> Papeletas</router-link
-          >
-        </li>
-        <li>
-          <router-link to="/incidencias"
-            ><i class="fas fa-question-circle"></i> Registro de
-            incidencias</router-link
-          >
-        </li>
-        <li>
-          <router-link to="/reportes"
-            ><i class="fas fa-chart-bar"></i> Reportes</router-link
-          >
-        </li>
-        <li>
-          <router-link to="/configuracion"
-            ><i class="fas fa-cog"></i> Configuración</router-link
-          >
-        </li>
-      </ul>
-    </div>
+
+    <AdminNavbar />
 
     <!-- Main Content -->
     <div class="main-content">
@@ -55,12 +13,16 @@
         </div>
         <div class="user-info">
           <img
-            src="https://ui-avatars.com/api/?name=Admin+User&background=3498db&color=fff"
+            :src="`https://ui-avatars.com/api/?name=${
+              currentUser?.nombre || 'Usuario'
+            }&background=3498db&color=fff`"
             alt="Usuario"
           />
           <div>
-            <div class="user-name">Admin User</div>
-            <div class="user-role">Administrador</div>
+            <div class="user-name">
+              {{ currentUser?.nombre || "Cargando..." }}
+            </div>
+            <div class="user-role">{{ userRole }}</div>
             <div>
               <button @click="logout" class="logout-btn" title="Cerrar Sesión">
                 <svg
@@ -254,11 +216,47 @@
 
 <script setup lang="ts">
 import { useRouter } from "vue-router";
+import { ref, onMounted } from "vue";
+import AdminNavbar from "@/components/Admin/NavbarView.vue";
+import { userService } from "@/api/services/user.service";
+import type { BiometricUser } from "@/api/types/users.types";
 
 const router = useRouter();
+const currentUser = ref<BiometricUser | null>(null);
+const userRole = ref<string>("");
+
+const fetchUserData = async () => {
+  try {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      const parsedUser = JSON.parse(storedUser);
+      // Assuming 'usuario' field in auth user corresponds to 'user_id' in biometric system (DNI)
+      const userId = parsedUser.usuario;
+
+      if (userId) {
+        const response = await userService.getByUserId(userId);
+        currentUser.value = response.data;
+
+        // Map privilege to readable role or use cargo/rol from different sources if needed
+        // Here we use the privilege from the biometric user or fallback to Auth role if available locally
+        // For now, let's display the cargo or map privilege
+        userRole.value =
+          currentUser.value.cargo ||
+          (currentUser.value.privilegio === 14 ? "Administrador" : "Usuario");
+      }
+    }
+  } catch (error) {
+    console.error("Error fetching user data:", error);
+  }
+};
+
+onMounted(() => {
+  fetchUserData();
+});
 
 const logout = () => {
   localStorage.removeItem("token");
+  localStorage.removeItem("user");
   router.push({ name: "Login" });
 };
 </script>

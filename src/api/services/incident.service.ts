@@ -1,11 +1,11 @@
 import { incidentApi as api } from '@/api/config';
 import type {
   // Estados
-  Estado,
-  EstadoResponse,
-  EstadosResponse,
-  CreateEstadoRequest,
-  UpdateEstadoRequest,
+  IncidenciaEstado,
+  IncidenciaEstadoResponse,
+  IncidenciaEstadosResponse,
+  CreateIncidenciaEstadoRequest,
+  UpdateIncidenciaEstadoRequest,
   
   // Tipos de Incidencia
   TipoIncidencia,
@@ -37,28 +37,28 @@ export const incidentService = {
    * Listar todos los estados
    */
   getAllEstados() {
-    return api.get<EstadosResponse>('/estados');
+    return api.get<IncidenciaEstadosResponse>('/estados');
   },
 
   /**
    * Obtener un estado por ID
    */
   getEstadoById(id: string) {
-    return api.get<{ data: Estado }>(`/estados/${id}`);
+    return api.get<{ data: IncidenciaEstado }>(`/estados/${id}`);
   },
 
   /**
    * Crear un nuevo estado
    */
-  createEstado(data: CreateEstadoRequest) {
-    return api.post<EstadoResponse>('/estados', data);
+  createEstado(data: CreateIncidenciaEstadoRequest) {
+    return api.post<IncidenciaEstadoResponse>('/estados', data);
   },
 
   /**
    * Actualizar un estado
    */
-  updateEstado(id: string, data: UpdateEstadoRequest) {
-    return api.put<EstadoResponse>(`/estados/${id}`, data);
+  updateEstado(id: string, data: UpdateIncidenciaEstadoRequest) {
+    return api.put<IncidenciaEstadoResponse>(`/estados/${id}`, data);
   },
 
   /**
@@ -210,10 +210,10 @@ export const incidentService = {
 // Opcional: Interfaz para el servicio completo
 export interface IncidentService {
   // Estados
-  getAllEstados(): Promise<{ data: EstadosResponse }>;
-  getEstadoById(id: string): Promise<{ data: { data: Estado } }>;
-  createEstado(data: CreateEstadoRequest): Promise<{ data: EstadoResponse }>;
-  updateEstado(id: string, data: UpdateEstadoRequest): Promise<{ data: EstadoResponse }>;
+  getAllEstados(): Promise<{ data: IncidenciaEstadosResponse }>;
+  getEstadoById(id: string): Promise<{ data: { data: IncidenciaEstado } }>;
+  createEstado(data: CreateIncidenciaEstadoRequest): Promise<{ data: IncidenciaEstadoResponse }>;
+  updateEstado(id: string, data: UpdateIncidenciaEstadoRequest): Promise<{ data: IncidenciaEstadoResponse }>;
   deleteEstado(id: string): Promise<{ data: { message: string } }>;
   
   // Tipos de Incidencia

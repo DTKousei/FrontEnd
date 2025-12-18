@@ -2,7 +2,7 @@
 // TIPOS DE DATOS - API DE INCIDENCIAS
 // ==============================
 
-export interface Estado {
+export interface IncidenciaEstado {
   id: string; // UUID
   nombre: string;
   descripcion?: string;
@@ -51,7 +51,7 @@ export interface Incidencia {
   };
 }
 
-export interface PaginationInfo {
+export interface IncidenciaPaginationInfo {
   total: number;
   page: number;
   limit: number;
@@ -60,19 +60,19 @@ export interface PaginationInfo {
 
 export interface IncidenciasResponse {
   data: Incidencia[];
-  pagination: PaginationInfo;
+  pagination: IncidenciaPaginationInfo;
 }
 
 // ==============================
 // REQUEST DTOs
 // ==============================
 
-export interface CreateEstadoRequest {
+export interface CreateIncidenciaEstadoRequest {
   nombre: string;
   descripcion?: string;
 }
 
-export interface UpdateEstadoRequest {
+export interface UpdateIncidenciaEstadoRequest {
   nombre?: string;
   descripcion?: string;
 }
@@ -127,13 +127,13 @@ export interface RechazarIncidenciaRequest {
 // RESPONSE DTOs
 // ==============================
 
-export interface EstadoResponse {
+export interface IncidenciaEstadoResponse {
   message: string;
-  data: Estado;
+  data: IncidenciaEstado;
 }
 
-export interface EstadosResponse {
-  data: Estado[];
+export interface IncidenciaEstadosResponse {
+  data: IncidenciaEstado[];
 }
 
 export interface TipoIncidenciaResponse {
@@ -150,7 +150,7 @@ export interface IncidenciaResponse {
   data: Incidencia;
 }
 
-export interface ErrorResponse {
+export interface IncidenciaErrorResponse {
   error: string;
   message: string;
   details?: Array<{
