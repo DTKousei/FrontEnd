@@ -39,6 +39,10 @@ export const authService = {
   // GET /api/auth/verify
   verifyToken() {
     return api.get<VerifyTokenResponse>('/auth/verify');
+  },
+  // GET /api/users
+  getAllUsers() {
+    return api.get<{ success: boolean; data: import('@/api/types/auth.types').User[] }>('/users');
   }
 };
 
