@@ -1,16 +1,15 @@
+
 import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosError } from 'axios';
 
 // Factory function to create API instances with specific base URLs
 export const createApi = (baseURL: string): AxiosInstance => {
-  const config: AxiosRequestConfig = {
+  const api: AxiosInstance = axios.create({
     baseURL,
+    timeout: 30000, // 30 seconds
     headers: {
       'Content-Type': 'application/json',
     },
-    timeout: 10000,
-  };
-
-  const api: AxiosInstance = axios.create(config);
+  });
 
   // Request Interceptor
   api.interceptors.request.use(

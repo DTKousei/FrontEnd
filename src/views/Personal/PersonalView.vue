@@ -89,7 +89,7 @@
           <button
             class="btn btn-success"
             id="nuevo-empleado-btn"
-            @click="showModal = true"
+            @click="openNewModal"
           >
             <i class="fas fa-user-plus"></i> Nuevo Empleado
           </button>
@@ -144,7 +144,7 @@
 
         <!-- Tabla de Empleados -->
         <div class="employees-container">
-          <PersonalTable ref="personalTableRef" />
+          <PersonalTable ref="personalTableRef" @edit-user="onEditUser" />
         </div>
       </div>
     </div>
@@ -152,6 +152,7 @@
     <!-- Modal Registro -->
     <ModalRegisPer
       :visible="showModal"
+      :userToEdit="selectedUser"
       @close="showModal = false"
       @saved="onEmployeeSaved"
     />
@@ -167,6 +168,17 @@ import ModalRegisPer from "@/components/Admin/ModalRegisPer.vue";
 const router = useRouter();
 const showModal = ref(false);
 const personalTableRef = ref();
+const selectedUser = ref(null);
+
+const openNewModal = () => {
+  selectedUser.value = null;
+  showModal.value = true;
+};
+
+const onEditUser = (user: any) => {
+  selectedUser.value = user;
+  showModal.value = true;
+};
 
 const onEmployeeSaved = () => {
   // Refresh table data

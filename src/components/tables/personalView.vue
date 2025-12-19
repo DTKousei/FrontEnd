@@ -17,7 +17,10 @@ interface ExtendedUser extends BiometricUser {
   rol?: string;
   estado?: string;
   initials?: string;
+  auth_id?: string;
 }
+
+const emit = defineEmits(["edit-user"]);
 
 const users = ref<ExtendedUser[]>([]);
 const loading = ref(true);
@@ -162,6 +165,7 @@ const loadUsers = async () => {
         rol: aUser?.rol?.nombre || "Empleado",
         // Determinación del estado: Se prioriza el estado del sistema de autenticación
         estado: aUser?.esta_activo ? "Activo" : "Inactivo",
+        auth_id: aUser?.id, // Capture Auth UUID
         initials: getInitials(bUser.nombre),
         // Formateo de fecha para presentación en UI
         fecha_creacion: bUser.fecha_creacion
@@ -289,7 +293,7 @@ defineExpose({
 
       <!-- Actions Column -->
       <Column header="Acciones" style="min-width: 8rem; text-align: right">
-        <template #body>
+        <template #body="slotProps">
           <div class="flex gap-2">
             <Button
               icon="pi pi-pencil"
@@ -297,6 +301,7 @@ defineExpose({
               rounded
               severity="warning"
               aria-label="Editar"
+              @click="$emit('edit-user', slotProps.data)"
             />
             <Button
               icon="pi pi-eye"

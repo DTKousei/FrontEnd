@@ -55,6 +55,14 @@ export interface RegisterData {
   rol_id?: string; // UUID opcional
 }
 
+export interface UpdateAuthUser {
+  usuario?: string;
+  correo_electronico?: string;
+  contrasena?: string;
+  rol_id?: string;
+  esta_activo?: boolean;
+}
+
 // Datos para cambio de contraseña
 export interface ChangePasswordData {
   contrasena_actual: string; // Cambio de 'current_password'
