@@ -179,6 +179,9 @@ const loadUsers = async () => {
 onMounted(() => {
   loadUsers();
 });
+defineExpose({
+  loadUsers,
+});
 </script>
 
 <template>
@@ -190,7 +193,7 @@ onMounted(() => {
       dataKey="id"
       :loading="loading"
       stripedRows
-      tableStyle="min-width: 50rem"
+      tableStyle="min-width: 40rem"
       paginatorTemplate="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink CurrentPageReport RowsPerPageDropdown"
       :rowsPerPageOptions="[5, 10, 25]"
       currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} empleados"

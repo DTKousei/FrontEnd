@@ -86,7 +86,11 @@
       <div class="page-content">
         <div class="page-title">
           <h1>Gestión de Personal</h1>
-          <button class="btn btn-success" id="nuevo-empleado-btn">
+          <button
+            class="btn btn-success"
+            id="nuevo-empleado-btn"
+            @click="showModal = true"
+          >
             <i class="fas fa-user-plus"></i> Nuevo Empleado
           </button>
         </div>
@@ -140,18 +144,36 @@
 
         <!-- Tabla de Empleados -->
         <div class="employees-container">
-          <PersonalTable />
+          <PersonalTable ref="personalTableRef" />
         </div>
       </div>
     </div>
+
+    <!-- Modal Registro -->
+    <ModalRegisPer
+      :visible="showModal"
+      @close="showModal = false"
+      @saved="onEmployeeSaved"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref } from "vue";
 import { useRouter } from "vue-router";
 import PersonalTable from "@/components/tables/personalView.vue";
+import ModalRegisPer from "@/components/Admin/ModalRegisPer.vue";
 
 const router = useRouter();
+const showModal = ref(false);
+const personalTableRef = ref();
+
+const onEmployeeSaved = () => {
+  // Refresh table data
+  if (personalTableRef.value) {
+    personalTableRef.value.loadUsers();
+  }
+};
 
 const logout = () => {
   localStorage.removeItem("token");

@@ -15,6 +15,7 @@ export default defineConfig({
     }
   },
   server: {
+    host: true,
     proxy: {
       '/api-biometrico': {
         target: 'http://localhost:8000',
