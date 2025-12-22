@@ -31,27 +31,7 @@ interface DailyRecord {
 
 const records = ref<DailyRecord[]>([]);
 const loading = ref(true);
-const calculating = ref(false);
 const selectedDate = ref<Date>(new Date());
-
-const handleCalculation = async () => {
-  calculating.value = true;
-  try {
-    const dateStr = formatDateForApi(selectedDate.value);
-    await attendanceService.calculateAttendance({
-      fecha_inicio: dateStr,
-      fecha_fin: dateStr,
-    });
-    // SweetAlert2 ideally, but standard alert for now if quick
-    alert("Cálculo de asistencia completado exitosamente.");
-    loadData();
-  } catch (error) {
-    console.error("Error calculating attendance:", error);
-    alert("Error al calcular la asistencia.");
-  } finally {
-    calculating.value = false;
-  }
-};
 
 const getSeverity = (status: string) => {
   switch (status?.toUpperCase()) {
@@ -105,6 +85,16 @@ const loadData = async () => {
   loading.value = true;
   try {
     const dateStr = formatDateForApi(selectedDate.value);
+
+    // 0. Calcular asistencia automáticamente antes de cargar
+    try {
+      await attendanceService.calculateAttendance({
+        fecha_inicio: dateStr,
+        fecha_fin: dateStr,
+      });
+    } catch (calcError) {
+      console.warn("Error en cálculo automático de asistencia:", calcError);
+    }
 
     // 1. Fetch Users & Auth Users in parallel for mapping
     // We cache this? Ideally yes, but for now simple fetch
@@ -190,13 +180,6 @@ onMounted(() => {
 
       <div class="flex align-items-center gap-2">
         <DatePicker v-model="selectedDate" dateFormat="dd/mm/yy" showIcon />
-        <Button
-          icon="pi pi-cog"
-          label="Calcular"
-          severity="secondary"
-          @click="handleCalculation"
-          :loading="calculating"
-        />
         <Button
           icon="pi pi-refresh"
           label="Actualizar"

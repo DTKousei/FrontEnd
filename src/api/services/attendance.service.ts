@@ -47,5 +47,10 @@ export const attendanceService = {
   // POST /api/asistencias/calcular
   calculateAttendance(params: { fecha_inicio: string; fecha_fin: string }) {
     return api.post<{ message: string }>('/asistencias/calcular', {}, { params });
+  },
+
+  // POST /api/asistencias/registrar
+  registerAttendance(data: { tipo: string; empleado_id: string; fecha_hora: string }) {
+    return api.post<{ message: string }>('/asistencias/registrar', data);
   }
 };

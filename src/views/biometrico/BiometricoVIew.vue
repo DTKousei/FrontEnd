@@ -66,7 +66,8 @@
 
         <!-- Acciones Rápidas -->
         <div class="quick-actions">
-          <div class="action-card entrada" data-action="entrada">
+          <!-- registrar Entrada manual -->
+          <div class="action-card entrada" @click="handleManualOpen('ENTRADA')">
             <div class="action-icon">
               <i class="fas fa-sign-in-alt"></i>
             </div>
@@ -74,7 +75,8 @@
             <div class="action-desc">Marcar hora de ingreso</div>
           </div>
 
-          <div class="action-card salida" data-action="salida">
+          <!-- registrar Salida manual -->
+          <div class="action-card salida" @click="handleManualOpen('SALIDA')">
             <div class="action-icon">
               <i class="fas fa-sign-out-alt"></i>
             </div>
@@ -106,22 +108,36 @@
         <i class="fas fa-check-circle"></i>
       </div>
       <h3 class="modal-title" id="modal-title">Asistencia Registrada</h3>
-      <p class="modal-message" id="modal-message">
-        Su registro de entrada ha sido guardado exitosamente.
-      </p>
-      <div class="modal-actions">
-        <button class="btn btn-primary" id="modal-close">Aceptar</button>
-      </div>
     </div>
   </div>
+
+  <ModalRegisManu
+    v-model:visible="showManualModal"
+    :type="manualModalType"
+    @success="handleSuccess"
+  />
 </template>
 
 <script setup lang="ts">
 import { useRouter } from "vue-router";
 import AdminNavbar from "@/components/Admin/NavbarView.vue";
 import PersonalAsis from "@/components/tables/PersonalAsis.vue";
+import ModalRegisManu from "@/components/Admin/ModalRegisManu.vue";
+import { ref } from "vue";
 
 const router = useRouter();
+const showManualModal = ref(false);
+const manualModalType = ref<"ENTRADA" | "SALIDA">("ENTRADA");
+
+const handleManualOpen = (type: "ENTRADA" | "SALIDA") => {
+  manualModalType.value = type;
+  showManualModal.value = true;
+};
+
+const handleSuccess = () => {
+  // Opcional: refrescar PersonalAsis si fuera necesario usando un ref o event bus
+  // Por ahora el modal muestra el sweet alert de éxito
+};
 
 const logout = () => {
   localStorage.removeItem("token");
