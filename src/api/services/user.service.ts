@@ -11,7 +11,6 @@ import type { PaginatedResponse } from '@/api/types/common.types';
 export const userService = {
   // Obtener todos los usuarios (GET /api/usuarios)
   getAll(params?: UserQueryParams) {
-    // Se añade '/' al final para evitar redirecciones 301 del backend (Django/FastAPI) que rompen CORS
     return api.get<PaginatedResponse<BiometricUser>>('/usuarios/', { params });
   },
 

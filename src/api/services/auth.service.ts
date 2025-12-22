@@ -48,6 +48,23 @@ export const authService = {
   // Actualizar usuario de auth (PUT /api/users/:id)
   updateUser(id: string, data: import('@/api/types/auth.types').UpdateAuthUser) {
     return api.put<{ success: boolean; data: import('@/api/types/auth.types').User }>(`/users/${id}`, data);
+  },
+
+  // === NUEVOS ENDPOINTS BASADOS EN DNI ===
+
+  // Obtener detalles del empleado por DNI (GET /api/users/usuario/:DNI)
+  getUserByDNI(usuario: string) {
+    return api.get<{ success: boolean; data: import('@/api/types/auth.types').User }>(`/users/usuario/${usuario}`);
+  },
+
+  // Actualizar usuario por DNI (PUT /api/users/usuario/:DNI)
+  updateUserByDNI(usuario: string, data: import('@/api/types/auth.types').UpdateAuthUser) {
+    return api.put<{ success: boolean; data: import('@/api/types/auth.types').User }>(`/users/usuario/${usuario}`, data);
+  },
+
+  // Cambiar contraseña por DNI (POST /api/auth/change-pass/:DNI)
+  changePasswordByDNI(usuario: string, data: any) {
+    return api.post<SuccessResponse>(`/auth/change-pass/${usuario}`, data);
   }
 };
 

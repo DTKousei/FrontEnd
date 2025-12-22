@@ -3,15 +3,17 @@ import { ref, onMounted, computed, watch } from "vue";
 import Button from "primevue/button";
 import Dialog from "primevue/dialog";
 import InputText from "primevue/inputtext";
-import Calendar from "primevue/calendar";
-import Dropdown from "primevue/dropdown";
+import DatePicker from "primevue/datepicker";
+import Select from "primevue/select";
 import Textarea from "primevue/textarea";
 import { roleService } from "@/api/services/role.service";
 import { userService } from "@/api/services/user.service";
 import { authService } from "@/api/services/auth.service";
+import { scheduleService } from "@/api/services/schedule.service";
 import Swal from "sweetalert2";
 import type { CreateUserData, BiometricUser } from "@/api/types/users.types";
 import type { RegisterData, Role } from "@/api/types/auth.types";
+import type { Schedule } from "@/api/types/schedules.types";
 
 const emit = defineEmits(["saved", "close"]);
 const props = defineProps({
@@ -44,6 +46,7 @@ const formatDate = (date: Date) => {
 
 const loading = ref(false);
 const roles = ref<Role[]>([]);
+const schedules = ref<Schedule[]>([]); // Lista de horarios
 
 const form = ref({
   nombres: "",
@@ -52,7 +55,7 @@ const form = ref({
   fecha_nacimiento: null as Date | null,
   cargo: "",
   area: "", // Departamento
-  fecha_ingreso: new Date(),
+  horario_id: null as number | null, // Reemplaza fecha_ingreso
   email: "",
   telefono: "",
   direccion: "",
@@ -114,12 +117,7 @@ const populateForm = (
     form.value.fecha_nacimiento = null;
   }
 
-  // user.fecha_creacion is likely string
-  if (user.fecha_creacion) {
-    form.value.fecha_ingreso = new Date(user.fecha_creacion);
-  } else {
-    form.value.fecha_ingreso = new Date(); // Default to now if not available
-  }
+  // fecha_creacion / fecha_ingreso logic removed as replaced by schedule assignment
 
   // Campos de Autenticación
   if (user.rol) {
@@ -134,22 +132,32 @@ const populateForm = (
   }
 };
 
-// Cargar roles al montar
+// Cargar roles y horarios al montar
+// Cargar roles y horarios al montar
 onMounted(async () => {
+  console.log("Modal Mounted. UserToEdit:", props.userToEdit);
   try {
-    const response = await roleService.getAllRoles();
-    if (response.data.success) {
-      roles.value = response.data.data;
+    const [rolesResponse, schedulesResponse]: [any, any] = await Promise.all([
+      roleService.getAllRoles(),
+      scheduleService.getAll(),
+    ]);
+
+    if (rolesResponse.data.success) {
+      roles.value = rolesResponse.data.data;
     } else {
-      console.error("Error fetching roles:", response.data.message);
+      console.error("Error fetching roles:", rolesResponse.data.message);
+    }
+
+    // Schedules response might be direct array or wrapped
+    if (schedulesResponse.data) {
+      // @ts-ignore
+      schedules.value = Array.isArray(schedulesResponse.data)
+        ? schedulesResponse.data
+        : schedulesResponse.data.data || [];
     }
   } catch (error) {
-    console.error("Error loading roles:", error);
+    console.error("Error loading initial data:", error);
   }
-});
-
-onMounted(() => {
-  console.log("Modal Mounted. UserToEdit:", props.userToEdit);
 });
 
 const handleClose = () => {
@@ -165,7 +173,7 @@ const resetForm = () => {
     fecha_nacimiento: null,
     cargo: "",
     area: "",
-    fecha_ingreso: new Date(),
+    horario_id: null,
     email: "",
     telefono: "",
     direccion: "",
@@ -240,65 +248,48 @@ const handleSubmit = async () => {
     const promises = [];
 
     // OPERACIÓN BIOMÉTRICA
-    const biometricPromise =
-      isEdit && props.userToEdit?.id
-        ? userService.update(props.userToEdit.id, biometricData)
-        : userService.create(biometricData);
+    // OPERACIÓN BIOMÉTRICA (Secuenciada para obtener ID)
+    let biometricResult;
+    try {
+      const bioResponse = await (isEdit && props.userToEdit?.id
+        ? userService.update(props.userToEdit.id, biometricData) // Devuelve Promise<BiometricUser>
+        : userService.create(biometricData)); // Devuelve Promise<BiometricUser>
 
-    console.log("Edit Mode:", isEdit);
-    console.log("Biometric ID to update:", props.userToEdit?.id);
+      // Manejo del envoltorio de respuesta de Axios
+      // @ts-ignore
+      biometricResult = bioResponse.data || bioResponse;
+      console.log("Resultado Operación Biométrica:", biometricResult);
+    } catch (bioError) {
+      console.error("Falló la Operación Biométrica:", bioError);
+      throw bioError;
+    }
 
-    promises.push(biometricPromise);
+    // Capturar ID para uso posterior (Asignación de Horario)
+    // Intentar encontrar el ID en ubicaciones probables de la respuesta
+    const userIdForAssignment =
+      (biometricResult as any)?.id ||
+      (biometricResult as any)?.data?.id ||
+      (isEdit ? props.userToEdit?.id : null);
 
-    promises.push(biometricPromise);
+    // Las operaciones de autenticación siguen...
 
     // OPERACIÓN DE AUTENTICACIÓN
     let generatedPassword = "";
-    if (isEdit && props.userToEdit?.auth_id) {
+    if (isEdit) {
+      // Usar nuevo endpoint PUT /api/users/usuario/:DNI
       const authData: any = {
-        usuario: form.value.dni,
         correo_electronico: form.value.email,
         rol_id: form.value.rol_id,
+        esta_activo: true, // O mapear desde el form si agregamos campo
       };
-      console.log("Carga útil Actualización Auth:", authData);
-      promises.push(authService.updateUser(props.userToEdit.auth_id, authData));
-    } else if (isEdit && !props.userToEdit?.auth_id) {
-      // Modo EDICIÓN pero falta usuario en módulo Auth -> REGISTRARLO
-      // Esto maneja el problema de no poder actualizar si no existe en auth.
+      console.log("Carga útil Actualización Auth (DNI):", authData);
+      promises.push(authService.updateUserByDNI(form.value.dni, authData));
+    } else {
+      // Crear nuevo
       generatedPassword = generatePassword(form.value.dni, form.value.nombres);
       const authData: RegisterData = {
         usuario: form.value.dni,
         correo_electronico: form.value.email || `${form.value.dni}@example.com`,
-        contrasena: generatedPassword,
-        rol_id: form.value.rol_id,
-      };
-      console.log("Carga útil Registro Auth (Faltante):", authData);
-
-      // Envolvemos esto en un bloque catch específico para evitar fallar toda la operación
-      // si el usuario ya existe (posible si auth_id no se pasó correctamente)
-      const registerPromise = authService.register(authData).catch((err) => {
-        // Si el error es 400 y dice "registrado", asumimos que existe y está bien.
-        // No podemos actualizar sin ID, pero al menos no rompemos el flujo.
-        if (
-          err.response &&
-          err.response.status === 400 &&
-          (err.response.data?.message?.includes("ya está registrado") ||
-            err.response.data?.message?.includes("already registered"))
-        ) {
-          console.warn(
-            "El usuario ya existe en Auth. Se asume vinculación exitosa."
-          );
-          return { success: true, message: "Usuario existe" }; // Éxito simulado
-        }
-        throw err; // Re-lanzar otros errores
-      });
-      promises.push(registerPromise);
-    } else if (!isEdit) {
-      // Modo CREACIÓN
-      generatedPassword = generatePassword(form.value.dni, form.value.nombres);
-      const authData: RegisterData = {
-        usuario: form.value.dni,
-        correo_electronico: form.value.email || `${form.value.dni}@example.com`, // Email de respaldo
         contrasena: generatedPassword,
         rol_id: form.value.rol_id,
       };
@@ -307,6 +298,33 @@ const handleSubmit = async () => {
     }
 
     await Promise.all(promises);
+
+    // 3. Asignar Horario (si se seleccionó uno)
+    // -----------------------------------------
+    if (form.value.horario_id) {
+      try {
+        console.log(
+          "Asignando horario user_id(DNI):",
+          form.value.dni,
+          "Horario:",
+          form.value.horario_id
+        );
+        await scheduleService.assignToUser({
+          user_id: form.value.dni, // USAR DNI COMO PIDE EL USUARIO / BACKEND
+          horario_id: form.value.horario_id,
+          fecha_inicio: new Date().toISOString().split("T")[0], // Fecha actual YYYY-MM-DD
+        });
+        console.log("Horario asignado correctamente");
+      } catch (scheduleError) {
+        console.error("Error al asignar horario:", scheduleError);
+        // No fallamos toda la operación, pero avisamos (o logueamos)
+        Swal.fire({
+          icon: "warning",
+          title: "Advertencia",
+          text: "El empleado fue guardado, pero hubo un error al asignar el horario.",
+        });
+      }
+    }
 
     Swal.fire({
       icon: "success",
@@ -405,7 +423,7 @@ const visibleModel = computed({
             <label for="fecha_nacimiento" class="font-bold block mb-2"
               >Fecha Nacimiento</label
             >
-            <Calendar
+            <DatePicker
               id="fecha_nacimiento"
               v-model="form.fecha_nacimiento"
               placeholder="dd/mm/aaaa"
@@ -441,16 +459,19 @@ const visibleModel = computed({
 
       <div class="form-row">
         <div class="form-group">
-          <!-- Fecha Ingreso -->
+          <!-- Horario Asignado -->
           <div class="field">
-            <label for="fecha_ingreso" class="font-bold block mb-2"
-              >Fecha Ingreso *</label
+            <label for="horario" class="font-bold block mb-2"
+              >Horario de Trabajo</label
             >
-            <Calendar
-              id="fecha_ingreso"
-              v-model="form.fecha_ingreso"
-              placeholder="dd/mm/aaaa"
-              dateFormat="dd/mm/yy"
+            <Select
+              id="horario"
+              v-model="form.horario_id"
+              :options="schedules"
+              optionLabel="nombre"
+              optionValue="id"
+              placeholder="Seleccionar horario"
+              class="w-full"
             />
           </div>
         </div>
@@ -460,7 +481,7 @@ const visibleModel = computed({
             <label for="rol" class="font-bold block mb-2"
               >Rol en Sistema *</label
             >
-            <Dropdown
+            <Select
               id="rol"
               v-model="form.rol_id"
               :options="roles"

@@ -143,6 +143,9 @@ const loadUsers = async () => {
 
     console.log("Biometric Users Count:", biometricUsers.length);
     console.log("Auth Users Count:", authUsers.length);
+    if (biometricUsers.length > 0)
+      console.log("Sample Biometric User:", biometricUsers[0]);
+    if (authUsers.length > 0) console.log("Sample Auth User:", authUsers[0]);
 
     if (biometricUsers.length === 0) {
       users.value = [];
