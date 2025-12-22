@@ -37,5 +37,15 @@ export const attendanceService = {
   // DELETE /api/asistencias/{dispositivo_id}/limpiar
   clearDevice(dispositivoId: number) {
     return api.delete<{ message: string }>(`/asistencias/${dispositivoId}/limpiar`);
+  },
+
+  // GET /api/asistencias/reporte
+  getDailyReport(params: { fecha_inicio: string; fecha_fin: string }) {
+    return api.get<any[]>('/asistencias/reporte', { params });
+  },
+
+  // POST /api/asistencias/calcular
+  calculateAttendance(params: { fecha_inicio: string; fecha_fin: string }) {
+    return api.post<{ message: string }>('/asistencias/calcular', {}, { params });
   }
 };

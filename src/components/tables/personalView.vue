@@ -316,14 +316,14 @@ defineExpose({
         style="min-width: 14rem"
       >
         <template #body="slotProps">
-          <div class="flex items-center gap-3">
+          <div class="flex align-items-center gap-3">
             <Avatar
               :label="slotProps.data.initials"
               shape="circle"
               size="large"
-              :style="{ backgroundColor: 'var(--blue-500)', color: '#ffffff' }"
+              class="bg-blue-500 text-white"
             />
-            <div class="flex flex-col">
+            <div class="flex flex-column">
               <span class="font-bold text-gray-800">{{
                 slotProps.data.nombre
               }}</span>

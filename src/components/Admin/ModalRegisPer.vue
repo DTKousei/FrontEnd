@@ -387,126 +387,113 @@ const visibleModel = computed({
     :breakpoints="{ '960px': '75vw', '641px': '90vw' }"
     class="p-fluid"
   >
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-      <div class="form-row">
-        <!-- Nombres -->
-        <div class="form-group">
-          <div class="field">
-            <label for="nombres" class="font-bold block mb-2">Nombres *</label>
-            <InputText
-              id="nombres"
-              v-model="form.nombres"
-              placeholder="Ingrese nombres"
-            />
-          </div>
-        </div>
+    <div class="formgrid grid mt-2">
+      <!-- Nombres -->
 
-        <!-- Apellidos -->
-        <div class="field">
-          <label for="apellidos" class="font-bold block mb-2"
-            >Apellidos *</label
-          >
-          <InputText
-            id="apellidos"
-            v-model="form.apellidos"
-            placeholder="Ingrese apellidos"
-          />
-        </div>
+      <div class="field col-12 md:col-6">
+        <label for="nombres" class="font-bold block mb-2">Nombres *</label>
+        <InputText
+          id="nombres"
+          v-model="form.nombres"
+          placeholder="Ingrese nombres"
+          class="w-full"
+        />
       </div>
 
-      <div class="form-row">
-        <div class="form-group">
-          <!-- DNI -->
-          <div class="field">
-            <label for="dni" class="font-bold block mb-2">DNI *</label>
-            <InputText
-              id="dni"
-              v-model="form.dni"
-              placeholder="Número de documento"
-              maxlength="8"
-            />
-            <small class="text-gray-500">Debe tener 8 dígitos</small>
-          </div>
-        </div>
-        <div class="form-group">
-          <!-- Fecha Nacimiento -->
-          <div class="field">
-            <label for="fecha_nacimiento" class="font-bold block mb-2"
-              >Fecha Nacimiento</label
-            >
-            <DatePicker
-              id="fecha_nacimiento"
-              v-model="form.fecha_nacimiento"
-              placeholder="dd/mm/aaaa"
-              dateFormat="dd/mm/yy"
-            />
-          </div>
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <!-- Cargo -->
-          <div class="field">
-            <label for="cargo" class="font-bold block mb-2">Cargo *</label>
-            <InputText
-              id="cargo"
-              v-model="form.cargo"
-              placeholder="Ej. Director"
-            />
-          </div>
-        </div>
-        <div class="form-group">
-          <!-- Área -->
-          <div class="field">
-            <label for="area" class="font-bold block mb-2">Área *</label>
-            <InputText
-              id="area"
-              v-model="form.area"
-              placeholder="Ej. Direccion"
-            />
-          </div>
-        </div>
+      <!-- Apellidos -->
+      <div class="field col-12 md:col-6">
+        <label for="apellidos" class="font-bold block mb-2">Apellidos *</label>
+        <InputText
+          id="apellidos"
+          v-model="form.apellidos"
+          placeholder="Ingrese apellidos"
+          class="w-full"
+        />
       </div>
 
-      <div class="form-row">
-        <div class="form-group">
-          <!-- Horario Asignado -->
-          <div class="field">
-            <label for="horario" class="font-bold block mb-2"
-              >Horario de Trabajo</label
-            >
-            <Select
-              id="horario"
-              v-model="form.horario_id"
-              :options="schedules"
-              optionLabel="nombre"
-              optionValue="id"
-              placeholder="Seleccionar horario"
-              class="w-full"
-            />
-          </div>
-        </div>
-        <div class="form-group">
-          <!-- Rol Sistema -->
-          <div class="field">
-            <label for="rol" class="font-bold block mb-2"
-              >Rol en Sistema *</label
-            >
-            <Select
-              id="rol"
-              v-model="form.rol_id"
-              :options="roles"
-              optionLabel="nombre"
-              optionValue="id"
-              placeholder="Seleccionar rol"
-              :loading="loading"
-            />
-          </div>
-        </div>
+      <!-- DNI -->
+      <div class="field col-12 md:col-6">
+        <label for="dni" class="font-bold block mb-2">DNI *</label>
+        <InputText
+          id="dni"
+          v-model="form.dni"
+          placeholder="Número de documento"
+          maxlength="8"
+          class="w-full"
+        />
+        <small class="text-gray-500">Debe tener 8 dígitos</small>
+      </div>
+
+      <!-- Fecha Nacimiento -->
+      <div class="field col-12 md:col-6">
+        <label for="fecha_nacimiento" class="font-bold block mb-2"
+          >Fecha Nacimiento</label
+        >
+        <DatePicker
+          id="fecha_nacimiento"
+          v-model="form.fecha_nacimiento"
+          placeholder="dd/mm/aaaa"
+          dateFormat="dd/mm/yy"
+          class="w-full"
+        />
+      </div>
+
+      <!-- Cargo -->
+      <div class="field col-12 md:col-6">
+        <label for="cargo" class="font-bold block mb-2">Cargo *</label>
+        <InputText
+          id="cargo"
+          v-model="form.cargo"
+          placeholder="Ej. Director"
+          class="w-full"
+        />
+      </div>
+
+      <!-- Área -->
+      <div class="field col-12 md:col-6">
+        <label for="area" class="font-bold block mb-2">Área *</label>
+        <InputText
+          id="area"
+          v-model="form.area"
+          placeholder="Ej. Direccion"
+          class="w-full"
+        />
+      </div>
+
+      <!-- Horario Asignado -->
+      <div class="field col-12 md:col-6">
+        <label for="horario" class="font-bold block mb-2"
+          >Horario de Trabajo</label
+        >
+        <Select
+          id="horario"
+          v-model="form.horario_id"
+          :options="schedules"
+          optionLabel="nombre"
+          optionValue="id"
+          placeholder="Seleccionar horario"
+          class="w-full"
+        />
+      </div>
+
+      <!-- Rol Sistema -->
+      <div class="field col-12 md:col-6">
+        <label for="rol" class="font-bold block mb-2">Rol en Sistema *</label>
+        <Select
+          id="rol"
+          v-model="form.rol_id"
+          :options="roles"
+          optionLabel="nombre"
+          optionValue="id"
+          placeholder="Seleccionar rol"
+          :loading="loading"
+          class="w-full"
+        />
       </div>
 
       <!-- Email (Full width on mobile, span 2 on desktop if needed, or keep grid) -->
-      <div class="field md:col-span-2">
+      <!-- Email (Full width on mobile, span 2 on desktop if needed, or keep grid) -->
+      <div class="field col-12">
         <label for="email" class="font-bold block mb-2"
           >Email Corporativo</label
         >
@@ -522,23 +509,27 @@ const visibleModel = computed({
       </div>
 
       <!-- Teléfono -->
-      <div class="field">
+      <!-- Teléfono -->
+      <div class="field col-12">
         <label for="telefono" class="font-bold block mb-2">Teléfono</label>
         <InputText
           id="telefono"
           v-model="form.telefono"
           placeholder="999 999 999"
+          class="w-full"
         />
       </div>
 
       <!-- Dirección -->
-      <div class="field md:col-span-2">
+      <!-- Dirección -->
+      <div class="field col-12">
         <label for="direccion" class="font-bold block mb-2">Dirección</label>
         <InputText id="direccion" v-model="form.direccion" class="w-full" />
       </div>
 
       <!-- Observaciones -->
-      <div class="field md:col-span-2">
+      <!-- Observaciones -->
+      <div class="field col-12">
         <label for="observaciones" class="font-bold block mb-2"
           >Observaciones</label
         >

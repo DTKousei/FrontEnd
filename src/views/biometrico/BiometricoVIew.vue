@@ -1,50 +1,7 @@
 <template>
   <div class="container">
     <!-- Sidebar -->
-    <div class="sidebar">
-      <div class="logo">
-        <h2><i class="fas fa-fingerprint"></i> Control Asistencia</h2>
-        <p>UGEL Sucre</p>
-      </div>
-      <ul class="nav-links">
-        <li>
-          <router-link to="/dashboard"
-            ><i class="fas fa-tachometer-alt"></i> Dashboard</router-link
-          >
-        </li>
-        <li>
-          <router-link to="/biometrico" class="active"
-            ><i class="fas fa-user-clock"></i> Registro Asistencia</router-link
-          >
-        </li>
-        <li>
-          <router-link to="/personal"
-            ><i class="fas fa-users"></i> Gestión Personal</router-link
-          >
-        </li>
-        <li>
-          <router-link to="/papeletas"
-            ><i class="fas fa-chart-bar"></i> Papeletas</router-link
-          >
-        </li>
-        <li>
-          <router-link to="/incidencias"
-            ><i class="fas fa-question-circle"></i> Registro
-            Incidencias</router-link
-          >
-        </li>
-        <li>
-          <router-link to="/reportes"
-            ><i class="fas fa-chart-bar"></i> Reportes</router-link
-          >
-        </li>
-        <li>
-          <router-link to="/configuracion"
-            ><i class="fas fa-cog"></i> Configuración</router-link
-          >
-        </li>
-      </ul>
-    </div>
+    <AdminNavbar />
 
     <!-- Main Content -->
     <div class="main-content">
@@ -136,104 +93,7 @@
 
         <!-- Registros del Día -->
         <div class="records-container">
-          <div class="records-header">
-            <h2 style="color: var(--primary)">Registros de Hoy</h2>
-            <div class="date-selector">
-              <input type="date" id="filter-date" value="2023-05-15" />
-              <button class="btn btn-primary">
-                <i class="fas fa-sync-alt"></i> Actualizar
-              </button>
-            </div>
-          </div>
-
-          <table>
-            <thead>
-              <tr>
-                <th>Empleado</th>
-                <th>Entrada</th>
-                <th>Salida</th>
-                <th>Horas Trabajadas</th>
-                <th>Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>
-                  <div class="employee-info">
-                    <div class="employee-avatar">JP</div>
-                    <div>
-                      <div>Juan Pérez</div>
-                      <small>Administración</small>
-                    </div>
-                  </div>
-                </td>
-                <td>08:05 AM</td>
-                <td>--:--</td>
-                <td>--:--</td>
-                <td><span class="status status-tardanza">Tardanza</span></td>
-              </tr>
-              <tr>
-                <td>
-                  <div class="employee-info">
-                    <div class="employee-avatar">MG</div>
-                    <div>
-                      <div>María García</div>
-                      <small>Recursos Humanos</small>
-                    </div>
-                  </div>
-                </td>
-                <td>07:55 AM</td>
-                <td>--:--</td>
-                <td>--:--</td>
-                <td><span class="status status-presente">Presente</span></td>
-              </tr>
-              <tr>
-                <td>
-                  <div class="employee-info">
-                    <div class="employee-avatar">CL</div>
-                    <div>
-                      <div>Carlos López</div>
-                      <small>Contabilidad</small>
-                    </div>
-                  </div>
-                </td>
-                <td>--:--</td>
-                <td>--:--</td>
-                <td>--:--</td>
-                <td><span class="status status-ausente">Ausente</span></td>
-              </tr>
-              <tr>
-                <td>
-                  <div class="employee-info">
-                    <div class="employee-avatar">AR</div>
-                    <div>
-                      <div>Ana Rodríguez</div>
-                      <small>Logística</small>
-                    </div>
-                  </div>
-                </td>
-                <td>08:10 AM</td>
-                <td>--:--</td>
-                <td>--:--</td>
-                <td><span class="status status-tardanza">Tardanza</span></td>
-              </tr>
-              <tr>
-                <td>
-                  <div class="employee-info">
-                    <div class="employee-avatar">LM</div>
-                    <div>
-                      <div>Luis Martínez</div>
-                      <small>Sistemas</small>
-                    </div>
-                  </div>
-                </td>
-                <td>07:50 AM</td>
-                <td>--:--</td>
-                <td>--:--</td>
-                <td><span class="status status-presente">Presente</span></td>
-              </tr>
-            </tbody>
-          </table>
+          <PersonalAsis />
         </div>
       </div>
     </div>
@@ -258,6 +118,8 @@
 
 <script setup lang="ts">
 import { useRouter } from "vue-router";
+import AdminNavbar from "@/components/Admin/NavbarView.vue";
+import PersonalAsis from "@/components/tables/PersonalAsis.vue";
 
 const router = useRouter();
 
