@@ -88,7 +88,7 @@ watch(
   }
 );
 
-const populateForm = (
+const populateForm = async (
   user: BiometricUser & { auth_id?: string; rol?: string }
 ) => {
   // Campos del Biomético
@@ -121,13 +121,32 @@ const populateForm = (
 
   // Campos de Autenticación
   if (user.rol) {
-    // Buscar ID del rol por nombre si es necesario, o pasarlo si está disponible.
-    // En personalView, solo mapeamos el nombre del 'rol'.
-    // Idealmente deberíamos haber mapeado 'rol_id' o mantenido el objeto rol completo.
-    // Sin embargo, podemos intentar coincidir por nombre desde la lista de 'roles'.
     const matchingRole = roles.value.find((r) => r.nombre === user.rol);
     if (matchingRole) {
       form.value.rol_id = matchingRole.id;
+    }
+  }
+
+  // Cargar Horario Asignado
+  if (user.user_id) {
+    try {
+      const response = await scheduleService.getUserAssignment(user.user_id);
+      console.log("Respuesta asignación horario:", response.data);
+
+      const data = response.data;
+      // Manejar respuesta tipo array [{...}] o objeto {...}
+      const assignment = Array.isArray(data) ? data[0] : data.data || data;
+
+      if (assignment && assignment.horario_id) {
+        console.log("Horario encontrado:", assignment.horario_id);
+        form.value.horario_id = assignment.horario_id;
+      } else {
+        console.log("No se encontró asignación válida en la respuesta");
+        form.value.horario_id = null;
+      }
+    } catch (error) {
+      console.warn("No se pudo cargar el horario asignado:", error);
+      form.value.horario_id = null;
     }
   }
 };
@@ -263,14 +282,6 @@ const handleSubmit = async () => {
       console.error("Falló la Operación Biométrica:", bioError);
       throw bioError;
     }
-
-    // Capturar ID para uso posterior (Asignación de Horario)
-    // Intentar encontrar el ID en ubicaciones probables de la respuesta
-    const userIdForAssignment =
-      (biometricResult as any)?.id ||
-      (biometricResult as any)?.data?.id ||
-      (isEdit ? props.userToEdit?.id : null);
-
     // Las operaciones de autenticación siguen...
 
     // OPERACIÓN DE AUTENTICACIÓN
@@ -312,7 +323,7 @@ const handleSubmit = async () => {
         await scheduleService.assignToUser({
           user_id: form.value.dni, // USAR DNI COMO PIDE EL USUARIO / BACKEND
           horario_id: form.value.horario_id,
-          fecha_inicio: new Date().toISOString().split("T")[0], // Fecha actual YYYY-MM-DD
+          fecha_inicio: `${new Date().toISOString().split("T")[0]}T00:00:00`, // Fecha actual con hora
         });
         console.log("Horario asignado correctamente");
       } catch (scheduleError) {

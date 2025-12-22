@@ -104,8 +104,8 @@
                 <i class="fas fa-users"></i>
               </div>
             </div>
-            <div class="stat-value">55</div>
-            <div class="stat-change">+5 este mes</div>
+            <div class="stat-value">{{ stats.total }}</div>
+            <div class="stat-change">+{{ stats.newMonth }} este mes</div>
           </div>
 
           <div class="stat-card">
@@ -115,8 +115,14 @@
                 <i class="fas fa-user-check"></i>
               </div>
             </div>
-            <div class="stat-value">48</div>
-            <div class="stat-change">87% del total</div>
+            <div class="stat-value">{{ stats.active }}</div>
+            <div class="stat-change">
+              {{
+                stats.total
+                  ? Math.round((stats.active / stats.total) * 100)
+                  : 0
+              }}% del total
+            </div>
           </div>
 
           <div class="stat-card">
@@ -126,8 +132,14 @@
                 <i class="fas fa-user-times"></i>
               </div>
             </div>
-            <div class="stat-value">5</div>
-            <div class="stat-change">2 bajas este mes</div>
+            <div class="stat-value">{{ stats.inactive }}</div>
+            <div class="stat-change">
+              {{
+                stats.total
+                  ? Math.round((stats.inactive / stats.total) * 100)
+                  : 0
+              }}% del total
+            </div>
           </div>
 
           <div class="stat-card">
@@ -137,14 +149,18 @@
                 <i class="fas fa-user-clock"></i>
               </div>
             </div>
-            <div class="stat-value">2</div>
+            <div class="stat-value">{{ stats.pending }}</div>
             <div class="stat-change">Por verificar</div>
           </div>
         </div>
 
         <!-- Tabla de Empleados -->
         <div class="employees-container">
-          <PersonalTable ref="personalTableRef" @edit-user="onEditUser" />
+          <PersonalTable
+            ref="personalTableRef"
+            @edit-user="onEditUser"
+            @update-stats="handleStatsUpdate"
+          />
         </div>
       </div>
     </div>
@@ -160,7 +176,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, reactive } from "vue";
 import { useRouter } from "vue-router";
 import PersonalTable from "@/components/tables/personalView.vue";
 import ModalRegisPer from "@/components/Admin/ModalRegisPer.vue";
@@ -169,6 +185,22 @@ const router = useRouter();
 const showModal = ref(false);
 const personalTableRef = ref();
 const selectedUser = ref(null);
+
+const stats = reactive({
+  total: 0,
+  active: 0,
+  inactive: 0,
+  pending: 0,
+  newMonth: 0,
+});
+
+const handleStatsUpdate = (newStats: any) => {
+  stats.total = newStats.total;
+  stats.active = newStats.active;
+  stats.inactive = newStats.inactive;
+  stats.pending = newStats.pending;
+  stats.newMonth = newStats.newMonth;
+};
 
 const openNewModal = () => {
   selectedUser.value = null;

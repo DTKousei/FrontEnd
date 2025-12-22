@@ -12,15 +12,18 @@ import IconField from "primevue/iconfield";
 import InputIcon from "primevue/inputicon";
 import Tag from "primevue/tag";
 import Avatar from "primevue/avatar";
+import Swal from "sweetalert2";
 
 interface ExtendedUser extends BiometricUser {
   rol?: string;
   estado?: string;
   initials?: string;
   auth_id?: string;
+  esta_activo?: boolean;
+  raw_created_at?: Date;
 }
 
-const emit = defineEmits(["edit-user"]);
+const emit = defineEmits(["edit-user", "update-stats"]);
 
 const users = ref<ExtendedUser[]>([]);
 const loading = ref(true);
@@ -170,16 +173,96 @@ const loadUsers = async () => {
         estado: aUser?.esta_activo ? "Activo" : "Inactivo",
         auth_id: aUser?.id, // Capture Auth UUID
         initials: getInitials(bUser.nombre),
+        raw_created_at: bUser.fecha_creacion
+          ? new Date(bUser.fecha_creacion)
+          : undefined,
         // Formateo de fecha para presentación en UI
         fecha_creacion: bUser.fecha_creacion
           ? new Date(bUser.fecha_creacion).toLocaleDateString()
           : "-",
       };
     });
+
+    // Calcular Estadísticas
+    const total = users.value.length;
+    const active = users.value.filter((u) => u.estado === "Activo").length;
+    const inactive = users.value.filter((u) => u.estado === "Inactivo").length;
+
+    // Nuevos este mes
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    const newCount = users.value.filter((u) => {
+      if (!u.raw_created_at) return false;
+      return (
+        u.raw_created_at.getMonth() === currentMonth &&
+        u.raw_created_at.getFullYear() === currentYear
+      );
+    }).length;
+
+    emit("update-stats", {
+      total,
+      active,
+      inactive,
+      pending: 0, // Pendiente de definir lógica para 'Pendientes'
+      newMonth: newCount,
+    });
   } catch (error) {
     console.error("Error crítico cargando usuarios:", error);
   } finally {
     loading.value = false;
+  }
+};
+
+const toggleUserStatus = async (user: ExtendedUser) => {
+  const isActive = user.estado === "Activo";
+  const action = isActive ? "desactivar" : "activar";
+  const confirmBtnText = isActive ? "Sí, desactivar" : "Sí, activar";
+  const confirmBtnColor = isActive ? "#d33" : "#3085d6";
+
+  const result = await Swal.fire({
+    title: `¿Estás seguro de ${action} a ${user.nombre}?`,
+    text: isActive
+      ? "El usuario perderá acceso al sistema."
+      : "El usuario recuperará su acceso al sistema.",
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonColor: confirmBtnColor,
+    cancelButtonColor: "#aaa",
+    confirmButtonText: confirmBtnText,
+    cancelButtonText: "Cancelar",
+  });
+
+  if (result.isConfirmed) {
+    try {
+      // Invertir estado actual
+      // Se utiliza !isActive para determinar el nuevo valor booleano a enviar a la API.
+      // Si isActive es true, enviamos false (desactivar), y viceversa.
+
+      // Nota: authService.updateUserByDNI espera { esta_activo: boolean }
+      await authService.updateUserByDNI(user.user_id, {
+        esta_activo: !isActive,
+      });
+
+      Swal.fire({
+        title: isActive ? "¡Desactivado!" : "¡Activado!",
+        text: `El usuario ha sido ${
+          isActive ? "desactivado" : "activado"
+        } correctamente.`,
+        icon: "success",
+      });
+
+      // Recargar tabla para reflejar el cambio en la UI
+      loadUsers();
+    } catch (error) {
+      console.error("Error cambiando estado:", error);
+      Swal.fire({
+        title: "Error",
+        text: "Hubo un problema al cambiar el estado del usuario.",
+        icon: "error",
+      });
+    }
   }
 };
 
@@ -244,13 +327,18 @@ defineExpose({
               <span class="font-bold text-gray-800">{{
                 slotProps.data.nombre
               }}</span>
-              <span class="text-sm text-gray-500"
-                >DNI: {{ slotProps.data.user_id }}</span
-              >
             </div>
           </div>
         </template>
       </Column>
+
+      <!-- DNI Column -->
+      <Column
+        field="user_id"
+        header="DNI"
+        sortable
+        style="min-width: 8rem"
+      ></Column>
 
       <Column
         field="cargo"
@@ -314,11 +402,23 @@ defineExpose({
               aria-label="Ver"
             />
             <Button
-              icon="pi pi-trash"
+              :icon="
+                slotProps.data.estado === 'Activo'
+                  ? 'pi pi-trash'
+                  : 'pi pi-check'
+              "
               outlined
               rounded
-              severity="danger"
-              aria-label="Eliminar"
+              :severity="slotProps.data.estado === 'Activo' ? 'danger' : 'info'"
+              :aria-label="
+                slotProps.data.estado === 'Activo' ? 'Desactivar' : 'Activar'
+              "
+              :title="
+                slotProps.data.estado === 'Activo'
+                  ? 'Desactivar usuario'
+                  : 'Activar usuario'
+              "
+              @click="toggleUserStatus(slotProps.data)"
             />
           </div>
         </template>
