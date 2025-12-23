@@ -22,6 +22,11 @@
         >
       </li>
       <li>
+        <router-link to="/departamentos"
+          ><i class="fas fa-building"></i> Departamentos</router-link
+        >
+      </li>
+      <li>
         <router-link to="/papeletas"
           ><i class="fas fa-chart-bar"></i> Papeletas</router-link
         >

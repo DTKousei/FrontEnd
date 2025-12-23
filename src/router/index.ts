@@ -56,12 +56,20 @@ const routes: Array<RouteRecordRaw> = [
     meta: { requiresAuth: true }
   },
 
-  // --- Configuracion ---
+  // --- Configuración ---
   {
     path: '/configuracion',
     name: 'Configuracion',
     component: () => import('@/views/configuracion/ConfigView.vue'),
     meta: { requiresAuth: true }
+  },
+  
+  // --- Departamentos ---
+  {
+      path: '/departamentos',
+      name: 'Departamentos',
+      component: () => import('@/views/DepartmentsView.vue'),
+      meta: { requiresAuth: true }
   },
 ];
 
@@ -71,7 +79,7 @@ const router = createRouter({
 });
 
 // Navigation Guard
-router.beforeEach((to, from, next) => {
+router.beforeEach((to, _from, next) => {
   const token = localStorage.getItem('token');
   if (to.meta.requiresAuth && !token) {
     next({ name: 'Login' });

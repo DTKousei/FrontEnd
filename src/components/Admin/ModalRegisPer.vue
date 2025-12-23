@@ -10,8 +10,10 @@ import { roleService } from "@/api/services/role.service";
 import { userService } from "@/api/services/user.service";
 import { authService } from "@/api/services/auth.service";
 import { scheduleService } from "@/api/services/schedule.service";
+import { DepartmentService } from "@/api/services/department.service";
 import Swal from "sweetalert2";
 import type { CreateUserData, BiometricUser } from "@/api/types/users.types";
+import type { Department } from "@/api/types/department.types";
 import type { RegisterData, Role } from "@/api/types/auth.types";
 import type { Schedule } from "@/api/types/schedules.types";
 
@@ -47,6 +49,7 @@ const formatDate = (date: Date) => {
 const loading = ref(false);
 const roles = ref<Role[]>([]);
 const schedules = ref<Schedule[]>([]); // Lista de horarios
+const departments = ref<Department[]>([]); // Lista de departamentos
 
 const form = ref({
   nombres: "",
@@ -54,7 +57,7 @@ const form = ref({
   dni: "",
   fecha_nacimiento: null as Date | null,
   cargo: "",
-  area: "", // Departamento
+  departamento_id: null as number | null, // Reemplaza 'area' (string)
   horario_id: null as number | null, // Reemplaza fecha_ingreso
   email: "",
   telefono: "",
@@ -105,7 +108,9 @@ const populateForm = async (
 
   form.value.dni = user.user_id; // user_id in biometric is DNI
   form.value.cargo = user.cargo || "";
-  form.value.area = user.departamento || "";
+  form.value.departamento_id = user.departamento_id || null;
+  // Fallback: si viene 'departamento' como objeto o string, intentar mapear si departamento_id es nulo?
+  // Por ahora confiamos en departamento_id.
   form.value.email = user.email || "";
   form.value.telefono = user.telefono || "";
   form.value.direccion = user.direccion || "";
@@ -129,6 +134,7 @@ const populateForm = async (
 
   // Cargar Horario Asignado
   if (user.user_id) {
+    // 1. Fetch Schedule
     try {
       const response = await scheduleService.getUserAssignment(user.user_id);
       console.log("Respuesta asignación horario:", response.data);
@@ -148,6 +154,29 @@ const populateForm = async (
       console.warn("No se pudo cargar el horario asignado:", error);
       form.value.horario_id = null;
     }
+
+    // 2. Fetch Department by User DNI
+    try {
+      const resp = await DepartmentService.getByUserDni(user.user_id);
+      // Explicitly cast to 'any' to handle runtime wrapping not reflected in strict types
+      const d = resp.data as any;
+      const dept = d && d.data ? d.data : d;
+
+      console.log("Departamento encontrado por DNI (raw):", dept);
+
+      if (dept && dept.id) {
+        form.value.departamento_id = dept.id;
+      } else {
+        form.value.departamento_id = null;
+      }
+    } catch (deptError) {
+      console.warn(
+        "User has no department assigned or error fetching it:",
+        deptError
+      );
+      // Fallback: keep existing value if any, or null
+      if (!form.value.departamento_id) form.value.departamento_id = null;
+    }
   }
 };
 
@@ -160,6 +189,26 @@ onMounted(async () => {
       roleService.getAllRoles(),
       scheduleService.getAll(),
     ]);
+
+    // Load Departments separately or in parallel
+    // "uses the same logic as schedule" -> Expecting AxiosResponse
+    // Load Departments separately or in parallel
+    // "uses the same logic as schedule" -> Expecting AxiosResponse
+    try {
+      const deptResponse = await DepartmentService.getAll();
+      const dData = deptResponse.data as any; // Cast for safety against wrapper types
+      // Handle array or wrapped array
+      if (Array.isArray(dData)) {
+        departments.value = dData;
+      } else if (dData && Array.isArray(dData.data)) {
+        departments.value = dData.data;
+      } else {
+        departments.value = [];
+      }
+    } catch (deptError) {
+      console.error("Error loading departments:", deptError);
+      departments.value = [];
+    }
 
     if (rolesResponse.data.success) {
       roles.value = rolesResponse.data.data;
@@ -191,7 +240,7 @@ const resetForm = () => {
     dni: "",
     fecha_nacimiento: null,
     cargo: "",
-    area: "",
+    departamento_id: null,
     horario_id: null,
     email: "",
     telefono: "",
@@ -250,7 +299,7 @@ const handleSubmit = async () => {
       privilegio: 0, // Default
       dispositivo_id: 1, // Default
       cargo: form.value.cargo,
-      departamento: form.value.area,
+      departamento_id: form.value.departamento_id || undefined, // Send ID
       telefono: form.value.telefono,
       email: form.value.email,
       fecha_nacimiento: form.value.fecha_nacimiento
@@ -449,13 +498,16 @@ const visibleModel = computed({
         />
       </div>
 
-      <!-- Área -->
+      <!-- Área / Departamento -->
       <div class="field col-12 md:col-6">
-        <label for="area" class="font-bold block mb-2">Área *</label>
-        <InputText
-          id="area"
-          v-model="form.area"
-          placeholder="Ej. Direccion"
+        <label for="departamento" class="font-bold block mb-2">Área *</label>
+        <Select
+          id="departamento"
+          v-model="form.departamento_id"
+          :options="departments"
+          optionLabel="nombre"
+          optionValue="id"
+          placeholder="Seleccionar departamento"
           class="w-full"
         />
       </div>

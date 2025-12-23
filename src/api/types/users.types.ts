@@ -16,7 +16,8 @@ export interface BiometricUser {
   dispositivo_id: number;
   email?: string;
   telefono?: string;
-  departamento?: string;
+  departamento_id?: number; // New field
+  departamento?: { id: number; nombre: string } | string; // Can be object or name depending on backend response
   cargo?: string;
   fecha_creacion: string; // ISO timestamp
   fecha_nacimiento?: string;
@@ -35,7 +36,7 @@ export interface CreateUserData {
   dispositivo_id: number;
   email?: string;
   telefono?: string;
-  departamento?: string;
+  departamento_id?: number; // Updated
   cargo?: string;
   fecha_nacimiento?: string;
   direccion?: string;
@@ -53,7 +54,7 @@ export interface UpdateUserData {
   dispositivo_id?: number;
   email?: string;
   telefono?: string;
-  departamento?: string;
+  departamento_id?: number; // Updated
   cargo?: string;
   fecha_nacimiento?: string;
   direccion?: string;

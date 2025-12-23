@@ -3,8 +3,10 @@ import { ref, onMounted } from "vue";
 import DataTable from "primevue/datatable";
 import Column from "primevue/column";
 import { userService } from "@/api/services/user.service";
+import { DepartmentService } from "@/api/services/department.service";
 import { authService } from "@/api/services/auth.service";
 import type { BiometricUser } from "@/api/types/users.types";
+import type { Department } from "@/api/types/department.types";
 import type { User as AuthUser } from "@/api/types/auth.types";
 import Button from "primevue/button";
 import InputText from "primevue/inputtext";
@@ -80,10 +82,12 @@ const loadUsers = async () => {
     const results = await Promise.allSettled([
       userService.getAll(),
       authService.getAllUsers(),
+      DepartmentService.getAll(),
     ]);
 
     const biometricResult = results[0];
     const authResult = results[1];
+    const deptResult = results[2];
 
     // Procesamiento de datos del servicio Biométrico
     let biometricUsers: BiometricUser[] = [];
@@ -144,6 +148,25 @@ const loadUsers = async () => {
       );
     }
 
+    // Process Department Data
+    // (We kept existing getAll call in Promise.allSettled but we will prioritize per-user fetch as requested)
+    let departments: Department[] = [];
+    if (deptResult.status === "fulfilled") {
+      // Use 'any' to safely inspect the axios response structure vs the expected Departments array
+      const resp = deptResult.value as any;
+      const dData = resp.data;
+      if (Array.isArray(dData)) {
+        departments = dData;
+      } else if (dData && Array.isArray(dData.data)) {
+        departments = dData.data;
+      } else {
+        departments = [];
+      }
+    }
+    // We can keeps map as fallback
+    const deptMap = new Map<number, string>();
+    departments.forEach((d) => deptMap.set(d.id, d.nombre));
+
     console.log("Biometric Users Count:", biometricUsers.length);
     console.log("Auth Users Count:", authUsers.length);
     if (biometricUsers.length > 0)
@@ -155,33 +178,58 @@ const loadUsers = async () => {
       return;
     }
 
-    // Lógica de Fusión (Merge) de Datos
-    // Se combinan los datos biométricos con la información de roles y estado
-    users.value = biometricUsers.map((bUser) => {
-      // Vinculación mediante DNI:
-      // Se asume que 'user_id' en el sistema biométrico corresponde al 'usuario' (DNI) en el sistema de autenticación.
-      // Se realiza una comparación de cadenas normalizada para evitar errores de tipo.
-      const aUser = authUsers.find(
-        (a) => String(a.usuario).trim() === String(bUser.user_id).trim()
-      );
+    // Lógica de Fusión (Merge) de Datos con Fetch de Departamento por Usuario
+    // Solicitado explicitamente: usar endpoint /api/departamentos/usuario/[DNI]
+    users.value = await Promise.all(
+      biometricUsers.map(async (bUser) => {
+        // Vinculación mediante DNI
+        const aUser = authUsers.find(
+          (a) => String(a.usuario).trim() === String(bUser.user_id).trim()
+        );
 
-      return {
-        ...bUser,
-        // Si no se encuentra usuario en Auth, se asigna rol por defecto "Empleado"
-        rol: aUser?.rol?.nombre || "Empleado",
-        // Determinación del estado: Se prioriza el estado del sistema de autenticación
-        estado: aUser?.esta_activo ? "Activo" : "Inactivo",
-        auth_id: aUser?.id, // Capture Auth UUID
-        initials: getInitials(bUser.nombre),
-        raw_created_at: bUser.fecha_creacion
-          ? new Date(bUser.fecha_creacion)
-          : undefined,
-        // Formateo de fecha para presentación en UI
-        fecha_creacion: bUser.fecha_creacion
-          ? new Date(bUser.fecha_creacion).toLocaleDateString()
-          : "-",
-      };
-    });
+        // Fetch Department name individually
+        let deptName = "-";
+        try {
+          // Try fetching
+          const resp = await DepartmentService.getByUserDni(bUser.user_id);
+          const d = resp.data as any;
+          const dept = d && d.data ? d.data : d;
+
+          if (dept && dept.nombre) {
+            deptName = dept.nombre;
+          } else {
+            // Fallback to map or existing data
+            deptName = bUser.departamento_id
+              ? deptMap.get(bUser.departamento_id) || "Desconocido"
+              : (typeof bUser.departamento === "object"
+                  ? bUser.departamento?.nombre
+                  : bUser.departamento) || "Sin Asignar";
+          }
+        } catch (err) {
+          // Fallback on error (e.g. 404 if not assigned)
+          deptName = bUser.departamento_id
+            ? deptMap.get(bUser.departamento_id) || "Desconocido"
+            : (typeof bUser.departamento === "object"
+                ? bUser.departamento?.nombre
+                : bUser.departamento) || "Sin Asignar";
+        }
+
+        return {
+          ...bUser,
+          rol: aUser?.rol?.nombre || "Empleado",
+          estado: aUser?.esta_activo ? "Activo" : "Inactivo",
+          auth_id: aUser?.id,
+          initials: getInitials(bUser.nombre),
+          departamento: deptName,
+          raw_created_at: bUser.fecha_creacion
+            ? new Date(bUser.fecha_creacion)
+            : undefined,
+          fecha_creacion: bUser.fecha_creacion
+            ? new Date(bUser.fecha_creacion).toLocaleDateString()
+            : "-",
+        };
+      })
+    );
 
     // Calcular Estadísticas
     const total = users.value.length;
