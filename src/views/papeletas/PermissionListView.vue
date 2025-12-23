@@ -86,7 +86,11 @@
       <div class="page-content">
         <div class="page-title">
           <h1>Gestión de Papeletas</h1>
-          <button class="btn btn-success" id="nueva-papeleta-btn">
+          <button
+            class="btn btn-success"
+            id="nueva-papeleta-btn"
+            @click="showModal = true"
+          >
             <i class="fas fa-plus"></i> Nueva Papeleta
           </button>
         </div>
@@ -188,23 +192,47 @@
               </tr>
             </thead>
             <tbody>
-              <tr>
+              <tr v-if="loading">
+                <td colspan="7" class="text-center p-4">Cargando...</td>
+              </tr>
+              <tr v-else-if="permissions.length === 0">
+                <td colspan="7" class="text-center p-4">
+                  No hay papeletas registradas.
+                </td>
+              </tr>
+              <tr v-for="permiso in permissions" :key="permiso.id">
                 <td>
                   <div class="employee-info">
-                    <div class="employee-avatar">JP</div>
+                    <div class="employee-avatar">
+                      {{ permiso.empleado_id.substring(0, 2) }}
+                    </div>
                     <div class="employee-details">
-                      <div class="employee-name">Juan Pérez</div>
-                      <div class="employee-area">Administración</div>
+                      <div class="employee-name">
+                        DNI: {{ permiso.empleado_id }}
+                      </div>
+                      <!-- Area not in permission object directly, defaulting -->
+                      <div class="employee-area">Personal</div>
                     </div>
                   </div>
                 </td>
                 <td>
-                  <span class="tipo-papeleta tipo-particular">Particular</span>
+                  <span
+                    class="tipo-papeleta"
+                    :class="getTypeClass(permiso.tipo_permiso)"
+                  >
+                    {{ permiso.tipo_permiso?.nombre }}
+                  </span>
                 </td>
-                <td>10:30 AM</td>
-                <td>11:30 AM</td>
-                <td>Trámite personal en el banco</td>
-                <td><span class="status status-pendiente">Pendiente</span></td>
+                <td>{{ formatDate(permiso.fecha_hora_inicio) }}</td>
+                <td>{{ formatDate(permiso.fecha_hora_fin || "") }}</td>
+                <td>{{ permiso.motivo }}</td>
+                <td>
+                  <span
+                    class="status"
+                    :class="getStatusClass(permiso.estado?.nombre)"
+                    >{{ getStatusLabel(permiso.estado) }}</span
+                  >
+                </td>
                 <td class="actions">
                   <button class="action-btn view" title="Ver detalles">
                     <i class="fas fa-eye"></i>
@@ -214,109 +242,6 @@
                   </button>
                   <button class="action-btn reject" title="Rechazar">
                     <i class="fas fa-times"></i>
-                  </button>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <div class="employee-info">
-                    <div class="employee-avatar">MG</div>
-                    <div class="employee-details">
-                      <div class="employee-name">María García</div>
-                      <div class="employee-area">Recursos Humanos</div>
-                    </div>
-                  </div>
-                </td>
-                <td>
-                  <span class="tipo-papeleta tipo-comision">Comisión</span>
-                </td>
-                <td>09:00 AM</td>
-                <td>02:00 PM</td>
-                <td>Reunión en Ministerio de Educación</td>
-                <td><span class="status status-aprobada">Aprobada</span></td>
-                <td class="actions">
-                  <button class="action-btn view" title="Ver detalles">
-                    <i class="fas fa-eye"></i>
-                  </button>
-                  <button class="action-btn" title="Marcar completada">
-                    <i class="fas fa-flag-checkered"></i>
-                  </button>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <div class="employee-info">
-                    <div class="employee-avatar">CL</div>
-                    <div class="employee-details">
-                      <div class="employee-name">Carlos López</div>
-                      <div class="employee-area">Contabilidad</div>
-                    </div>
-                  </div>
-                </td>
-                <td>
-                  <span class="tipo-papeleta tipo-particular">Particular</span>
-                </td>
-                <td>03:00 PM</td>
-                <td>04:00 PM</td>
-                <td>Cita médica</td>
-                <td>
-                  <span class="status status-completada">Completada</span>
-                </td>
-                <td class="actions">
-                  <button class="action-btn view" title="Ver detalles">
-                    <i class="fas fa-eye"></i>
-                  </button>
-                  <button class="action-btn" title="Descargar PDF">
-                    <i class="fas fa-file-pdf"></i>
-                  </button>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <div class="employee-info">
-                    <div class="employee-avatar">AR</div>
-                    <div class="employee-details">
-                      <div class="employee-name">Ana Rodríguez</div>
-                      <div class="employee-area">Logística</div>
-                    </div>
-                  </div>
-                </td>
-                <td>
-                  <span class="tipo-papeleta tipo-comision">Comisión</span>
-                </td>
-                <td>08:30 AM</td>
-                <td>12:00 PM</td>
-                <td>Recojo de material educativo</td>
-                <td><span class="status status-rechazada">Rechazada</span></td>
-                <td class="actions">
-                  <button class="action-btn view" title="Ver detalles">
-                    <i class="fas fa-eye"></i>
-                  </button>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <div class="employee-info">
-                    <div class="employee-avatar">LM</div>
-                    <div class="employee-details">
-                      <div class="employee-name">Luis Martínez</div>
-                      <div class="employee-area">Sistemas</div>
-                    </div>
-                  </div>
-                </td>
-                <td>
-                  <span class="tipo-papeleta tipo-comision">Comisión</span>
-                </td>
-                <td>10:00 AM</td>
-                <td>05:00 PM</td>
-                <td>Instalación de equipos en escuela</td>
-                <td><span class="status status-aprobada">Aprobada</span></td>
-                <td class="actions">
-                  <button class="action-btn view" title="Ver detalles">
-                    <i class="fas fa-eye"></i>
-                  </button>
-                  <button class="action-btn" title="Marcar completada">
-                    <i class="fas fa-flag-checkered"></i>
                   </button>
                 </td>
               </tr>
@@ -340,12 +265,71 @@
       </div>
     </div>
   </div>
+  <ModalPerm v-model:visible="showModal" @save="handleSavePapeleta" />
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
+import ModalPerm from "@/components/Modals/ModalPerm.vue";
+import { permissionService } from "@/api/services/permission.service";
+import type { Permiso } from "@/api/types/permissions.types";
 
 const router = useRouter();
+const showModal = ref(false);
+const permissions = ref<Permiso[]>([]);
+const loading = ref(false);
+
+const loadPermissions = async () => {
+  try {
+    loading.value = true;
+    const response = await permissionService.getPermisos();
+    // @ts-ignore
+    const data = response.data?.data || response.data || [];
+    permissions.value = Array.isArray(data) ? data : [];
+  } catch (error) {
+    console.error("Error loading permissions:", error);
+  } finally {
+    loading.value = false;
+  }
+};
+
+const handleSavePapeleta = () => {
+  loadPermissions();
+};
+
+const formatDate = (dateString: string) => {
+  if (!dateString) return "-";
+  // Format: 10:30 AM (Time only as per current table design, or Date + Time)
+  // The table columns are Hora Salida / Hora Regreso.
+  // Assuming we want time.
+  const date = new Date(dateString);
+  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+};
+
+const getStatusClass = (status: string | undefined) => {
+  // Map backend status to CSS class
+  // unique IDs are backend generated, need to map names or IDs
+  // For now assuming status object or code
+  // The Permiso type has `estado?: { nombre: string }`
+  // Let's use a safe fallback
+  return "status-pendiente"; // Default
+};
+
+const getStatusLabel = (status: any) => {
+  return status?.nombre || "Pendiente";
+};
+
+const getTypeClass = (type: any) => {
+  const name = type?.nombre?.toLowerCase() || "";
+  if (name.includes("particular")) return "tipo-particular";
+  if (name.includes("comisi")) return "tipo-comision";
+  return "tipo-particular";
+};
+
+onMounted(() => {
+  loadPermissions();
+});
 
 const logout = () => {
   localStorage.removeItem("token");
