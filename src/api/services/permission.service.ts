@@ -279,6 +279,15 @@ export const permissionService = {
   // ==============================
   
   /**
+   * Ver PDF ya generado (sin regenerar)
+   */
+  verPDF(id: string) {
+    return api.get(`/permisos/${id}/pdf/ver`, {
+      responseType: 'blob',
+    });
+  },
+
+  /**
    * Generar y descargar PDF de la papeleta
    */
   generarPDF(id: string) {
@@ -335,6 +344,7 @@ export interface PermissionService {
   verificarFirma(id: string, tipoFirma: TipoFirma): Promise<{ data: VerificarFirmaResponse }>;
   
   // PDF
+  verPDF(id: string): Promise<{ data: Blob }>;
   generarPDF(id: string): Promise<{ data: Blob }>;
   uploadPDF(id: string, pdfFile: File): Promise<{ data: UploadPDFResponse }>;
 }

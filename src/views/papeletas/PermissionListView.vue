@@ -104,8 +104,8 @@
                 <i class="fas fa-clock"></i>
               </div>
             </div>
-            <div class="stat-value">8</div>
-            <div class="stat-change">+2 hoy</div>
+            <div class="stat-value">{{ pendientesCount }}</div>
+            <div class="stat-change">Total pendientes</div>
           </div>
 
           <div class="stat-card">
@@ -115,8 +115,8 @@
                 <i class="fas fa-check-circle"></i>
               </div>
             </div>
-            <div class="stat-value">5</div>
-            <div class="stat-change">80% de tasa de aprobación</div>
+            <div class="stat-value">{{ aprobadasHoyCount }}</div>
+            <div class="stat-change">Solicitadas hoy</div>
           </div>
 
           <div class="stat-card">
@@ -126,8 +126,8 @@
                 <i class="fas fa-times-circle"></i>
               </div>
             </div>
-            <div class="stat-value">2</div>
-            <div class="stat-change">1 esta semana</div>
+            <div class="stat-value">{{ rechazadasCount }}</div>
+            <div class="stat-change">Total rechazadas</div>
           </div>
 
           <div class="stat-card">
@@ -137,148 +137,79 @@
                 <i class="fas fa-briefcase"></i>
               </div>
             </div>
-            <div class="stat-value">12</div>
-            <div class="stat-change">Este mes</div>
+            <div class="stat-value">{{ comisionesCount }}</div>
+            <div class="stat-change">Total activas</div>
           </div>
         </div>
 
-        <!-- Barra de Acciones -->
-        <div class="actions-bar">
-          <div class="search-box">
-            <input
-              type="text"
-              placeholder="Buscar por empleado, área o motivo..."
-            />
-            <button class="btn btn-outline">
-              <i class="fas fa-search"></i>
-            </button>
-          </div>
-
-          <div class="filters">
-            <select>
-              <option value="">Todos los estados</option>
-              <option value="pendiente">Pendientes</option>
-              <option value="aprobada">Aprobadas</option>
-              <option value="rechazada">Rechazadas</option>
-              <option value="completada">Completadas</option>
-            </select>
-
-            <select>
-              <option value="">Todos los tipos</option>
-              <option value="particular">Particular</option>
-              <option value="comision">Comisión</option>
-            </select>
-
-            <input type="date" value="2023-05-15" />
-
-            <button class="btn btn-outline">
-              <i class="fas fa-download"></i> Exportar
-            </button>
-          </div>
-        </div>
-
-        <!-- Tabla de Papeletas -->
+        <!-- Tabla de Papeletas (New Component) -->
         <div class="papeletas-container">
-          <table>
-            <thead>
-              <tr>
-                <th>Empleado</th>
-                <th>Tipo</th>
-                <th>Hora Salida</th>
-                <th>Hora Regreso</th>
-                <th>Motivo</th>
-                <th>Estado</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-if="loading">
-                <td colspan="7" class="text-center p-4">Cargando...</td>
-              </tr>
-              <tr v-else-if="permissions.length === 0">
-                <td colspan="7" class="text-center p-4">
-                  No hay papeletas registradas.
-                </td>
-              </tr>
-              <tr v-for="permiso in permissions" :key="permiso.id">
-                <td>
-                  <div class="employee-info">
-                    <div class="employee-avatar">
-                      {{ permiso.empleado_id.substring(0, 2) }}
-                    </div>
-                    <div class="employee-details">
-                      <div class="employee-name">
-                        DNI: {{ permiso.empleado_id }}
-                      </div>
-                      <!-- Area not in permission object directly, defaulting -->
-                      <div class="employee-area">Personal</div>
-                    </div>
-                  </div>
-                </td>
-                <td>
-                  <span
-                    class="tipo-papeleta"
-                    :class="getTypeClass(permiso.tipo_permiso)"
-                  >
-                    {{ permiso.tipo_permiso?.nombre }}
-                  </span>
-                </td>
-                <td>{{ formatDate(permiso.fecha_hora_inicio) }}</td>
-                <td>{{ formatDate(permiso.fecha_hora_fin || "") }}</td>
-                <td>{{ permiso.motivo }}</td>
-                <td>
-                  <span
-                    class="status"
-                    :class="getStatusClass(permiso.estado?.nombre)"
-                    >{{ getStatusLabel(permiso.estado) }}</span
-                  >
-                </td>
-                <td class="actions">
-                  <button class="action-btn view" title="Ver detalles">
-                    <i class="fas fa-eye"></i>
-                  </button>
-                  <button class="action-btn approve" title="Aprobar">
-                    <i class="fas fa-check"></i>
-                  </button>
-                  <button class="action-btn reject" title="Rechazar">
-                    <i class="fas fa-times"></i>
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-
-          <!-- Paginación -->
-          <div class="pagination">
-            <div class="pagination-info">Mostrando 1-5 de 27 papeletas</div>
-            <div class="pagination-controls">
-              <button class="page-btn">Anterior</button>
-              <button class="page-btn active">1</button>
-              <button class="page-btn">2</button>
-              <button class="page-btn">3</button>
-              <button class="page-btn">...</button>
-              <button class="page-btn">6</button>
-              <button class="page-btn">Siguiente</button>
-            </div>
-          </div>
+          <PermisosView
+            :data="permissions"
+            :loading="loading"
+            @view="handleView"
+            @approve="handleApprove"
+            @reject="handleReject"
+          />
         </div>
       </div>
     </div>
   </div>
   <ModalPerm v-model:visible="showModal" @save="handleSavePapeleta" />
+  <ModalFirmaOnpe
+    v-model:visible="showFirmaModal"
+    :permiso="selectedPermiso"
+    @signed="handleSigned"
+  />
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import ModalPerm from "@/components/Modals/ModalPerm.vue";
+import ModalFirmaOnpe from "@/components/Modals/ModalFirmaOnpe.vue";
+import PermisosView from "@/components/tables/PermisosView.vue";
 import { permissionService } from "@/api/services/permission.service";
 import type { Permiso } from "@/api/types/permissions.types";
+import Swal from "sweetalert2";
 
 const router = useRouter();
 const showModal = ref(false);
+const showFirmaModal = ref(false);
+const selectedPermiso = ref<Permiso | null>(null);
 const permissions = ref<Permiso[]>([]);
 const loading = ref(false);
+
+// Estadísticas Computadas
+const pendientesCount = computed(() => {
+  return permissions.value.filter((p) =>
+    p.estado?.nombre?.toLowerCase().includes("pend")
+  ).length;
+});
+
+const aprobadasHoyCount = computed(() => {
+  const hoy = new Date().toISOString().split("T")[0];
+  return permissions.value.filter((p) => {
+    const isAprobada = p.estado?.nombre?.toLowerCase().includes("aprob");
+    // Usamos fecha_hora_inicio como referencia para la fecha
+    const fechaPermiso = p.fecha_hora_inicio
+      ? new Date(p.fecha_hora_inicio).toISOString().split("T")[0]
+      : "";
+    return isAprobada && fechaPermiso === hoy;
+  }).length;
+});
+
+const rechazadasCount = computed(() => {
+  return permissions.value.filter((p) =>
+    p.estado?.nombre?.toLowerCase().includes("rechaz")
+  ).length;
+});
+
+const comisionesCount = computed(() => {
+  return permissions.value.filter((p) =>
+    p.tipo_permiso?.nombre?.toLowerCase().includes("comisi")
+  ).length;
+});
 
 const loadPermissions = async () => {
   try {
@@ -298,33 +229,43 @@ const handleSavePapeleta = () => {
   loadPermissions();
 };
 
-const formatDate = (dateString: string) => {
-  if (!dateString) return "-";
-  // Format: 10:30 AM (Time only as per current table design, or Date + Time)
-  // The table columns are Hora Salida / Hora Regreso.
-  // Assuming we want time.
-  const date = new Date(dateString);
-  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+const handleView = async (permiso: Permiso) => {
+  try {
+    loading.value = true;
+    // Usar endpoint para ver PDF existente sin regenerar
+    const response = await permissionService.verPDF(permiso.id);
+
+    // Crear URL del Blob
+    const blob = new Blob([response.data], { type: "application/pdf" });
+    const url = window.URL.createObjectURL(blob);
+
+    // Abrir en nueva pestaña
+    window.open(url, "_blank");
+  } catch (error) {
+    console.error("Error al visualizar PDF:", error);
+    Swal.fire({
+      icon: "warning",
+      title: "Documento no disponible",
+      text: "El documento PDF no se encuentra disponible. Asegúrese de que se haya generado correctamente.",
+    });
+  } finally {
+    loading.value = false;
+  }
 };
 
-const getStatusClass = (status: string | undefined) => {
-  // Map backend status to CSS class
-  // unique IDs are backend generated, need to map names or IDs
-  // For now assuming status object or code
-  // The Permiso type has `estado?: { nombre: string }`
-  // Let's use a safe fallback
-  return "status-pendiente"; // Default
+const handleApprove = (permiso: Permiso) => {
+  console.log("Iniciando flujo de firma digital para:", permiso);
+  selectedPermiso.value = permiso;
+  showFirmaModal.value = true;
 };
 
-const getStatusLabel = (status: any) => {
-  return status?.nombre || "Pendiente";
+const handleSigned = () => {
+  console.log("Documento enviado a firma (simulado)");
+  loadPermissions(); // Recargar para actualizar estados si fuera el caso
 };
 
-const getTypeClass = (type: any) => {
-  const name = type?.nombre?.toLowerCase() || "";
-  if (name.includes("particular")) return "tipo-particular";
-  if (name.includes("comisi")) return "tipo-comision";
-  return "tipo-particular";
+const handleReject = (permiso: Permiso) => {
+  console.log("Rechazar permiso:", permiso);
 };
 
 onMounted(() => {
@@ -592,7 +533,7 @@ body {
   background-color: #f8f9fa;
 }
 
-/* Papeletas Table */
+/* Papeletas Table Container */
 .papeletas-container {
   background-color: white;
   border-radius: 8px;

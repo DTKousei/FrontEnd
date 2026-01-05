@@ -4,6 +4,9 @@ import DataTable from "primevue/datatable";
 import Column from "primevue/column";
 import Button from "primevue/button";
 import Tag from "primevue/tag";
+import InputText from "primevue/inputtext";
+import IconField from "primevue/iconfield";
+import InputIcon from "primevue/inputicon";
 import { userService } from "@/api/services/user.service";
 import type { Permiso } from "@/api/types/permissions.types";
 import type { BiometricUser } from "@/api/types/users.types";
@@ -17,6 +20,10 @@ const emit = defineEmits(["approve", "reject", "view"]);
 
 const usersMap = ref<Record<string, string>>({});
 const loadingUsers = ref(false);
+
+const filters = ref({
+  global: { value: null, matchMode: "contains" },
+});
 
 const loadUserNames = async () => {
   // Only load if we have permissions to look up
@@ -63,9 +70,11 @@ const formatDate = (dateString: string | undefined) => {
 
 const getStatusSeverity = (status: any) => {
   const name = status?.nombre?.toLowerCase() || "";
-  if (name.includes("aprob")) return "success";
-  if (name.includes("rechaz")) return "danger";
-  if (name.includes("pend")) return "warning";
+
+  if (!name || name.includes("pendiente")) return "warning";
+  if (name.includes("rechazado")) return "danger";
+  if (name.includes("aprobado")) return "success";
+
   return "info";
 };
 
@@ -81,14 +90,41 @@ onMounted(() => {
 <template>
   <div class="card">
     <DataTable
+      v-model:filters="filters"
       :value="displayData"
       :loading="loading"
       stripedRows
+      paginator
+      :rows="5"
+      :rowsPerPageOptions="[5, 10, 20, 50]"
+      :globalFilterFields="[
+        'empleado_nombre',
+        'empleado_id',
+        'tipo_permiso.nombre',
+        'motivo',
+        'estado.nombre',
+      ]"
       tableStyle="min-width: 50rem"
     >
+      <template #header>
+        <div
+          class="flex flex-wrap gap-3 align-items-center justify-content-between"
+        >
+          <IconField>
+            <InputIcon>
+              <i class="pi pi-search" />
+            </InputIcon>
+            <InputText
+              v-model="filters['global'].value"
+              placeholder="Buscar por nombre, Tipo o Motivo..."
+              class="w-full sm:w-30rem"
+            />
+          </IconField>
+        </div>
+      </template>
       <template #empty>No hay papeletas registradas.</template>
 
-      <Column header="Empleado">
+      <Column header="Empleado" sortable field="empleado_nombre">
         <template #body="slotProps">
           <div class="flex flex-column">
             <span class="font-bold">{{ slotProps.data.empleado_nombre }}</span>
@@ -99,19 +135,19 @@ onMounted(() => {
         </template>
       </Column>
 
-      <Column header="Tipo">
+      <Column header="Tipo" sortable field="tipo_permiso.nombre">
         <template #body="slotProps">
           {{ slotProps.data.tipo_permiso?.nombre }}
         </template>
       </Column>
 
-      <Column header="Hora Salida">
+      <Column header="Hora Salida" sortable field="fecha_hora_inicio">
         <template #body="slotProps">
           {{ formatDate(slotProps.data.fecha_hora_inicio) }}
         </template>
       </Column>
 
-      <Column header="Hora Retorno">
+      <Column header="Hora Retorno" sortable field="fecha_hora_fin">
         <template #body="slotProps">
           {{ formatDate(slotProps.data.fecha_hora_fin) }}
         </template>
@@ -119,7 +155,7 @@ onMounted(() => {
 
       <Column field="motivo" header="Motivo" style="width: 20%"></Column>
 
-      <Column header="Estado">
+      <Column header="Estado" sortable field="estado.nombre">
         <template #body="slotProps">
           <Tag
             :value="getStatusLabel(slotProps.data.estado)"

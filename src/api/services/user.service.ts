@@ -31,7 +31,7 @@ export const userService = {
 
   // Actualizar usuario existente (PUT /api/usuarios/{id})
   update(id: number, data: UpdateUserData) {
-    return api.put<BiometricUser>(`/usuarios/${id}/`, data);
+    return api.put<BiometricUser>(`/usuarios/${id}`, data);
   },
 
   // Eliminar usuario (DELETE /api/usuarios/{id})

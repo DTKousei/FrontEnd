@@ -1,3 +1,4 @@
+<script setup lang="ts">
 import { ref, onMounted, computed } from "vue";
 import Dialog from "primevue/dialog";
 import Dropdown from "primevue/dropdown";
@@ -39,7 +40,7 @@ const form = ref({
 const loadEmployees = async () => {
   try {
     loadingEmployees.value = true;
-    
+
     // 1. Obtener todos los empleados
     const usersResponse = await userService.getAll();
     const extractData = (res: any) => {
@@ -52,32 +53,45 @@ const loadEmployees = async () => {
     const allEmployees = extractData(usersResponse.data || usersResponse);
 
     // 2. Obtener asistencias de hoy para filtrar
-    const today = new Date().toISOString().split('T')[0];
-    const attendanceResponse = await attendanceService.getDailyReport({ 
-        fecha_inicio: today, 
-        fecha_fin: today 
+    const today = new Date().toISOString().split("T")[0];
+    const attendanceResponse = await attendanceService.getDailyReport({
+      fecha_inicio: today,
+      fecha_fin: today,
     });
-    
+
     // @ts-ignore
     const dailyAttendance = attendanceResponse.data || [];
-    
-    // Extraer IDs de empleados con asistencia (asumiendo que dailyAttendance tiene user_id o empleado_id)
-    // Ajustar según la estructura real de la respuesta de getDailyReport.
-    // Si getDailyReport devuelve un array de objetos con 'user_id' o similar:
-    const presentEmployeeIds = new Set(dailyAttendance.map((a: any) => String(a.user_id || a.empleado_id)));
+
+    // console.log("DEBUG: Daily Attendance Array:", dailyAttendance);
+
+    // Filter only employees present
+    const presentStatus = ["ASISTENCIA", "PRESENTE", "TARDANZA"];
+    const presentRecords = dailyAttendance.filter((record: any) => {
+      const status = record.estado_asistencia
+        ? record.estado_asistencia.toUpperCase()
+        : "";
+      return (
+        presentStatus.includes(status) ||
+        (record.entrada_real && record.entrada_real !== null)
+      );
+    });
+
+    // Extraer IDs de empleados con asistencia
+    const presentEmployeeIds = new Set(
+      presentRecords.map((a: any) => String(a.user_id || a.empleado_id))
+    );
 
     // 3. Filtrar empleados
-    employees.value = allEmployees.filter((emp: BiometricUser) => 
-        presentEmployeeIds.has(String(emp.user_id))
+    employees.value = allEmployees.filter((emp: BiometricUser) =>
+      presentEmployeeIds.has(String(emp.user_id))
     );
 
     if (employees.value.length === 0) {
-        console.warn("No hay empleados con asistencia registrada para hoy.");
+      console.warn("No hay empleados con asistencia registrada para hoy.");
     }
-
   } catch (error) {
     console.error("Error loading employees:", error);
-    // Fallback: mostrar todos si falla el filtro de asistencia? 
+    // Fallback: mostrar todos si falla el filtro de asistencia?
     // Por seguridad/rigurosidad, mejor dejar vacía o mostrar error, pero el usuario pidió explícitame filtro.
   } finally {
     loadingEmployees.value = false;
@@ -170,7 +184,22 @@ const handleSubmit = async () => {
 
     console.log("Enviando Payload:", payload);
 
-    await permissionService.createPermisoPersonal(payload);
+    const response = await permissionService.createPermisoPersonal(payload);
+
+    // Obtener ID del nuevo permiso
+    // @ts-ignore
+    const newPermiso = response.data?.data || response.data;
+
+    // Generar PDF automáticamente (para que se guarde en el servidor)
+    if (newPermiso && newPermiso.id) {
+      console.log("Generando PDF para el permiso:", newPermiso.id);
+      try {
+        await permissionService.generarPDF(newPermiso.id);
+      } catch (pdfError) {
+        console.error("Error generando PDF inicial:", pdfError);
+        // No bloqueamos el flujo de éxito si falla el PDF, pero lo logueamos
+      }
+    }
 
     Swal.fire({
       icon: "success",
