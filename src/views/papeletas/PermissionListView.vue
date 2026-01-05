@@ -188,14 +188,20 @@ const pendientesCount = computed(() => {
 });
 
 const aprobadasHoyCount = computed(() => {
-  const hoy = new Date().toISOString().split("T")[0];
+  const hoy = new Date();
   return permissions.value.filter((p) => {
     const isAprobada = p.estado?.nombre?.toLowerCase().includes("aprob");
-    // Usamos fecha_hora_inicio como referencia para la fecha
-    const fechaPermiso = p.fecha_hora_inicio
-      ? new Date(p.fecha_hora_inicio).toISOString().split("T")[0]
-      : "";
-    return isAprobada && fechaPermiso === hoy;
+
+    // Comparar usando fechas locales para evitar discrepancias de Zona Horaria (UTC)
+    if (!p.fecha_hora_inicio) return false;
+
+    const fechaPermiso = new Date(p.fecha_hora_inicio);
+    const esHoy =
+      fechaPermiso.getDate() === hoy.getDate() &&
+      fechaPermiso.getMonth() === hoy.getMonth() &&
+      fechaPermiso.getFullYear() === hoy.getFullYear();
+
+    return isAprobada && esHoy;
   }).length;
 });
 
@@ -264,8 +270,33 @@ const handleSigned = () => {
   loadPermissions(); // Recargar para actualizar estados si fuera el caso
 };
 
-const handleReject = (permiso: Permiso) => {
-  console.log("Rechazar permiso:", permiso);
+const handleReject = async (permiso: Permiso) => {
+  try {
+    const result = await Swal.fire({
+      title: "¿Rechazar Papeleta?",
+      text: "Esta acción cambiará el estado a RECHAZADO. ¿Desea continuar?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Sí, Rechazar",
+      cancelButtonText: "Cancelar",
+      confirmButtonColor: "#d33",
+    });
+
+    if (result.isConfirmed) {
+      loading.value = true;
+
+      // Usar nuevo endpoint para cambiar estado por código
+      await permissionService.cambiarEstado(permiso.id, "RECHAZADO");
+
+      Swal.fire("Rechazado", "La papeleta ha sido rechazada.", "success");
+      loadPermissions();
+    }
+  } catch (error) {
+    console.error("Error al rechazar:", error);
+    Swal.fire("Error", "No se pudo rechazar la papeleta.", "error");
+  } finally {
+    loading.value = false;
+  }
 };
 
 onMounted(() => {

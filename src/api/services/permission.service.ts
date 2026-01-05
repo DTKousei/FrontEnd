@@ -165,6 +165,15 @@ export const permissionService = {
     return api.delete<{ success: boolean; message: string }>(`/permisos/${id}`);
   },
 
+  /**
+   * Cambiar estado del permiso por código (ej: RECHAZADO, APROBADO)
+   */
+  cambiarEstado(id: string, codigoEstado: string) {
+    return api.patch<PermisoResponse>(`/permisos/${id}/estado`, {
+      codigo_estado: codigoEstado,
+    });
+  },
+
   // ==============================
   // ENDPOINTS - FIRMAS TRADICIONALES
   // ==============================

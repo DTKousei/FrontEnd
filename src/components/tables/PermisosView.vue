@@ -68,10 +68,21 @@ const formatDate = (dateString: string | undefined) => {
   return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 };
 
+const formatFecha = (dateString: string | undefined) => {
+  if (!dateString) return "-";
+  // Format: dd/mm/yyyy
+  const date = new Date(dateString);
+  return date.toLocaleDateString("es-PE", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+};
+
 const getStatusSeverity = (status: any) => {
   const name = status?.nombre?.toLowerCase() || "";
 
-  if (!name || name.includes("pendiente")) return "warning";
+  if (!name || name.includes("pendiente")) return "warn";
   if (name.includes("rechazado")) return "danger";
   if (name.includes("aprobado")) return "success";
 
@@ -150,6 +161,12 @@ onMounted(() => {
       <Column header="Hora Retorno" sortable field="fecha_hora_fin">
         <template #body="slotProps">
           {{ formatDate(slotProps.data.fecha_hora_fin) }}
+        </template>
+      </Column>
+
+      <Column header="Fecha Creación" sortable field="creado_en">
+        <template #body="slotProps">
+          {{ formatFecha(slotProps.data.creado_en) }}
         </template>
       </Column>
 
