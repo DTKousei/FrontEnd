@@ -2,10 +2,12 @@
 import { ref, computed } from "vue";
 import Dialog from "primevue/dialog";
 import Button from "primevue/button";
+import FileUpload from "primevue/fileupload";
+import Image from "primevue/image";
 import RadioButton from "primevue/radiobutton";
 import { permissionService } from "@/api/services/permission.service";
 import Swal from "sweetalert2";
-import type { Permiso } from "@/api/types/permissions.types";
+import type { Permiso, TipoFirma } from "@/api/types/permissions.types";
 
 const props = defineProps<{
   visible: boolean;
@@ -16,6 +18,7 @@ const emit = defineEmits(["update:visible", "signed"]);
 
 const selectedRole = ref<string>("solicitante");
 const loading = ref(false);
+const signatureImage = ref<string | null>(null);
 
 const roles = [
   { label: "Solicitante", value: "solicitante" },
@@ -28,156 +31,70 @@ const visibleModel = computed({
   set: (val) => emit("update:visible", val),
 });
 
-const handleSign = async () => {
-  if (!props.permiso) return;
+const handleFileSelect = async (event: any) => {
+  const file = event.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      signatureImage.value = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  }
+};
+
+const handleClearImage = () => {
+  signatureImage.value = null;
+};
+
+const handleSaveSignature = async () => {
+  if (!props.permiso || !signatureImage.value) {
+    Swal.fire("Error", "Debe seleccionar una imagen de firma", "warning");
+    return;
+  }
 
   try {
     loading.value = true;
 
-    // 1. Obtener Base URL.
-    // Nota: En producción, esto debería venir de variables de entorno.
-    // Usamos la misma base que la API de papeletas.
-    const baseUrl = "http://localhost:3002";
+    // Preparar payload Base64
+    // IMPORTANTE: Muchos backends fallan con el prefijo "data:image/...".
+    // Enviamos solo la cadena Base64 pura.
+    const rawBase64 = signatureImage.value.includes(",")
+      ? signatureImage.value.split(",")[1]
+      : signatureImage.value;
 
-    // 2. Definir URLs para ReFirma
-    // downloadUrl: Endpoint que devuelve el PDF original (binary)
-    const downloadUrl = `${baseUrl}/api/permisos/${props.permiso.id}/pdf`;
-
-    // uploadUrl: Endpoint POST donde ReFirma subirá el PDF firmado automáticamente
-    const uploadUrl = `${baseUrl}/api/permisos/callback`;
-
-    // 3. Construir Parámetros ReFirma
-    const params = {
-      app: "pdf",
-      clientId: "CLIENT_ID_DUMMY", // Configurar en producción
-      clientSecret: "CLIENT_SECRET_DUMMY", // Configurar en producción
-      idFile: `papeleta_${props.permiso.id}`,
-      type: "W", // Web Download & Upload
-      protocol: "T", // HTTP (usar 'S' para HTTPS en prod)
-      fileDownloadUrl: downloadUrl,
-      fileUploadUrl: uploadUrl,
-      reason: "Soy el autor del documento / Doy mi conformidad",
-      pageNumber: 0, // 0 = última página? O usar coordenadas específicas
-      posx: 100,
-      posy: 100,
-      outputFile: `papeleta_firmada_${props.permiso.id}.pdf`,
+    const payload = {
+      tipo_firma: selectedRole.value as TipoFirma,
+      firma: rawBase64,
     };
 
-    // 4. Codificar a Base64
-    const jsonParams = JSON.stringify(params);
-    const base64Params = btoa(jsonParams);
-
-    // 5. Invocar Protocolo
-    const refirmaUrl = `refirma://${base64Params}`;
-    console.log("Invocando ReFirma con:", refirmaUrl);
-
-    // Abrir ReFirma
-    window.location.href = refirmaUrl;
-
-    // 6. Iniciar Polling (Esperar respuesta del servidor)
-    startPolling(props.permiso.id);
+    // Llamar al endpoint /firmar (PATCH)
+    await permissionService.firmarPermiso(props.permiso.id, payload);
 
     Swal.fire({
-      title: "Esperando Firma...",
-      text: "La aplicación ReFirma se ha ejecutado. Por favor firme el documento. El sistema detectará automáticamente cuando termine.",
-      icon: "info",
-      showConfirmButton: false,
-      allowOutsideClick: false,
-      didOpen: () => {
-        Swal.showLoading();
-      },
+      icon: "success",
+      title: "Firmado Exitosamente",
+      text: "La firma se ha guardado correctamente.",
+      timer: 2000,
     });
+
+    emit("signed");
+    visibleModel.value = false;
+    signatureImage.value = null; // Reset
   } catch (error) {
-    console.error("Error al iniciar proceso de firma:", error);
+    console.error("Error al guardar firma:", error);
     Swal.fire({
       icon: "error",
       title: "Error",
-      text: "No se pudo iniciar el proceso de firma.",
+      text: "No se pudo guardar la firma. Verifique la conexión.",
     });
+  } finally {
     loading.value = false;
   }
 };
 
-const pollingInterval = ref<number | null>(null);
-
-const startPolling = (permisoId: string) => {
-  // Limpiar intervalo anterior si existe
-  if (pollingInterval.value) clearInterval(pollingInterval.value);
-
-  let attempts = 0;
-  const maxAttempts = 60; // 3 minutos aprox (60 * 3s)
-
-  pollingInterval.value = window.setInterval(async () => {
-    attempts++;
-    try {
-      const response = await permissionService.getPermisoById(permisoId);
-      // La respuesta es PermisoResponse, y el objeto Permiso está en .data.data
-      const permisoData = response.data.data;
-
-      if (!permisoData) return;
-
-      // Verificar si ya fue firmado según el rol seleccionado
-      let yaFirmado = false;
-      const role = selectedRole.value;
-
-      if (role === "solicitante") {
-        yaFirmado =
-          !!permisoData.firma_solicitante_digital ||
-          !!permisoData.firma_solicitante;
-      } else if (role === "jefe_area") {
-        yaFirmado =
-          !!permisoData.firma_jefe_area_digital ||
-          !!permisoData.firma_jefe_area;
-      } else if (role === "rrhh") {
-        yaFirmado =
-          !!permisoData.firma_rrhh_digital || !!permisoData.firma_rrhh;
-      }
-
-      // Alternativamente, verificar si el estado cambió a algo que implique firma completa,
-      // pero es mejor ser específico con el rol actual.
-      // Si el backend marca firmas_completas:
-      if (response.data.firmas_completas) {
-        yaFirmado = true;
-      }
-
-      if (yaFirmado) {
-        stopPolling();
-        Swal.fire({
-          icon: "success",
-          title: "Firma Detectada",
-          text: "El documento ha sido firmado exitosamente.",
-          timer: 2000,
-        });
-        emit("signed");
-        visibleModel.value = false;
-      }
-    } catch (err) {
-      console.warn("Error poll status:", err);
-    }
-
-    if (attempts >= maxAttempts) {
-      stopPolling();
-      Swal.fire({
-        icon: "warning",
-        title: "Tiempo de espera agotado",
-        text: "No detectamos la firma automáticamente. Si ya firmó, por favor actualice la página.",
-        showConfirmButton: true,
-      });
-      loading.value = false;
-    }
-  }, 3000); // Cada 3 segundos
-};
-
-const stopPolling = () => {
-  if (pollingInterval.value) {
-    clearInterval(pollingInterval.value);
-    pollingInterval.value = null;
-  }
-  loading.value = false;
-};
-
 const handleCancel = () => {
   visibleModel.value = false;
+  signatureImage.value = null;
 };
 </script>
 
@@ -185,26 +102,63 @@ const handleCancel = () => {
   <Dialog
     v-model:visible="visibleModel"
     modal
-    header="Firma Digital ONPE"
-    :style="{ width: '400px' }"
+    header="Firma Digital (Cargar Imagen)"
+    :style="{ width: '500px' }"
     class="p-fluid"
   >
     <div class="flex flex-column gap-4 py-4">
+      <!-- Selección de Rol -->
       <div class="font-bold text-center mb-2">
         Seleccione el rol con el que desea firmar:
       </div>
+      <div class="flex justify-content-center gap-3 mb-3">
+        <div
+          v-for="role in roles"
+          :key="role.value"
+          class="field-checkbox flex align-items-center gap-2"
+        >
+          <RadioButton
+            v-model="selectedRole"
+            :inputId="role.value"
+            :value="role.value"
+          />
+          <label :for="role.value" class="cursor-pointer">{{
+            role.label
+          }}</label>
+        </div>
+      </div>
 
-      <div
-        v-for="role in roles"
-        :key="role.value"
-        class="field-checkbox flex align-items-center gap-2"
-      >
-        <RadioButton
-          v-model="selectedRole"
-          :inputId="role.value"
-          :value="role.value"
-        />
-        <label :for="role.value" class="cursor-pointer">{{ role.label }}</label>
+      <!-- Carga de Imagen -->
+      <div class="flex flex-column align-items-center gap-3">
+        <div v-if="!signatureImage" class="w-full">
+          <FileUpload
+            mode="basic"
+            name="firma"
+            accept="image/*"
+            :maxFileSize="1000000"
+            @select="handleFileSelect"
+            chooseLabel="Seleccionar Imagen de Firma"
+            class="w-full"
+            :auto="true"
+          />
+          <small class="text-gray-500 block text-center mt-2">
+            Formatos: PNG, JPG (Máx 1MB)
+          </small>
+        </div>
+
+        <div
+          v-else
+          class="flex flex-column align-items-center gap-2 border-1 surface-border border-round p-3 w-full"
+        >
+          <span class="font-bold text-primary">Vista Previa:</span>
+          <Image :src="signatureImage" alt="Firma" width="250" preview />
+          <Button
+            label="Cambiar Imagen"
+            icon="pi pi-refresh"
+            class="p-button-text p-button-sm mt-2"
+            @click="handleClearImage"
+          />
+        </div>
       </div>
     </div>
 
@@ -218,11 +172,12 @@ const handleCancel = () => {
           outlined
         />
         <Button
-          label="Abrir en ONPE"
-          icon="pi pi-external-link"
+          label="Guardar Firma"
+          icon="pi pi-check"
           severity="primary"
-          @click="handleSign"
+          @click="handleSaveSignature"
           :loading="loading"
+          :disabled="!signatureImage"
         />
       </div>
     </template>
