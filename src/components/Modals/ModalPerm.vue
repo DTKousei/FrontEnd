@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from "vue";
 import Dialog from "primevue/dialog";
-import Dropdown from "primevue/dropdown";
-import Calendar from "primevue/calendar";
+import Select from "primevue/select";
+import DatePicker from "primevue/datepicker";
 import Textarea from "primevue/textarea";
 import Button from "primevue/button";
 import Swal from "sweetalert2";
@@ -262,7 +262,7 @@ onMounted(() => {
         <label class="font-bold block mb-2"
           >Empleado <span class="text-red-500">*</span></label
         >
-        <Dropdown
+        <Select
           v-model="form.empleado_id"
           :options="employees"
           optionLabel="nombre"
@@ -278,14 +278,14 @@ onMounted(() => {
               <span>{{ slotProps.option.nombre }}</span>
             </div>
           </template>
-        </Dropdown>
+        </Select>
       </div>
 
       <div class="field col-12 md:col-6">
         <label class="font-bold block mb-2"
           >Tipo de Papeleta <span class="text-red-500">*</span></label
         >
-        <Dropdown
+        <Select
           v-model="form.tipo_papeleta"
           :options="papeletaTypes"
           optionLabel="label"
@@ -300,11 +300,10 @@ onMounted(() => {
         <label class="font-bold block mb-2"
           >Fecha <span class="text-red-500">*</span></label
         >
-        <Calendar
+        <DatePicker
           v-model="form.fecha"
           dateFormat="dd/mm/yy"
           showIcon
-          iconDisplay="input"
           class="w-full"
           disabled
         />
@@ -314,11 +313,10 @@ onMounted(() => {
         <label class="font-bold block mb-2"
           >Hora Salida <span class="text-red-500">*</span></label
         >
-        <Calendar
+        <DatePicker
           v-model="form.hora_salida"
           timeOnly
           showIcon
-          iconDisplay="input"
           placeholder="00:00"
           class="w-full"
         />
@@ -328,11 +326,10 @@ onMounted(() => {
         <label class="font-bold block mb-2"
           >Hora Retorno <span class="text-red-500">*</span></label
         >
-        <Calendar
+        <DatePicker
           v-model="form.hora_retorno"
           timeOnly
           showIcon
-          iconDisplay="input"
           placeholder="00:00"
           class="w-full"
         />

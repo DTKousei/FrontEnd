@@ -59,23 +59,11 @@
             alt="Usuario"
           />
           <div>
-            <div class="user-name">Admin User</div>
+            <div class="user-name">{{ currentUser }}</div>
             <div class="user-role">Administrador</div>
             <div>
               <button @click="logout" class="logout-btn" title="Cerrar Sesión">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke-width="1.5"
-                  stroke="currentColor"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75"
-                  />
-                </svg>
+                <i class="fas fa-sign-out-alt"></i>
               </button>
             </div>
           </div>
@@ -84,242 +72,619 @@
 
       <!-- Page Content -->
       <div class="page-content">
-        <div class="page-title">
-          <h1>Registro de Incidencias</h1>
-          <button class="btn btn-primary" id="nueva-incidencia-btn">
-            <i class="fas fa-plus"></i> Nueva Incidencia
-          </button>
+        <div class="flex justify-content-between align-items-center mb-4">
+          <h1 class="text-3xl font-bold text-blue-800 m-0">
+            Gestión de Incidencias
+          </h1>
+          <Button
+            label="Nuevo Tipo de Incidencia"
+            icon="pi pi-plus"
+            severity="secondary"
+            @click="showModalType = true"
+            outlined
+          />
         </div>
 
-        <!-- Formulario de Registro -->
-        <div class="form-container" id="form-incidencia">
-          <h2 style="margin-bottom: 20px; color: var(--primary)">
-            Registrar Nueva Incidencia
-          </h2>
-
-          <form id="incidencia-form">
-            <div class="form-row">
-              <div class="form-group">
-                <label for="empleado">Empleado *</label>
-                <select id="empleado" required>
-                  <option value="">Seleccionar empleado</option>
-                  <option value="1">Juan Pérez - Administración</option>
-                  <option value="2">María García - Recursos Humanos</option>
-                  <option value="3">Carlos López - Contabilidad</option>
-                  <option value="4">Ana Rodríguez - Logística</option>
-                  <option value="5">Luis Martínez - Sistemas</option>
-                </select>
+        <!-- Estadísticas -->
+        <div class="grid mb-4">
+          <div class="col-12 md:col-3">
+            <div
+              class="card mb-0 flex align-items-center justify-content-between p-3 border-round shadow-1 bg-white"
+            >
+              <div>
+                <span class="block text-blue-600 font-medium mb-1">Total</span>
+                <div class="text-900 font-medium text-xl">
+                  {{ computedStats.total }}
+                </div>
               </div>
-
-              <div class="form-group">
-                <label for="tipo-incidencia">Tipo de Incidencia *</label>
-                <select id="tipo-incidencia" required>
-                  <option value="">Seleccionar tipo</option>
-                  <option value="tardanza">Tardanza</option>
-                  <option value="inasistencia">Inasistencia</option>
-                  <option value="permiso">Permiso</option>
-                  <option value="licencia">Licencia</option>
-                  <option value="comision">Comisión de Servicio</option>
-                  <option value="vacaciones">Vacaciones</option>
-                  <option value="otros">Otros</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="form-row">
-              <div class="form-group">
-                <label for="fecha-inicio">Fecha de Inicio *</label>
-                <input type="date" id="fecha-inicio" required />
-              </div>
-
-              <div class="form-group">
-                <label for="fecha-fin">Fecha de Fin</label>
-                <input type="date" id="fecha-fin" />
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label for="descripcion">Descripción *</label>
-              <textarea
-                id="descripcion"
-                placeholder="Describa los detalles de la incidencia..."
-                required
-              ></textarea>
-            </div>
-
-            <div class="form-group">
-              <label for="evidencia">Evidencia (Opcional)</label>
-              <input type="file" id="evidencia" />
-              <small style="color: #7f8c8d; font-size: 0.8rem"
-                >Formatos permitidos: PDF, JPG, PNG (Máx. 5MB)</small
+              <div
+                class="flex align-items-center justify-content-center bg-blue-200 border-round"
+                style="width: 2.5rem; height: 2.5rem"
               >
-            </div>
-
-            <div class="form-actions">
-              <button type="button" class="btn btn-secondary" id="cancelar-btn">
-                Cancelar
-              </button>
-              <button type="submit" class="btn btn-primary">
-                Registrar Incidencia
-              </button>
-            </div>
-          </form>
-        </div>
-
-        <!-- Lista de Incidencias -->
-        <div class="incidencias-container">
-          <div class="table-header">
-            <h2 style="color: var(--primary)">Historial de Incidencias</h2>
-            <div class="search-box">
-              <input type="text" placeholder="Buscar incidencia..." />
-              <button class="btn btn-secondary">
-                <i class="fas fa-filter"></i> Filtrar
-              </button>
+                <i class="pi pi-list text-blue-600 text-xl"></i>
+              </div>
             </div>
           </div>
-
-          <table>
-            <thead>
-              <tr>
-                <th>Empleado</th>
-                <th>Tipo</th>
-                <th>Fecha Inicio</th>
-                <th>Fecha Fin</th>
-                <th>Estado</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>Juan Pérez</td>
-                <td>Tardanza</td>
-                <td>15/05/2023</td>
-                <td>15/05/2023</td>
-                <td><span class="status status-pendiente">Pendiente</span></td>
-                <td class="actions">
-                  <button class="action-btn" title="Editar">
-                    <i class="fas fa-edit"></i>
-                  </button>
-                  <button class="action-btn" title="Ver detalles">
-                    <i class="fas fa-eye"></i>
-                  </button>
-                  <button class="action-btn delete" title="Eliminar">
-                    <i class="fas fa-trash"></i>
-                  </button>
-                </td>
-              </tr>
-              <tr>
-                <td>María García</td>
-                <td>Permiso</td>
-                <td>14/05/2023</td>
-                <td>14/05/2023</td>
-                <td><span class="status status-aprobado">Aprobado</span></td>
-                <td class="actions">
-                  <button class="action-btn" title="Editar">
-                    <i class="fas fa-edit"></i>
-                  </button>
-                  <button class="action-btn" title="Ver detalles">
-                    <i class="fas fa-eye"></i>
-                  </button>
-                  <button class="action-btn delete" title="Eliminar">
-                    <i class="fas fa-trash"></i>
-                  </button>
-                </td>
-              </tr>
-              <tr>
-                <td>Carlos López</td>
-                <td>Vacaciones</td>
-                <td>10/05/2023</td>
-                <td>20/05/2023</td>
-                <td><span class="status status-aprobado">Aprobado</span></td>
-                <td class="actions">
-                  <button class="action-btn" title="Editar">
-                    <i class="fas fa-edit"></i>
-                  </button>
-                  <button class="action-btn" title="Ver detalles">
-                    <i class="fas fa-eye"></i>
-                  </button>
-                  <button class="action-btn delete" title="Eliminar">
-                    <i class="fas fa-trash"></i>
-                  </button>
-                </td>
-              </tr>
-              <tr>
-                <td>Ana Rodríguez</td>
-                <td>Licencia</td>
-                <td>01/05/2023</td>
-                <td>10/05/2023</td>
-                <td><span class="status status-rechazado">Rechazado</span></td>
-                <td class="actions">
-                  <button class="action-btn" title="Editar">
-                    <i class="fas fa-edit"></i>
-                  </button>
-                  <button class="action-btn" title="Ver detalles">
-                    <i class="fas fa-eye"></i>
-                  </button>
-                  <button class="action-btn delete" title="Eliminar">
-                    <i class="fas fa-trash"></i>
-                  </button>
-                </td>
-              </tr>
-              <tr>
-                <td>Luis Martínez</td>
-                <td>Comisión de Servicio</td>
-                <td>08/05/2023</td>
-                <td>12/05/2023</td>
-                <td><span class="status status-pendiente">Pendiente</span></td>
-                <td class="actions">
-                  <button class="action-btn" title="Editar">
-                    <i class="fas fa-edit"></i>
-                  </button>
-                  <button class="action-btn" title="Ver detalles">
-                    <i class="fas fa-eye"></i>
-                  </button>
-                  <button class="action-btn delete" title="Eliminar">
-                    <i class="fas fa-trash"></i>
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <div class="col-12 md:col-3">
+            <div
+              class="card mb-0 flex align-items-center justify-content-between p-3 border-round shadow-1 bg-white"
+            >
+              <div>
+                <span class="block text-orange-600 font-medium mb-1"
+                  >Pendientes</span
+                >
+                <div class="text-900 font-medium text-xl">
+                  {{ computedStats.pendientes }}
+                </div>
+              </div>
+              <div
+                class="flex align-items-center justify-content-center bg-orange-200 border-round"
+                style="width: 2.5rem; height: 2.5rem"
+              >
+                <i class="pi pi-clock text-orange-600 text-xl"></i>
+              </div>
+            </div>
+          </div>
+          <div class="col-12 md:col-3">
+            <div
+              class="card mb-0 flex align-items-center justify-content-between p-3 border-round shadow-1 bg-white"
+            >
+              <div>
+                <span class="block text-green-600 font-medium mb-1"
+                  >Aprobadas</span
+                >
+                <div class="text-900 font-medium text-xl">
+                  {{ computedStats.aprobadas }}
+                </div>
+              </div>
+              <div
+                class="flex align-items-center justify-content-center bg-green-200 border-round"
+                style="width: 2.5rem; height: 2.5rem"
+              >
+                <i class="pi pi-check-circle text-green-600 text-xl"></i>
+              </div>
+            </div>
+          </div>
+          <div class="col-12 md:col-3">
+            <div
+              class="card mb-0 flex align-items-center justify-content-between p-3 border-round shadow-1 bg-white"
+            >
+              <div>
+                <span class="block text-red-600 font-medium mb-1"
+                  >Rechazadas</span
+                >
+                <div class="text-900 font-medium text-xl">
+                  {{ computedStats.rechazadas }}
+                </div>
+              </div>
+              <div
+                class="flex align-items-center justify-content-center bg-red-200 border-round"
+                style="width: 2.5rem; height: 2.5rem"
+              >
+                <i class="pi pi-times-circle text-red-600 text-xl"></i>
+              </div>
+            </div>
+          </div>
         </div>
+
+        <!-- FORMULARIO DE CREACIÓN (Inline) -->
+        <div class="card mb-5 border-round incidencias-container">
+          <h3 class="mb-3 text-blue-800">
+            <i class="pi pi-plus-circle mr-2"></i>Registrar Nueva Incidencia
+          </h3>
+          <div class="formgrid grid">
+            <div class="field col-12 md:col-6 lg:col-4">
+              <label class="font-bold">Empleado</label>
+              <Select
+                v-model="form.empleado_id"
+                :options="employees"
+                optionLabel="nombre"
+                optionValue="id"
+                filter
+                placeholder="Seleccionar Empleado"
+                class="w-full"
+                :loading="loadingEmployees"
+              />
+            </div>
+            <div class="field col-12 md:col-6 lg:col-4">
+              <label class="font-bold">Tipo de Incidencia</label>
+              <Select
+                v-model="form.tipo_incidencia"
+                :options="incidentTypes"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Seleccionar Tipo"
+                class="w-full"
+                showClear
+              />
+            </div>
+            <div class="field col-12 md:col-6 lg:col-4">
+              <label class="font-bold">Estado Inicial</label>
+              <Select
+                v-model="form.estado_id"
+                :options="incidentStates"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Seleccionar Estado"
+                class="w-full"
+              />
+            </div>
+            <div class="field col-12 md:col-6 lg:col-3">
+              <label class="font-bold">Fecha Inicio</label>
+              <DatePicker
+                v-model="form.fecha_inicio"
+                dateFormat="dd/mm/yy"
+                showIcon
+                class="w-full"
+              />
+            </div>
+            <div class="field col-12 md:col-6 lg:col-3">
+              <label class="font-bold">Fecha Fin</label>
+              <DatePicker
+                v-model="form.fecha_fin"
+                dateFormat="dd/mm/yy"
+                showIcon
+                class="w-full"
+              />
+            </div>
+
+            <div class="field col-12">
+              <label class="font-bold">Descripción / Motivo</label>
+              <Textarea
+                v-model="form.descripcion"
+                rows="2"
+                class="w-full"
+                placeholder="Detalle la incidencia..."
+              />
+            </div>
+
+            <div class="field col-12 lg:col-6">
+              <label class="font-bold">Adjuntar Evidencia</label>
+              <FileUpload
+                mode="basic"
+                name="documento"
+                accept="image/*,application/pdf"
+                :maxFileSize="5000000"
+                @select="handleFileUpload"
+                chooseLabel="Seleccionar Archivo"
+                class="bg-blue-700"
+              />
+            </div>
+          </div>
+          <div class="flex justify-content-end">
+            <Button
+              label="Guardar Incidencia"
+              icon="pi pi-check"
+              @click="handleSubmit"
+              :loading="loadingSubmit"
+            />
+          </div>
+        </div>
+
+        <!-- Lista de Incidencias (Componente Tabla) -->
+        <h2 class="mb-3 text-blue-800 font-bold">Historial de Incidencias</h2>
+        <IncidenciaView
+          :data="incidencias"
+          :loading="loading"
+          @approve="handleApprove"
+          @reject="handleReject"
+          @delete="handleDelete"
+          @view="handleView"
+        />
       </div>
     </div>
   </div>
+
+  <ModalTipoIncidencia v-model:visible="showModalType" @save="loadMetadata" />
+  <ModalIncidencia
+    v-model="showModalDetail"
+    :incidencia="selectedIncidencia"
+    @approve="handleApprove"
+    @reject="handleReject"
+  />
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
+import Button from "primevue/button";
+import Select from "primevue/select";
+import DatePicker from "primevue/datepicker";
+import Textarea from "primevue/textarea";
+import FileUpload from "primevue/fileupload";
+import Swal from "sweetalert2";
+
+import ModalTipoIncidencia from "@/components/Modals/ModalTipoIncidencia.vue"; // Para Tipos
+import ModalIncidencia from "@/components/Modals/ModalIncidencia.vue"; // Para Detalle
+import IncidenciaView from "@/components/tables/IncidenciaView.vue";
+import { incidentService } from "@/api/services/incident.service";
+import { userService } from "@/api/services/user.service";
+import type { BiometricUser } from "@/api/types/users.types";
 
 const router = useRouter();
 
+// Estado de la aplicación
+const showModalType = ref(false); // Controla la visibilidad del modal para crear tipos de incidencia
+const showModalDetail = ref(false); // Controla la visibilidad del modal de detalle
+const selectedIncidencia = ref<any>(null); // Almacena la incidencia seleccionada para ver detalles
+const loading = ref(false); // Indicador de carga general (tabla)
+const loadingSubmit = ref(false); // Indicador de carga al enviar formularios
+const loadingEmployees = ref(false); // Indicador de carga de empleados
+
+/**
+ * Obtiene el nombre del usuario actual desde el almacenamiento local.
+ * Se utiliza para registrar quién realiza acciones como aprobar.
+ */
+const getCurrentUser = () => {
+  try {
+    const userStr = localStorage.getItem("user");
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      return user.nombre || user.nombres || "Administrador";
+    }
+  } catch (e) {
+    console.error("Error leyendo usuario", e);
+  }
+  return "Administrador";
+};
+
+const currentUser = ref(getCurrentUser());
+
+// Datos reactivos
+const incidencias = ref<any[]>([]); // Lista principal de incidencias
+const employees = ref<BiometricUser[]>([]); // Lista de empleados para el selector
+const incidentTypes = ref<{ label: string; value: string }[]>([]); // Tipos de incidencia para el selector
+const incidentStates = ref<{ label: string; value: string }[]>([]); // Estados posibles para el selector
+const userMap = ref<Record<string, string>>({}); // Mapa para acceso rápido a nombres de empleados por ID
+
+// Estado del Formulario de Creación
+const form = ref({
+  empleado_id: null as number | null,
+  tipo_incidencia: null as string | null,
+  fecha_inicio: null as Date | null,
+  fecha_fin: null as Date | null,
+  descripcion: "",
+  estado_id: null as string | null,
+  documento: null as File | null,
+});
+
+// --- CARGA DE DATOS ---
+
+/**
+ * Carga la lista de todos los empleados desde el servicio de usuarios.
+ * Crea un mapa (userMap) para mostrar nombres rápidamente en la tabla.
+ */
+const loadUsers = async () => {
+  try {
+    loadingEmployees.value = true;
+    const res = await userService.getAll();
+    // @ts-ignore
+    const users = res.data?.data || res.data || [];
+    employees.value = users;
+
+    // Crear mapa para nombres en la tabla
+    users.forEach((u: any) => {
+      if (u.user_id) userMap.value[String(u.user_id)] = u.nombre || "";
+    });
+  } catch (e) {
+    console.error("Error cargando usuarios", e);
+  } finally {
+    loadingEmployees.value = false;
+  }
+};
+
+/**
+ * Carga metadatos necesarios: Tipos de Incidencia y Estados.
+ * Se ejecuta al montar el componente.
+ */
+const loadMetadata = async () => {
+  try {
+    // Cargar Tipos de Incidencia Activos
+    const typesRes = await incidentService.getAllTiposIncidencia({
+      esta_activo: true,
+    });
+    // @ts-ignore
+    const types = typesRes.data?.data || typesRes.data || [];
+    incidentTypes.value = types.map((t: any) => ({
+      label: t.nombre,
+      value: t.id,
+    }));
+
+    // Cargar Estados
+    const statesRes = await incidentService.getAllEstados();
+    // @ts-ignore
+    const states = statesRes.data?.data || statesRes.data || [];
+    incidentStates.value = states.map((s: any) => ({
+      label: s.nombre,
+      value: s.id,
+    }));
+
+    // Establecer estado por defecto 'Pendiente' en el formulario
+    const pending = states.find((s: any) =>
+      s.nombre.toLowerCase().includes("pendiente")
+    );
+    if (pending) form.value.estado_id = pending.id;
+  } catch (e) {
+    console.error("Error cargando metadatos", e);
+  }
+};
+
+/**
+ * Carga el historial completo de incidencias.
+ * Mapea los IDs de empleados a sus nombres usando `userMap`.
+ */
+const loadIncidencias = async () => {
+  try {
+    loading.value = true;
+    const response = await incidentService.getAllIncidencias();
+    // @ts-ignore
+    const data = response.data?.data || response.data || [];
+    incidencias.value = data.map((inc: any) => ({
+      ...inc,
+      // Resolver nombre del empleado
+      empleado_nombre: userMap.value[inc.empleado_id] || inc.empleado_id,
+    }));
+  } catch (error) {
+    console.error("Error cargando incidencias", error);
+  } finally {
+    loading.value = false;
+  }
+};
+
+// --- ESTADÍSTICAS COMPUTADAS ---
+
+/**
+ * Calcula estadísticas en tiempo real basadas en la lista de incidencias cargada.
+ * Retorna contadores para: Total, Pendientes, Aprobadas y Rechazadas.
+ */
+const computedStats = computed(() => {
+  const total = incidencias.value.length;
+  const pendientes = incidencias.value.filter((i) =>
+    i.estado?.nombre?.toLowerCase().includes("pendiente")
+  ).length;
+  const aprobadas = incidencias.value.filter((i) =>
+    i.estado?.nombre?.toLowerCase().includes("aprobado")
+  ).length;
+  const rechazadas = incidencias.value.filter((i) =>
+    i.estado?.nombre?.toLowerCase().includes("rechazado")
+  ).length;
+  return { total, pendientes, aprobadas, rechazadas };
+});
+
+// --- ACCIONES DEL FORMULARIO ---
+
+/**
+ * Maneja la selección de archivos en el componente FileUpload.
+ * Almacena el archivo seleccionado en el estado del formulario.
+ */
+const handleFileUpload = (event: any) => {
+  form.value.documento = event.files[0];
+};
+
+/**
+ * Envía el formulario para crear una nueva incidencia.
+ * Realiza validaciones, formateo de fechas y llama al servicio.
+ */
+const handleSubmit = async () => {
+  // Validación de campos obligatorios
+  if (
+    !form.value.empleado_id ||
+    !form.value.tipo_incidencia ||
+    !form.value.fecha_inicio ||
+    !form.value.descripcion
+  ) {
+    Swal.fire("Incompleto", "Complete los campos obligatorios", "warning");
+    return;
+  }
+
+  try {
+    loadingSubmit.value = true;
+
+    // Obtener DNI del empleado seleccionado
+    const employee = employees.value.find(
+      (e) => e.id === form.value.empleado_id
+    );
+    const dni = employee?.user_id ? String(employee.user_id) : null;
+    if (!dni) throw new Error("Empleado sin DNI");
+
+    // Función auxiliar para formatear fecha a YYYY-MM-DD local
+    const formatDate = (d: Date) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+
+    // Construir payload para el API
+    const payload = {
+      empleado_id: dni,
+      tipo_incidencia_id: form.value.tipo_incidencia!,
+      fecha_inicio: formatDate(form.value.fecha_inicio!),
+      fecha_fin: form.value.fecha_fin
+        ? formatDate(form.value.fecha_fin)
+        : formatDate(form.value.fecha_inicio!), // Si no hay fin, es el mismo día
+      descripcion: form.value.descripcion,
+      estado_id: form.value.estado_id || "",
+      documento: form.value.documento || undefined,
+    };
+
+    // @ts-ignore
+    await incidentService.createIncidencia(payload);
+    Swal.fire("Registrado", "Incidencia creada existosamente", "success");
+
+    // Limpiar formulario y recargar lista
+    resetForm();
+    await loadIncidencias();
+  } catch (e) {
+    console.error(e);
+    Swal.fire("Error", "No se pudo crear la incidencia", "error");
+  } finally {
+    loadingSubmit.value = false;
+  }
+};
+
+/**
+ * Reinicia el formulario a su estado inicial.
+ */
+const resetForm = () => {
+  form.value.empleado_id = null;
+  form.value.tipo_incidencia = null;
+  form.value.fecha_inicio = null;
+  form.value.fecha_fin = null;
+  form.value.descripcion = "";
+  form.value.documento = null;
+
+  // Restablecer estado 'Pendiente' por defecto
+  const pending = incidentStates.value.find((s: any) =>
+    s.label.toLowerCase().includes("pendiente")
+  );
+  if (pending) form.value.estado_id = pending.value;
+};
+
+// --- ACCIONES DE LA TABLA ---
+
+/**
+ * Maneja la aprobación de una incidencia.
+ * Solicita confirmación y registra el nombre del usuario logueado.
+ */
+const handleApprove = async (data: any) => {
+  try {
+    const result = await Swal.fire({
+      title: "¿Aprobar?",
+      text: "La incidencia cambiará a estado Aprobado.",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Sí, Aprobar",
+    });
+
+    if (result.isConfirmed) {
+      loading.value = true;
+      const aprobadoPor = getCurrentUser();
+
+      // 1. Registrar quién aprobó
+      await incidentService.aprobarIncidencia(data.id, {
+        aprobado_por: aprobadoPor,
+      });
+
+      // 2. Actualizar el estado a 'Aprobado' explícitamente
+      const approvedState = incidentStates.value.find((s) =>
+        s.label.toLowerCase().includes("aprob")
+      );
+      if (approvedState) {
+        await incidentService.updateIncidencia(data.id, {
+          estado_id: approvedState.value,
+        });
+      }
+
+      Swal.fire("Aprobado", `Aprobado por: ${aprobadoPor}`, "success");
+      await loadIncidencias();
+    }
+  } catch (e) {
+    console.error(e);
+    Swal.fire("Error", "Falló la aprobación", "error");
+  } finally {
+    loading.value = false;
+  }
+};
+
+/**
+ * Maneja el rechazo de una incidencia.
+ * Solicita un motivo de rechazo obligatorio.
+ */
+const handleReject = async (data: any) => {
+  try {
+    const { value: motivo } = await Swal.fire({
+      title: "Rechazar",
+      input: "textarea",
+      inputLabel: "Motivo del rechazo",
+      showCancelButton: true,
+      confirmButtonText: "Rechazar",
+      inputValidator: (v) => (!v ? "Debe escribir un motivo" : null),
+    });
+
+    if (motivo) {
+      loading.value = true;
+
+      // 1. Registrar el motivo de rechazo
+      await incidentService.rechazarIncidencia(data.id, {
+        motivo_rechazo: motivo,
+      });
+
+      // 2. Actualizar el estado a 'Rechazado' explícitamente
+      const rejectedState = incidentStates.value.find((s) =>
+        s.label.toLowerCase().includes("rechaz")
+      );
+      if (rejectedState) {
+        await incidentService.updateIncidencia(data.id, {
+          estado_id: rejectedState.value,
+        });
+      }
+
+      Swal.fire("Rechazado", "La incidencia ha sido rechazada.", "success");
+      await loadIncidencias();
+    }
+  } catch (e) {
+    console.error(e);
+    Swal.fire("Error", "Falló el rechazo", "error");
+  } finally {
+    loading.value = false;
+  }
+};
+
+/**
+ * Maneja la eliminación física de una incidencia.
+ * Acción irreversible.
+ */
+const handleDelete = async (data: any) => {
+  try {
+    const result = await Swal.fire({
+      title: "¿Eliminar?",
+      text: "Esta acción no se puede deshacer.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      confirmButtonText: "Eliminar",
+    });
+
+    if (result.isConfirmed) {
+      loading.value = true;
+      await incidentService.deleteIncidencia(data.id);
+      Swal.fire("Eliminado", "La incidencia ha sido eliminada.", "success");
+      await loadIncidencias();
+    }
+  } catch (e) {
+    Swal.fire("Error", "Falló la eliminación", "error");
+  } finally {
+    loading.value = false;
+  }
+};
+
+/**
+ * Abre el modal de detalle para visualizar la incidencia seleccionada.
+ */
+const handleView = (data: any) => {
+  selectedIncidencia.value = data;
+  showModalDetail.value = true;
+};
+
+// Cerrar sesión
 const logout = () => {
   localStorage.removeItem("token");
   router.push({ name: "Login" });
 };
+
+// Inicialización
+onMounted(async () => {
+  await loadUsers();
+  await loadMetadata();
+  await loadIncidencias();
+});
 </script>
 
-<style>
+<style scoped>
 :root {
   --primary: #2c5aa0;
   --secondary: #3498db;
-  --success: #27ae60;
-  --warning: #f39c12;
-  --danger: #e74c3c;
-  --light: #ecf0f1;
-  --dark: #34495e;
-}
-
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-}
-
-body {
-  background-color: #f5f7fa;
-  color: #333;
 }
 
 .container {
@@ -327,7 +692,7 @@ body {
   min-height: 100vh;
 }
 
-/* Sidebar */
+/* Sidebar (Common Layout) */
 .sidebar {
   width: 250px;
   background-color: var(--primary);
@@ -341,36 +706,20 @@ body {
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.logo h2 {
-  font-size: 1.5rem;
-}
-
-.nav-links {
-  padding: 20px 0;
-}
-
-.nav-links li {
-  list-style: none;
-}
-
 .nav-links a {
   display: flex;
   align-items: center;
   padding: 15px 20px;
   color: white;
   text-decoration: none;
-  transition: all 0.3s;
 }
-
 .nav-links a:hover,
 .nav-links a.active {
   background-color: rgba(255, 255, 255, 0.1);
   border-left: 4px solid var(--secondary);
 }
-
 .nav-links i {
   margin-right: 10px;
-  font-size: 1.2rem;
 }
 
 /* Main Content */
@@ -378,9 +727,9 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
+  background-color: #f5f7fa;
 }
 
-/* Header */
 .header {
   background-color: white;
   padding: 15px 30px;
@@ -393,237 +742,29 @@ body {
 .user-info {
   display: flex;
   align-items: center;
+  gap: 10px;
 }
-
 .user-info img {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  margin-right: 10px;
 }
 
-/* Page Content */
 .page-content {
   padding: 30px;
-  flex: 1;
 }
-
-.page-title {
-  margin-bottom: 20px;
-  color: var(--primary);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-/* Form Styles */
-.form-container {
-  background-color: white;
-  border-radius: 8px;
-  padding: 25px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-  margin-bottom: 30px;
-}
-
-.form-group {
-  margin-bottom: 20px;
-}
-
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-}
-
-label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 600;
-  color: var(--dark);
-}
-
-input,
-select,
-textarea {
-  width: 100%;
-  padding: 12px 15px;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  font-size: 1rem;
-  transition: border 0.3s;
-}
-
-input:focus,
-select:focus,
-textarea:focus {
-  outline: none;
-  border-color: var(--secondary);
-}
-
-textarea {
-  resize: vertical;
-  min-height: 100px;
-}
-
-.btn {
-  padding: 12px 25px;
+.logout-btn {
+  background: none;
   border: none;
-  border-radius: 5px;
   cursor: pointer;
-  font-size: 1rem;
-  font-weight: 600;
-  transition: all 0.3s;
+  font-size: 1.2rem;
+  color: #7f8c8d;
 }
 
-.btn-primary {
-  background-color: var(--secondary);
-  color: white;
-}
-
-.btn-primary:hover {
-  background-color: #2980b9;
-}
-
-.btn-secondary {
-  background-color: #95a5a6;
-  color: white;
-}
-
-.btn-secondary:hover {
-  background-color: #7f8c8d;
-}
-
-.form-actions {
-  display: flex;
-  gap: 15px;
-  justify-content: flex-end;
-  margin-top: 25px;
-}
-
-/* Incidencias List */
 .incidencias-container {
   background-color: white;
   border-radius: 8px;
   padding: 25px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-}
-
-.table-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.search-box {
-  display: flex;
-  gap: 10px;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-th,
-td {
-  padding: 12px 15px;
-  text-align: left;
-  border-bottom: 1px solid #eee;
-}
-
-th {
-  background-color: #f8f9fa;
-  font-weight: 600;
-  color: var(--dark);
-}
-
-.status {
-  padding: 5px 10px;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: 600;
-}
-
-.status-pendiente {
-  background-color: #fff8e1;
-  color: var(--warning);
-}
-
-.status-aprobado {
-  background-color: #e8f5e9;
-  color: var(--success);
-}
-
-.status-rechazado {
-  background-color: #ffebee;
-  color: var(--danger);
-}
-
-.actions {
-  display: flex;
-  gap: 10px;
-}
-
-.action-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 1rem;
-  color: var(--secondary);
-  transition: color 0.3s;
-}
-
-.action-btn:hover {
-  color: #2980b9;
-}
-
-.action-btn.delete {
-  color: var(--danger);
-}
-
-.action-btn.delete:hover {
-  color: #c0392b;
-}
-
-/* Responsive */
-@media (max-width: 992px) {
-  .form-row {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 768px) {
-  .container {
-    flex-direction: column;
-  }
-
-  .sidebar {
-    width: 100%;
-    height: auto;
-  }
-
-  .nav-links {
-    display: flex;
-    overflow-x: auto;
-  }
-
-  .nav-links li {
-    flex: 0 0 auto;
-  }
-
-  .nav-links a {
-    padding: 15px;
-  }
-
-  .table-header {
-    flex-direction: column;
-    gap: 15px;
-    align-items: flex-start;
-  }
-
-  .search-box {
-    width: 100%;
-  }
 }
 </style>

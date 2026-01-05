@@ -127,6 +127,16 @@ export const incidentService = {
     return api.get<{ data: Incidencia }>(`/incidencias/${id}`);
   },
 
+
+  /**
+   * Obtener el documento de una incidencia (Blob)
+   */
+  getIncidenciaDocumento(id: string) {
+    return api.get(`/incidencias/${id}/documento`, {
+      responseType: 'blob',
+    });
+  },
+
   /**
    * Crear una nueva incidencia con archivo PDF
    */

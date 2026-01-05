@@ -140,54 +140,22 @@
               </select>
             </div>
           </div>
+          <!-- tabla de usuarios -->
+          <!-- Tabla de Selección de Usuarios -->
+          <div class="mb-4">
+            <ReportPerView
+              :users="users"
+              v-model:selection="selectedUsers"
+              :loading="loadingUsers"
+            />
 
-          <div>
-            <table id="myTable" class="display">
-              <thead>
-                <tr>
-                  <th>DNI</th>
-                  <th>Nombres</th>
-                  <th>Apellidos</th>
-                  <th>Area</th>
-                  <th>Cargo</th>
-                  <th>selecciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>12345678</td>
-                  <td>Marcelino</td>
-                  <td>Leon Oscco</td>
-                  <td>Direccion</td>
-                  <td>Director</td>
-                  <td><input type="checkbox" name="1" id="1" /></td>
-                </tr>
-                <tr>
-                  <td>87654321</td>
-                  <td>Renan</td>
-                  <td>Raminrez</td>
-                  <td>Administracion</td>
-                  <td>Adinistrador</td>
-                  <td><input type="checkbox" name="2" id="1" /></td>
-                </tr>
-                <tr>
-                  <td>11223344</td>
-                  <td>Adolfo</td>
-                  <td>Zulca</td>
-                  <td>Administracion</td>
-                  <td>Abastecimiento</td>
-                  <td><input type="checkbox" name="3" id="1" /></td>
-                </tr>
-                <tr>
-                  <td>44332211</td>
-                  <td>Vito</td>
-                  <td>Vilches</td>
-                  <td>administracion</td>
-                  <td>jefe de personal</td>
-                  <td><input type="checkbox" name="4" id="1" /></td>
-                </tr>
-              </tbody>
-            </table>
+            <div
+              class="mt-2 text-sm text-gray-600"
+              v-if="selectedUsers.length > 0"
+            >
+              <strong>{{ selectedUsers.length }}</strong> usuarios
+              seleccionados.
+            </div>
           </div>
 
           <div class="filter-actions">
@@ -476,14 +444,40 @@
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
+import ReportPerView from "@/components/tables/ReportPerView.vue";
+import { userService } from "@/api/services/user.service";
+import type { BiometricUser } from "@/api/types/users.types";
 
 const router = useRouter();
+
+// State for User Selection Table
+const users = ref<BiometricUser[]>([]);
+const selectedUsers = ref<BiometricUser[]>([]);
+const loadingUsers = ref(false);
+
+const loadUsers = async () => {
+  try {
+    loadingUsers.value = true;
+    const response = await userService.getAll();
+    // @ts-ignore
+    users.value = response.data?.data || response.data || [];
+  } catch (error) {
+    console.error("Error loading users for report:", error);
+  } finally {
+    loadingUsers.value = false;
+  }
+};
 
 const logout = () => {
   localStorage.removeItem("token");
   router.push({ name: "Login" });
 };
+
+onMounted(() => {
+  loadUsers();
+});
 </script>
 
 <style>
