@@ -1,7 +1,14 @@
 import { pythonReportApi } from '@/api/config';
-import type { ReportExportRequest } from '@/api/types/reports.types';
+import type { ReportExportRequest, AttendanceMetricsResponse } from '@/api/types/reports.types';
 
 export const reportService = {
+  // --- Metrics ---
+  getAttendanceMetrics(fecha_inicio: string, fecha_fin: string) {
+    return pythonReportApi.get<AttendanceMetricsResponse>('/asistencias/reporte', {
+      params: { fecha_inicio, fecha_fin }
+    });
+  },
+
   // --- Python Exports (Port 8001) ---
   exportPdf(data: ReportExportRequest) {
     return pythonReportApi.post('/reports/export/pdf', data, {

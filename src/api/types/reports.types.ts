@@ -5,6 +5,7 @@
 export interface ReportExportRequest {
   mes: string;
   anio: string;
+  area?: string;
   user_ids: string[];
 }
 
@@ -30,7 +31,25 @@ export interface GeneratedReport {
   usuario_id: number;
   fecha_generacion: string;
   filtros: any;
+  parametros?: any;
+  area?: string;
   archivo_path?: string;
   formato: string;
   estado: string; // 'COMPLETED', 'PENDING', 'FAILED'
+}
+
+// Response for GET /api/asistencias/reporte
+export interface AttendanceMetricsResponse {
+  rango: {
+    inicio: string;
+    fin: string;
+  };
+  totales: {
+    puntual: number;
+    tardanzas: number;
+    faltas: number;
+    horas_extras: number;
+  };
+  total_empleados: number;
+  data: any[];
 }

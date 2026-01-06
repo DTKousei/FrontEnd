@@ -12,11 +12,12 @@ const reports = ref<GeneratedReport[]>([]);
 const loading = ref(false);
 
 // Helper: Calcular Periodo (Mes Año)
-const getPeriodo = (filtros: any) => {
-  if (!filtros || !filtros.mes || !filtros.anio) return "-";
+const getPeriodo = (report: GeneratedReport) => {
+  const data = report.parametros || report.filtros;
+  if (!data || !data.mes || !data.anio) return "-";
 
-  const mes = parseInt(filtros.mes, 10);
-  const anio = filtros.anio;
+  const mes = parseInt(data.mes, 10);
+  const anio = data.anio;
 
   if (isNaN(mes) || mes < 1 || mes > 12) return "-";
 
@@ -111,7 +112,8 @@ const generateMissingFormat = async (
   targetFormat: "PDF" | "EXCEL"
 ) => {
   // Extract params from original report filters
-  const { mes, anio, user_ids } = report.filtros || {};
+  const data = report.parametros || report.filtros || {};
+  const { mes, anio, user_ids, area } = data;
 
   if (!mes || !anio || !user_ids) {
     Swal.fire(
@@ -122,7 +124,7 @@ const generateMissingFormat = async (
     return;
   }
 
-  const payload = { mes, anio, user_ids };
+  const payload = { mes, anio, user_ids, area };
 
   try {
     Swal.fire({
@@ -215,10 +217,19 @@ defineExpose({
         </template>
       </Column>
 
+      <!-- Columna Área -->
+      <Column header="Área" sortable field="area">
+        <template #body="{ data }">
+          <span class="font-medium">{{
+            data.parametros?.area || data.area || "-"
+          }}</span>
+        </template>
+      </Column>
+
       <!-- Columna Periodo -->
       <Column header="Periodo">
         <template #body="{ data }">
-          <span class="font-medium">{{ getPeriodo(data.filtros) }}</span>
+          <span class="font-medium">{{ getPeriodo(data) }}</span>
         </template>
       </Column>
 

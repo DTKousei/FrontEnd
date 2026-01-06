@@ -189,9 +189,9 @@
                 <i class="fas fa-user-check"></i>
               </div>
             </div>
-            <div class="metric-value">89.2%</div>
+            <div class="metric-value">{{ metrics.puntual }}</div>
             <div class="metric-change positive">
-              <i class="fas fa-arrow-up"></i> 2.1% vs mes anterior
+              <i class="fas fa-chart-line"></i> Total en rango
             </div>
           </div>
 
@@ -202,9 +202,9 @@
                 <i class="fas fa-clock"></i>
               </div>
             </div>
-            <div class="metric-value">42</div>
+            <div class="metric-value">{{ metrics.tardanzas }}</div>
             <div class="metric-change negative">
-              <i class="fas fa-arrow-up"></i> 8% vs mes anterior
+              <i class="fas fa-exclamation-circle"></i> Total en rango
             </div>
           </div>
 
@@ -215,9 +215,9 @@
                 <i class="fas fa-user-times"></i>
               </div>
             </div>
-            <div class="metric-value">18</div>
-            <div class="metric-change positive">
-              <i class="fas fa-arrow-down"></i> 12% vs mes anterior
+            <div class="metric-value">{{ metrics.faltas }}</div>
+            <div class="metric-change negative">
+              <i class="fas fa-user-slash"></i> Total en rango
             </div>
           </div>
 
@@ -228,9 +228,9 @@
                 <i class="fas fa-business-time"></i>
               </div>
             </div>
-            <div class="metric-value">156h</div>
+            <div class="metric-value">{{ metrics.horas_extras }}h</div>
             <div class="metric-change positive">
-              <i class="fas fa-arrow-up"></i> 15% vs mes anterior
+              <i class="fas fa-clock"></i> Total en rango
             </div>
           </div>
         </div>
@@ -239,27 +239,41 @@
         <div class="charts-container">
           <div class="chart-card">
             <div class="chart-header">
-              <div class="chart-title">Asistencia por Área - Octubre 2025</div>
-              <div class="chart-actions">
+              <div class="chart-title">Registros por Área</div>
+              <!-- <div class="chart-actions">
                 <button class="btn btn-outline">
                   <i class="fas fa-download"></i>
                 </button>
-              </div>
+              </div> -->
             </div>
-            <div class="chart-placeholder" id="chart2"></div>
+            <!-- Gráfico de Barras -->
+            <div class="chart-wrapper">
+              <VueApexCharts
+                type="bar"
+                height="300"
+                :options="barChartOptions"
+                :series="barChartSeries"
+              />
+            </div>
           </div>
 
           <div class="chart-card">
             <div class="chart-header">
-              <div class="chart-title">Distribución de Incidencias</div>
-              <div class="chart-actions">
+              <div class="chart-title">Distribución de Asistencia</div>
+              <!-- <div class="chart-actions">
                 <button class="btn btn-outline">
                   <i class="fas fa-download"></i>
                 </button>
-              </div>
+              </div> -->
             </div>
-            <div class="chart-placeholder">
-              Gráfico Circular - Tipos de Incidencias
+            <!-- Gráfico Circular -->
+            <div class="chart-wrapper">
+              <VueApexCharts
+                type="donut"
+                height="300"
+                :options="pieChartOptions"
+                :series="pieChartSeries"
+              />
             </div>
           </div>
         </div>
@@ -331,6 +345,7 @@
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import Swal from "sweetalert2";
+import VueApexCharts from "vue3-apexcharts";
 import ReportPerView from "@/components/tables/ReportPerView.vue";
 import ReportRegisView from "@/components/tables/ReportRegisView.vue";
 import { userService } from "@/api/services/user.service";
@@ -341,41 +356,102 @@ import type { Department } from "@/api/types/department.types";
 
 const router = useRouter();
 
-// References
+// Referencias
 const reportRegisRef = ref();
 
-// State for Data
-
-// State for Data
-const allUsers = ref<BiometricUser[]>([]); // Copy of all loaded users
-const users = ref<BiometricUser[]>([]); // Displayed users (filtered)
+// Estado para Datos
+const allUsers = ref<BiometricUser[]>([]); // Copia de todos los usuarios cargados
+const users = ref<BiometricUser[]>([]); // Usuarios mostrados (filtrados)
 const selectedUsers = ref<BiometricUser[]>([]);
 const loadingUsers = ref(false);
 const departments = ref<Department[]>([]);
 
-// State for Filters
+// Estado para Filtros
 const selectedArea = ref<string>("");
-const fechaDesde = ref<string>(new Date().toISOString().slice(0, 10)); // Default today
-const fechaHasta = ref<string>(new Date().toISOString().slice(0, 10)); // Default today
-// We extract Month/Year from 'fechaDesde' for the current report requirement
+const now = new Date();
+const y = now.getFullYear();
+const m = String(now.getMonth() + 1).padStart(2, "0");
+const lastDay = new Date(y, now.getMonth() + 1, 0).getDate();
+
+const fechaDesde = ref<string>(`${y}-${m}-01`);
+const fechaHasta = ref<string>(`${y}-${m}-${lastDay}`);
+
+// Estado para Métricas
+const metrics = ref({
+  puntual: 0,
+  tardanzas: 0,
+  faltas: 0,
+  horas_extras: 0,
+});
+
+// Estado para Gráficos
+const pieChartSeries = ref<number[]>([]);
+const pieChartOptions = ref({
+  chart: { type: "donut" },
+  labels: ["Puntual", "Tardanzas", "Faltas"],
+  colors: ["#27ae60", "#f39c12", "#e74c3c"],
+  legend: { position: "bottom" },
+  dataLabels: { enabled: true },
+  plotOptions: {
+    pie: {
+      donut: {
+        size: "65%",
+        labels: {
+          show: true,
+          total: {
+            show: true,
+            label: "Total",
+            formatter: function (w: any) {
+              return w.globals.seriesTotals.reduce(
+                (a: any, b: any) => a + b,
+                0
+              );
+            },
+          },
+        },
+      },
+    },
+  },
+});
+
+const barChartSeries = ref<any[]>([]);
+const barChartOptions = ref({
+  chart: { type: "bar", toolbar: { show: false } },
+  plotOptions: {
+    bar: { horizontal: false, columnWidth: "55%", borderRadius: 4 },
+  },
+  dataLabels: { enabled: false },
+  stroke: { show: true, width: 2, colors: ["transparent"] },
+  xaxis: { categories: [] as string[] },
+  yaxis: { title: { text: "Registros" } },
+  fill: { opacity: 1 },
+  colors: ["#3498db"],
+  tooltip: {
+    y: {
+      formatter: function (val: any) {
+        return val + " registros";
+      },
+    },
+  },
+});
 
 const loadTableData = async () => {
   try {
     loadingUsers.value = true;
 
-    // Fetch users and departments
+    // Obtener usuarios y departamentos en paralelo
     const [usersResponse, deptsResponse] = await Promise.all([
       userService.getAll(),
       DepartmentService.getAll(),
     ]);
 
-    console.log("Users Response:", usersResponse);
-    console.log("Depts Response:", deptsResponse);
+    console.log("Respuesta Usuarios:", usersResponse);
+    console.log("Respuesta Deptos:", deptsResponse);
 
-    // Process Departments
+    // Procesar Departamentos
     // @ts-ignore
     const deptsData = deptsResponse.data?.data || deptsResponse.data || [];
-    console.log("Parsed Depts Data:", deptsData);
+    console.log("Datos Deptos Parseados:", deptsData);
 
     if (Array.isArray(deptsData)) {
       departments.value = deptsData;
@@ -384,7 +460,7 @@ const loadTableData = async () => {
     const deptsMap = new Map<number, string>();
     departments.value.forEach((d) => deptsMap.set(d.id, d.nombre));
 
-    // Process Users
+    // Procesar Usuarios
     // @ts-ignore
     const rawUsers = usersResponse.data?.data || usersResponse.data || [];
 
@@ -392,12 +468,12 @@ const loadTableData = async () => {
       let deptName = "-";
       let deptId = user.departamento_id;
 
-      // Try to get from existing object
+      // Intentar obtener del objeto existente
       if (typeof user.departamento === "object" && user.departamento?.nombre) {
         deptName = user.departamento.nombre;
         if (!deptId) deptId = user.departamento.id;
       }
-      // Try to get from ID using the map
+      // Intentar obtener del ID usando el mapa de departamentos
       else if (user.departamento_id) {
         deptName = deptsMap.get(user.departamento_id) || "Sin Asignar";
       }
@@ -405,12 +481,12 @@ const loadTableData = async () => {
       return {
         ...user,
         departamento: deptName,
-        departamento_id: deptId, // Ensure ID is preserved for filtering
+        departamento_id: deptId,
       };
     });
 
     allUsers.value = enrichedUsers;
-    users.value = enrichedUsers; // Initially show all
+    users.value = enrichedUsers; // Inicialmente mostrar todos
   } catch (error) {
     console.error("Error loading users for report:", error);
     Swal.fire("Error", "No se pudieron cargar los datos.", "error");
@@ -422,11 +498,10 @@ const loadTableData = async () => {
 const applyFilters = () => {
   loadingUsers.value = true;
 
-  // Filter by Area
+  // Filtrar por Área
   let filtered = [...allUsers.value];
 
   if (selectedArea.value) {
-    // selectedArea value will be the department ID as string
     const areaId = Number(selectedArea.value);
     filtered = filtered.filter((u) => u.departamento_id === areaId);
   }
@@ -434,11 +509,79 @@ const applyFilters = () => {
   users.value = filtered;
   loadingUsers.value = false;
 
-  // Optional: Reset selection if needed, or keep it. Keeping it is usually better UX.
+  // Actualizar métricas cuando cambian los filtros
+  fetchMetrics();
+
+  Swal.fire({
+    icon: "success",
+    title: "Filtros aplicados correctamente",
+    showConfirmButton: false,
+    timer: 1500,
+  });
+};
+
+const fetchMetrics = async () => {
+  try {
+    const response = await reportService.getAttendanceMetrics(
+      fechaDesde.value,
+      fechaHasta.value
+    );
+    // @ts-ignore
+    const data = response.data?.totales || response.data || {};
+    // @ts-ignore
+    const rawData = response.data?.data || [];
+
+    // 1. Métricas Principales
+    metrics.value = {
+      puntual: data.puntual || 0,
+      tardanzas: data.tardanzas || 0,
+      faltas: data.faltas || 0,
+      horas_extras: data.horas_extras || 0,
+    };
+
+    // 2. Gráfico Circular (Donut) - Distribución General
+    pieChartSeries.value = [
+      metrics.value.puntual,
+      metrics.value.tardanzas,
+      metrics.value.faltas,
+    ];
+
+    // 3. Gráfico de Barras - Asistencia por Área
+    const deptCounts: Record<string, number> = {};
+
+    rawData.forEach((record: any) => {
+      let deptName = "Otros";
+      if (record.departamento) {
+        deptName = record.departamento;
+      } else if (record.area) {
+        deptName = record.area;
+      }
+
+      if (!deptCounts[deptName]) deptCounts[deptName] = 0;
+      deptCounts[deptName]++;
+    });
+
+    const categories = Object.keys(deptCounts);
+    const seriesData = Object.values(deptCounts);
+
+    // Actualizar gráfico de barras
+    barChartOptions.value = {
+      ...barChartOptions.value,
+      xaxis: { categories: categories },
+    };
+    barChartSeries.value = [
+      {
+        name: "Registros",
+        data: seriesData,
+      },
+    ];
+  } catch (error) {
+    console.error("Error obteniendo métricas:", error);
+  }
 };
 
 const handleGenerateReport = async () => {
-  // 1. Validation
+  // 1. Validación
   if (selectedUsers.value.length === 0) {
     Swal.fire({
       icon: "warning",
@@ -448,7 +591,7 @@ const handleGenerateReport = async () => {
     return;
   }
 
-  // 2. Format Selection
+  // 2. Selección de Formato
   const result = await Swal.fire({
     title: "Generar Reporte",
     text: "Selecciona el formato de exportación para los usuarios seleccionados.",
@@ -458,8 +601,8 @@ const handleGenerateReport = async () => {
     confirmButtonText: '<i class="fas fa-file-pdf"></i> PDF',
     denyButtonText: '<i class="fas fa-file-excel"></i> Excel',
     cancelButtonText: "Cancelar",
-    confirmButtonColor: "#e74c3c", // Red for PDF
-    denyButtonColor: "#27ae60", // Green for Excel
+    confirmButtonColor: "#e74c3c", // Rojo para PDF
+    denyButtonColor: "#27ae60", // Verde para Excel
   });
 
   if (result.isDismissed) return;
@@ -469,17 +612,62 @@ const handleGenerateReport = async () => {
 
   if (!isPdf && !isExcel) return;
 
-  // 3. Prepare Payload
-  // Extract month/year from date picker (fechaDesde)
-  const dateObj = new Date(fechaDesde.value);
-  // getMonth() is 0-indexed, so +1. PadStart to ensure "05".
-  const mes = String(dateObj.getMonth() + 1).padStart(2, "0");
-  const anio = String(dateObj.getFullYear());
+  // 3. Preparar Datos (Payload)
+  const [y, m] = fechaDesde.value.split("-");
+  const mes = m;
+  const anio = y;
+
+  // Obtener Nombre del Área
+  let areaName = "Todas las áreas";
+
+  if (selectedArea.value) {
+    // Filtro explícito seleccionado
+    const areaId = Number(selectedArea.value);
+    const areaObj = departments.value.find((d) => d.id === areaId);
+    if (areaObj) areaName = areaObj.nombre;
+  } else if (selectedUsers.value.length > 0) {
+    // Sin filtro explícito, inferir de los usuarios seleccionados
+    const uniqueDepts = new Set<string>();
+
+    selectedUsers.value.forEach((u) => {
+      let dName = "";
+      if (
+        typeof u.departamento === "object" &&
+        (u.departamento as any).nombre
+      ) {
+        dName = (u.departamento as any).nombre;
+      } else if (u.departamento) {
+        dName = String(u.departamento);
+      }
+
+      if (dName && dName !== "-" && dName !== "Sin Asignar") {
+        uniqueDepts.add(dName);
+      }
+    });
+
+    if (uniqueDepts.size === 1) {
+      // Solo una área implicada
+      areaName = Array.from(uniqueDepts)[0];
+    } else if (uniqueDepts.size > 1) {
+      // Múltiples áreas: generar abreviaturas
+      const abbrevs = Array.from(uniqueDepts).map((name) => {
+        const cleaned = name.trim();
+        // Tomar las primeras 3 letras y capitalizar
+        if (cleaned.length <= 3) return cleaned;
+        return (
+          cleaned.substring(0, 3).charAt(0).toUpperCase() +
+          cleaned.substring(1, 3).toLowerCase()
+        );
+      });
+      areaName = abbrevs.join("/");
+    }
+  }
 
   const payload = {
     mes,
     anio,
-    user_ids: selectedUsers.value.map((u) => u.user_id), // using DNI string
+    area: areaName,
+    user_ids: selectedUsers.value.map((u) => u.user_id), // usando DNI string
   };
 
   try {
@@ -490,31 +678,23 @@ const handleGenerateReport = async () => {
       didOpen: () => Swal.showLoading(),
     });
 
-    let response;
-    let fileName = `Reporte_${anio}_${mes}`;
-
+    // Mantenemos la llamada a la API pero ignoramos la respuesta blob para la descarga
     if (isPdf) {
-      response = await reportService.exportPdf(payload);
-      fileName += ".pdf";
+      await reportService.exportPdf(payload);
     } else {
-      response = await reportService.exportExcel(payload);
-      fileName += ".xlsx";
+      await reportService.exportExcel(payload);
     }
 
-    // 4. Download File
-    // @ts-ignore
-    const blob = new Blob([response.data], {
-      type: isPdf
-        ? "application/pdf"
-        : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    });
-    const link = document.createElement("a");
-    link.href = window.URL.createObjectURL(blob);
-    link.download = fileName;
-    link.click();
-    window.URL.revokeObjectURL(link.href);
+    // 4. Actualizar Historial en lugar de descargar
+    if (reportRegisRef.value) {
+      reportRegisRef.value.loadReports();
+    }
 
-    Swal.fire("Éxito", "El reporte se ha descargado correctamente.", "success");
+    Swal.fire(
+      "Éxito",
+      "Reporte generado correctamente. Revise la tabla de historial.",
+      "success"
+    );
   } catch (error) {
     console.error("Error generating report:", error);
     Swal.fire("Error", "Hubo un problema al generar el reporte.", "error");
@@ -528,6 +708,7 @@ const logout = () => {
 
 onMounted(() => {
   loadTableData();
+  fetchMetrics();
 });
 </script>
 
