@@ -1,28 +1,36 @@
-export interface PlantillaReporte {
+// ============================================
+// INTERFACES DE DATOS - REPORTES (PYTHON)
+// ============================================
+
+export interface ReportExportRequest {
+  mes: string;
+  anio: string;
+  user_ids: string[];
+}
+
+export interface ReportType {
   id: number;
   nombre: string;
-  tipo: string;
-  descripcion?: string;
-  configuracion_json: string; // JSON string with columns, filters logic
+  descripcion: string;
+  activo: boolean;
+  code?: string; // Optional code for frontend mapping
+  created_at?: string;
+}
+
+export interface ReportTypeCreate {
+  nombre: string;
+  descripcion: string;
   activo: boolean;
 }
 
-export interface ReporteGenerado {
+export interface GeneratedReport {
   id: number;
-  nombre: string;
-  tipo: string;
+  report_type_id?: number; // Optional if not linked
+  report_type_name?: string; // Backend likely returns the name too
+  usuario_id: number;
   fecha_generacion: string;
-  generado_por_id: number;
-  url_archivo: string;
-  formato: 'pdf' | 'excel' | 'csv';
-  parametros_usados?: string;
-}
-
-export interface GenerateReportDto {
-  plantilla_id?: number;
-  tipo_reporte: string;
-  fecha_inicio: string;
-  fecha_fin: string;
-  usuarios_ids?: number[];
-  formato: 'pdf' | 'excel';
+  filtros: any;
+  archivo_path?: string;
+  formato: string;
+  estado: string; // 'COMPLETED', 'PENDING', 'FAILED'
 }

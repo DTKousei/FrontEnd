@@ -7,11 +7,12 @@ const AUTH_API_URL = 'http://localhost:3001/api';      // Módulo 1
 const BIOMETRIC_API_URL = '/api-biometrico';           // Módulo 2 (Proxied to 8000)
 const PAPELETA_API_URL = 'http://localhost:3002/api';  // Módulo 3
 export const INCIDENT_API_URL = 'http://localhost:3003/api';  // Módulo 4
-const REPORT_API_URL = 'http://localhost:3004/api';    // Módulo 5
+const PYTHON_REPORT_API_URL = 'http://localhost:8001/api'; // Módulo 6 (Python)
 
 // Create instances
 export const authApi = createApi(AUTH_API_URL);
 export const biometricApi = createApi(BIOMETRIC_API_URL);
 export const papeletaApi = createApi(PAPELETA_API_URL);
 export const incidentApi = createApi(INCIDENT_API_URL);
-export const reportApi = createApi(REPORT_API_URL);
+// reportApi removed (Node module deprecated)
+export const pythonReportApi = createApi(PYTHON_REPORT_API_URL);

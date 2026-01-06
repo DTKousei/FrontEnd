@@ -86,7 +86,11 @@
       <div class="page-content">
         <div class="page-title">
           <h1>Reportes e Informes</h1>
-          <button class="btn btn-success" id="generar-reporte-btn">
+          <button
+            class="btn btn-success"
+            id="generar-reporte-btn"
+            @click="handleGenerateReport"
+          >
             <i class="fas fa-plus"></i> Generar Reporte
           </button>
         </div>
@@ -108,23 +112,25 @@
 
             <div class="filter-group">
               <label for="fecha-desde">Desde</label>
-              <input type="date" id="fecha-desde" value="2025-05-01" />
+              <input type="date" id="fecha-desde" v-model="fechaDesde" />
             </div>
 
             <div class="filter-group">
               <label for="fecha-hasta">Hasta</label>
-              <input type="date" id="fecha-hasta" value="2025-05-31" />
+              <input type="date" id="fecha-hasta" v-model="fechaHasta" />
             </div>
 
             <div class="filter-group">
               <label for="area">Área</label>
-              <select id="area">
+              <select id="area" v-model="selectedArea">
                 <option value="">Todas las áreas</option>
-                <option value="administracion">Administración</option>
-                <option value="rrhh">Recursos Humanos</option>
-                <option value="contabilidad">Contabilidad</option>
-                <option value="logistica">Logística</option>
-                <option value="sistemas">Sistemas</option>
+                <option
+                  v-for="dept in departments"
+                  :key="dept.id"
+                  :value="dept.id"
+                >
+                  {{ dept.nombre }}
+                </option>
               </select>
             </div>
 
@@ -159,10 +165,16 @@
           </div>
 
           <div class="filter-actions">
-            <button class="btn btn-outline">
+            <button
+              class="btn btn-outline"
+              @click="
+                selectedArea = '';
+                applyFilters();
+              "
+            >
               <i class="fas fa-redo"></i> Restablecer
             </button>
-            <button class="btn btn-primary">
+            <button class="btn btn-primary" @click="applyFilters">
               <i class="fas fa-filter"></i> Aplicar Filtros
             </button>
           </div>
@@ -308,135 +320,7 @@
 
         <!-- Historial de Reportes Generados -->
         <div class="reports-table-container">
-          <div class="chart-header">
-            <div class="chart-title">Reportes Generados Recientemente</div>
-            <button class="btn btn-outline" id="exportar-todo">
-              <i class="fas fa-file-export"></i> Exportar Todo
-            </button>
-          </div>
-
-          <table>
-            <thead>
-              <tr>
-                <th>Nombre del Reporte</th>
-                <th>Tipo</th>
-                <th>Período</th>
-                <th>Generado</th>
-                <th>Estado</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>
-                  <div class="report-type">
-                    <div class="type-icon monthly">
-                      <i class="fas fa-calendar"></i>
-                    </div>
-                    <div>
-                      <div>Asistencia Octubre 2025</div>
-                      <small>Completo</small>
-                    </div>
-                  </div>
-                </td>
-                <td>Mensual</td>
-                <td>01/10/2025 - 31/10/2025</td>
-                <td>01/11/5 09:30</td>
-                <td><span class="status status-completed">Completado</span></td>
-                <td class="actions">
-                  <button class="action-btn download" title="Descargar PDF">
-                    <i class="fas fa-file-pdf"></i>
-                  </button>
-                  <button class="action-btn download" title="Descargar Excel">
-                    <i class="fas fa-file-excel"></i>
-                  </button>
-                  <button class="action-btn" title="Ver">
-                    <i class="fas fa-eye"></i>
-                  </button>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <div class="report-type">
-                    <div class="type-icon weekly">
-                      <i class="fas fa-calendar-week"></i>
-                    </div>
-                    <div>
-                      <div>Incidencias Semana 21</div>
-                      <small>Resumido</small>
-                    </div>
-                  </div>
-                </td>
-                <td>Semanal</td>
-                <td>22/10/2025 - 28/10/2025</td>
-                <td>29/10/2025 08:15</td>
-                <td><span class="status status-completed">Completado</span></td>
-                <td class="actions">
-                  <button class="action-btn download" title="Descargar PDF">
-                    <i class="fas fa-file-pdf"></i>
-                  </button>
-                  <button class="action-btn download" title="Descargar Excel">
-                    <i class="fas fa-file-excel"></i>
-                  </button>
-                  <button class="action-btn" title="Ver">
-                    <i class="fas fa-eye"></i>
-                  </button>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <div class="report-type">
-                    <div class="type-icon custom">
-                      <i class="fas fa-cog"></i>
-                    </div>
-                    <div>
-                      <div>Análisis Tardanzas Q2</div>
-                      <small>Personalizado</small>
-                    </div>
-                  </div>
-                </td>
-                <td>Trimestral</td>
-                <td>01/09/2025 - 30/11/2025</td>
-                <td>15/10/2025 14:20</td>
-                <td>
-                  <span class="status status-processing">Procesando</span>
-                </td>
-                <td class="actions">
-                  <button class="action-btn" title="Cancelar">
-                    <i class="fas fa-times"></i>
-                  </button>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <div class="report-type">
-                    <div class="type-icon daily">
-                      <i class="fas fa-calendar-day"></i>
-                    </div>
-                    <div>
-                      <div>Asistencia Diaria</div>
-                      <small>15/05/2025</small>
-                    </div>
-                  </div>
-                </td>
-                <td>Diario</td>
-                <td>15/10/2025</td>
-                <td>15/10/2025 18:00</td>
-                <td><span class="status status-completed">Completado</span></td>
-                <td class="actions">
-                  <button class="action-btn download" title="Descargar PDF">
-                    <i class="fas fa-file-pdf"></i>
-                  </button>
-                  <button class="action-btn download" title="Descargar Excel">
-                    <i class="fas fa-file-excel"></i>
-                  </button>
-                  <button class="action-btn" title="Ver">
-                    <i class="fas fa-eye"></i>
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <ReportRegisView ref="reportRegisRef" />
         </div>
       </div>
     </div>
@@ -446,27 +330,194 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
+import Swal from "sweetalert2";
 import ReportPerView from "@/components/tables/ReportPerView.vue";
+import ReportRegisView from "@/components/tables/ReportRegisView.vue";
 import { userService } from "@/api/services/user.service";
+import { reportService } from "@/api/services/report.service";
+import { DepartmentService } from "@/api/services/department.service";
 import type { BiometricUser } from "@/api/types/users.types";
+import type { Department } from "@/api/types/department.types";
 
 const router = useRouter();
 
-// State for User Selection Table
-const users = ref<BiometricUser[]>([]);
+// References
+const reportRegisRef = ref();
+
+// State for Data
+
+// State for Data
+const allUsers = ref<BiometricUser[]>([]); // Copy of all loaded users
+const users = ref<BiometricUser[]>([]); // Displayed users (filtered)
 const selectedUsers = ref<BiometricUser[]>([]);
 const loadingUsers = ref(false);
+const departments = ref<Department[]>([]);
 
-const loadUsers = async () => {
+// State for Filters
+const selectedArea = ref<string>("");
+const fechaDesde = ref<string>(new Date().toISOString().slice(0, 10)); // Default today
+const fechaHasta = ref<string>(new Date().toISOString().slice(0, 10)); // Default today
+// We extract Month/Year from 'fechaDesde' for the current report requirement
+
+const loadTableData = async () => {
   try {
     loadingUsers.value = true;
-    const response = await userService.getAll();
+
+    // Fetch users and departments
+    const [usersResponse, deptsResponse] = await Promise.all([
+      userService.getAll(),
+      DepartmentService.getAll(),
+    ]);
+
+    console.log("Users Response:", usersResponse);
+    console.log("Depts Response:", deptsResponse);
+
+    // Process Departments
     // @ts-ignore
-    users.value = response.data?.data || response.data || [];
+    const deptsData = deptsResponse.data?.data || deptsResponse.data || [];
+    console.log("Parsed Depts Data:", deptsData);
+
+    if (Array.isArray(deptsData)) {
+      departments.value = deptsData;
+    }
+
+    const deptsMap = new Map<number, string>();
+    departments.value.forEach((d) => deptsMap.set(d.id, d.nombre));
+
+    // Process Users
+    // @ts-ignore
+    const rawUsers = usersResponse.data?.data || usersResponse.data || [];
+
+    const enrichedUsers = rawUsers.map((user: BiometricUser) => {
+      let deptName = "-";
+      let deptId = user.departamento_id;
+
+      // Try to get from existing object
+      if (typeof user.departamento === "object" && user.departamento?.nombre) {
+        deptName = user.departamento.nombre;
+        if (!deptId) deptId = user.departamento.id;
+      }
+      // Try to get from ID using the map
+      else if (user.departamento_id) {
+        deptName = deptsMap.get(user.departamento_id) || "Sin Asignar";
+      }
+
+      return {
+        ...user,
+        departamento: deptName,
+        departamento_id: deptId, // Ensure ID is preserved for filtering
+      };
+    });
+
+    allUsers.value = enrichedUsers;
+    users.value = enrichedUsers; // Initially show all
   } catch (error) {
     console.error("Error loading users for report:", error);
+    Swal.fire("Error", "No se pudieron cargar los datos.", "error");
   } finally {
     loadingUsers.value = false;
+  }
+};
+
+const applyFilters = () => {
+  loadingUsers.value = true;
+
+  // Filter by Area
+  let filtered = [...allUsers.value];
+
+  if (selectedArea.value) {
+    // selectedArea value will be the department ID as string
+    const areaId = Number(selectedArea.value);
+    filtered = filtered.filter((u) => u.departamento_id === areaId);
+  }
+
+  users.value = filtered;
+  loadingUsers.value = false;
+
+  // Optional: Reset selection if needed, or keep it. Keeping it is usually better UX.
+};
+
+const handleGenerateReport = async () => {
+  // 1. Validation
+  if (selectedUsers.value.length === 0) {
+    Swal.fire({
+      icon: "warning",
+      title: "Atención",
+      text: "Debes seleccionar al menos un usuario de la tabla para generar el reporte.",
+    });
+    return;
+  }
+
+  // 2. Format Selection
+  const result = await Swal.fire({
+    title: "Generar Reporte",
+    text: "Selecciona el formato de exportación para los usuarios seleccionados.",
+    icon: "question",
+    showDenyButton: true,
+    showCancelButton: true,
+    confirmButtonText: '<i class="fas fa-file-pdf"></i> PDF',
+    denyButtonText: '<i class="fas fa-file-excel"></i> Excel',
+    cancelButtonText: "Cancelar",
+    confirmButtonColor: "#e74c3c", // Red for PDF
+    denyButtonColor: "#27ae60", // Green for Excel
+  });
+
+  if (result.isDismissed) return;
+
+  const isPdf = result.isConfirmed;
+  const isExcel = result.isDenied;
+
+  if (!isPdf && !isExcel) return;
+
+  // 3. Prepare Payload
+  // Extract month/year from date picker (fechaDesde)
+  const dateObj = new Date(fechaDesde.value);
+  // getMonth() is 0-indexed, so +1. PadStart to ensure "05".
+  const mes = String(dateObj.getMonth() + 1).padStart(2, "0");
+  const anio = String(dateObj.getFullYear());
+
+  const payload = {
+    mes,
+    anio,
+    user_ids: selectedUsers.value.map((u) => u.user_id), // using DNI string
+  };
+
+  try {
+    Swal.fire({
+      title: "Generando...",
+      text: "Por favor espere mientras se procesa el reporte.",
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading(),
+    });
+
+    let response;
+    let fileName = `Reporte_${anio}_${mes}`;
+
+    if (isPdf) {
+      response = await reportService.exportPdf(payload);
+      fileName += ".pdf";
+    } else {
+      response = await reportService.exportExcel(payload);
+      fileName += ".xlsx";
+    }
+
+    // 4. Download File
+    // @ts-ignore
+    const blob = new Blob([response.data], {
+      type: isPdf
+        ? "application/pdf"
+        : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    const link = document.createElement("a");
+    link.href = window.URL.createObjectURL(blob);
+    link.download = fileName;
+    link.click();
+    window.URL.revokeObjectURL(link.href);
+
+    Swal.fire("Éxito", "El reporte se ha descargado correctamente.", "success");
+  } catch (error) {
+    console.error("Error generating report:", error);
+    Swal.fire("Error", "Hubo un problema al generar el reporte.", "error");
   }
 };
 
@@ -476,7 +527,7 @@ const logout = () => {
 };
 
 onMounted(() => {
-  loadUsers();
+  loadTableData();
 });
 </script>
 

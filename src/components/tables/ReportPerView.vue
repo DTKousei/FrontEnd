@@ -25,9 +25,17 @@ const filters = ref({
 });
 
 // Helper para obtener nombre del departamento de forma segura
+// Debug para ver qué llega en users
+// console.log("ReportPerView users:", props.users);
+
+// Helper para obtener nombre del departamento de forma segura
 const getDepartmentName = (dept: any) => {
+  // Debug para evaluar cada fila si es necesario
+  // console.log("Dept value:", dept);
   if (!dept) return "-";
+  // Si es un string (nombre directo)
   if (typeof dept === "string") return dept;
+  // Si es un objeto (debería tener .nombre)
   return dept.nombre || "-";
 };
 </script>
@@ -56,7 +64,7 @@ const getDepartmentName = (dept: any) => {
     >
       <template #header>
         <div class="flex justify-content-between align-items-center">
-          <h4 class="m-0 text-primary">Selección de Personal</h4>
+          <h4 class="m-0 text-blue-700">Selección de Personal</h4>
           <IconField iconPosition="left">
             <InputIcon class="pi pi-search" />
             <InputText
@@ -69,9 +77,6 @@ const getDepartmentName = (dept: any) => {
       </template>
 
       <template #empty> No se encontraron usuarios. </template>
-
-      <!-- Columna de Selección -->
-      <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
 
       <!-- Columnas de Datos -->
       <Column field="user_id" header="DNI" sortable></Column>
@@ -89,6 +94,14 @@ const getDepartmentName = (dept: any) => {
           {{ data.cargo || "-" }}
         </template>
       </Column>
+
+      <!-- Columna de Selección -->
+      <Column
+        selectionMode="multiple"
+        header="Todos"
+        headerStyle="width: 3rem; text-align: center"
+        bodyStyle="text-align: center"
+      ></Column>
     </DataTable>
   </div>
 </template>
