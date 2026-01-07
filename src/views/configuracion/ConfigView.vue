@@ -89,26 +89,58 @@
         <!-- Navegación de Configuración -->
         <div class="config-nav">
           <div class="config-tabs">
-            <button class="config-tab active" data-tab="general">
+            <button
+              class="config-tab"
+              :class="{ active: activeTab === 'general' }"
+              @click="activeTab = 'general'"
+            >
               General
             </button>
-            <button class="config-tab" data-tab="horarios">
+            <button
+              class="config-tab"
+              :class="{ active: activeTab === 'horarios' }"
+              @click="activeTab = 'horarios'"
+            >
               Horarios Laborales
             </button>
-            <button class="config-tab" data-tab="biometrico">
+            <button
+              class="config-tab"
+              :class="{ active: activeTab === 'biometrico' }"
+              @click="activeTab = 'biometrico'"
+            >
               Control Biométrico
             </button>
-            <button class="config-tab" data-tab="permisos">
+            <button
+              class="config-tab"
+              :class="{ active: activeTab === 'permisos' }"
+              @click="activeTab = 'permisos'"
+            >
               Permisos y Roles
             </button>
-            <button class="config-tab" data-tab="notificaciones">
+            <button
+              class="config-tab"
+              :class="{ active: activeTab === 'notificaciones' }"
+              @click="activeTab = 'notificaciones'"
+            >
               Notificaciones
             </button>
-            <button class="config-tab" data-tab="backup">
+            <button
+              class="config-tab"
+              :class="{ active: activeTab === 'backup' }"
+              @click="activeTab = 'backup'"
+            >
               Backup y Restauración
             </button>
-            <button class="config-tab" data-tab="sistema">Sistema</button>
+            <button
+              class="config-tab"
+              :class="{ active: activeTab === 'sistema' }"
+              @click="activeTab = 'sistema'"
+            >
+              Sistema
+            </button>
           </div>
+
+          <!-- Datos Principales -->
 
           <div class="system-info">
             <div class="info-cards">
@@ -162,7 +194,10 @@
         </div>
 
         <!-- Sección General -->
-        <div class="config-section active" id="general-section">
+        <div
+          class="config-section"
+          :class="{ active: activeTab === 'general' }"
+        >
           <h2 class="section-title">Configuración General</h2>
           <p class="section-description">
             Configura los parámetros básicos del sistema de control de
@@ -234,81 +269,82 @@
         </div>
 
         <!-- Sección Horarios Laborales -->
-        <div class="config-section" id="horarios-section">
+        <div
+          class="config-section"
+          :class="{ active: activeTab === 'horarios' }"
+        >
           <h2 class="section-title">Horarios Laborales</h2>
           <p class="section-description">
-            Configura los horarios de trabajo y tolerancias para el control de
-            asistencia.
+            Gestiona los perfiles de horarios y sus turnos (segmentos).
           </p>
 
-          <div class="form-grid">
-            <div class="form-group">
-              <label for="hora-entrada">Hora de Entrada</label>
-              <input type="time" id="hora-entrada" value="08:00" required />
-            </div>
-
-            <div class="form-group">
-              <label for="hora-salida">Hora de Salida</label>
-              <input type="time" id="hora-salida" value="17:00" required />
-            </div>
-
-            <div class="form-group">
-              <label for="tolerancia-entrada"
-                >Tolerancia de Entrada (minutos)</label
-              >
-              <input
-                type="number"
-                id="tolerancia-entrada"
-                value="10"
-                min="0"
-                max="60"
-              />
-              <div class="label-hint">
-                Tiempo de gracia para no marcar como tardanza
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label for="dias-laborales">Días Laborales</label>
-              <div class="checkbox-group">
-                <input type="checkbox" id="lunes" checked />
-                <label for="lunes" class="checkbox-label">Lunes</label>
-              </div>
-              <div class="checkbox-group">
-                <input type="checkbox" id="martes" checked />
-                <label for="martes" class="checkbox-label">Martes</label>
-              </div>
-              <div class="checkbox-group">
-                <input type="checkbox" id="miercoles" checked />
-                <label for="miercoles" class="checkbox-label">Miércoles</label>
-              </div>
-              <div class="checkbox-group">
-                <input type="checkbox" id="jueves" checked />
-                <label for="jueves" class="checkbox-label">Jueves</label>
-              </div>
-              <div class="checkbox-group">
-                <input type="checkbox" id="viernes" checked />
-                <label for="viernes" class="checkbox-label">Viernes</label>
-              </div>
-              <div class="checkbox-group">
-                <input type="checkbox" id="sabado" />
-                <label for="sabado" class="checkbox-label">Sábado</label>
-              </div>
-              <div class="checkbox-group">
-                <input type="checkbox" id="domingo" />
-                <label for="domingo" class="checkbox-label">Domingo</label>
-              </div>
-            </div>
+          <div
+            class="mb-4 flex justify-between items-center"
+            style="
+              margin-bottom: 1rem;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+            "
+          >
+            <span class="text-gray-600">Lista de Horarios Configurados</span>
+            <Button
+              label="Nuevo Horario"
+              icon="pi pi-plus"
+              @click="openCreateHorario"
+            />
           </div>
 
-          <div class="form-actions">
-            <button class="btn btn-outline">Cancelar</button>
-            <button class="btn btn-primary">Guardar Horarios</button>
-          </div>
+          <DataTable
+            :value="schedules"
+            :loading="loadingSchedules"
+            stripedRows
+            tableStyle="min-width: 50rem"
+          >
+            <Column field="nombre" header="Nombre"></Column>
+            <Column field="descripcion" header="Descripción"></Column>
+            <Column field="activo" header="Estado">
+              <template #body="slotProps">
+                <span
+                  :class="
+                    slotProps.data.activo
+                      ? 'text-green-600 font-bold'
+                      : 'text-red-500'
+                  "
+                >
+                  {{ slotProps.data.activo ? "Activo" : "Inactivo" }}
+                </span>
+              </template>
+            </Column>
+            <Column header="Acciones">
+              <template #body="slotProps">
+                <div class="flex gap-2">
+                  <Button
+                    icon="pi pi-pencil"
+                    size="small"
+                    severity="warning"
+                    text
+                    @click="openEditHorario(slotProps.data)"
+                  />
+                  <Button
+                    icon="pi pi-trash"
+                    size="small"
+                    severity="danger"
+                    text
+                    @click="deleteSchedule(slotProps.data)"
+                  />
+                </div>
+              </template>
+            </Column>
+            <template #empty>No hay horarios registrados.</template>
+          </DataTable>
         </div>
 
         <!-- Sección Control Biométrico -->
-        <div class="config-section" id="biometrico-section">
+        <div
+          class="config-section"
+          :class="{ active: activeTab === 'biometrico' }"
+        >
           <h2 class="section-title">Control Biométrico</h2>
           <p class="section-description">
             Configura los dispositivos biométricos y parámetros de verificación.
@@ -372,7 +408,10 @@
         </div>
 
         <!-- Sección Permisos y Roles -->
-        <div class="config-section" id="permisos-section">
+        <div
+          class="config-section"
+          :class="{ active: activeTab === 'permisos' }"
+        >
           <h2 class="section-title">Permisos y Roles</h2>
           <p class="section-description">
             Gestiona los niveles de acceso y permisos para diferentes roles de
@@ -459,7 +498,7 @@
         </div>
 
         <!-- Sección Backup y Restauración -->
-        <div class="config-section" id="backup-section">
+        <div class="config-section" :class="{ active: activeTab === 'backup' }">
           <h2 class="section-title">Backup y Restauración</h2>
           <p class="section-description">
             Gestiona las copias de seguridad y restauración del sistema.
@@ -521,8 +560,34 @@
             <button class="btn btn-outline">Restaurar Sistema</button>
             <button class="btn btn-success">Generar Backup Manual</button>
           </div>
+        </div>
 
-          <!-- Zona de Peligro -->
+        <!-- Sección Sistema (Nueva) -->
+        <div
+          class="config-section"
+          :class="{ active: activeTab === 'sistema' }"
+        >
+          <h2 class="section-title">Configuración del Sistema</h2>
+          <p class="section-description">
+            Opciones avanzadas y gestión de datos estructurales.
+          </p>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Gestión de Áreas y Departamentos</label>
+              <button
+                class="btn btn-secondary"
+                style="width: 100%"
+                @click="modalAreaVisible = true"
+              >
+                <i class="fas fa-building"></i> Gestionar Áreas
+              </button>
+              <div class="label-hint">
+                Administrar departamentos y asignar jefes de área
+              </div>
+            </div>
+          </div>
+
           <div class="danger-zone" style="margin-top: 40px">
             <h3 class="danger-title">
               <i class="fas fa-exclamation-triangle"></i>
@@ -540,20 +605,103 @@
         </div>
       </div>
     </div>
+
+    <!-- Modals -->
+    <ModalArea v-model:visible="modalAreaVisible" />
+    <ModalHorario
+      v-model:visible="modalHorarioVisible"
+      :scheduleToEdit="selectedSchedule"
+      @saved="loadSchedules"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
-
+import Swal from "sweetalert2";
 import "@fortawesome/fontawesome-free/css/all.min.css";
+import ModalArea from "@/components/Modals/ModalArea.vue";
+import ModalHorario from "@/components/Modals/ModalHorario.vue";
+import Button from "primevue/button"; // Necesario para la sección de horarios
+import DataTable from "primevue/datatable";
+import Column from "primevue/column";
+import { scheduleService } from "@/api/services/schedule.service";
+import type { Schedule } from "@/api/types/schedules.types";
 
 const router = useRouter();
+const activeTab = ref("general");
+const modalAreaVisible = ref(false);
+
+// Horarios State
+const modalHorarioVisible = ref(false);
+const schedules = ref<Schedule[]>([]);
+const loadingSchedules = ref(false);
+const selectedSchedule = ref<Schedule | null>(null);
+
+const loadSchedules = async () => {
+  loadingSchedules.value = true;
+  try {
+    const response = await scheduleService.getAll();
+    // @ts-ignore
+    const data = response.data?.data || response.data || [];
+    schedules.value = Array.isArray(data) ? data : [];
+  } catch (error) {
+    console.error("Error loading schedules", error);
+  } finally {
+    loadingSchedules.value = false;
+  }
+};
+
+const openCreateHorario = () => {
+  selectedSchedule.value = null;
+  modalHorarioVisible.value = true;
+};
+
+const openEditHorario = (schedule: Schedule) => {
+  selectedSchedule.value = schedule;
+  modalHorarioVisible.value = true;
+};
+
+const deleteSchedule = async (schedule: Schedule) => {
+  const result = await Swal.fire({
+    title: "¿Estás seguro?",
+    text: `Vas a eliminar el horario "${schedule.nombre}". Verifica que NO tenga usuarios asignados, de lo contrario la operación podría fallar.`,
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonColor: "#d33",
+    cancelButtonColor: "#3085d6",
+    confirmButtonText: "Sí, eliminar",
+    cancelButtonText: "Cancelar",
+  });
+
+  if (result.isConfirmed) {
+    try {
+      loadingSchedules.value = true;
+      await scheduleService.delete(schedule.id);
+      Swal.fire("Eliminado", "El horario ha sido eliminado.", "success");
+      await loadSchedules();
+    } catch (error) {
+      console.error("Error eliminando horario:", error);
+      Swal.fire(
+        "Error",
+        "No se pudo eliminar el horario. Es posible que tenga usuarios asignados o segmentos activos.",
+        "error"
+      );
+    } finally {
+      loadingSchedules.value = false;
+    }
+  }
+};
 
 const logout = () => {
   localStorage.removeItem("token");
   router.push({ name: "Login" });
 };
+
+onMounted(() => {
+  loadSchedules();
+});
 </script>
 
 <style>
@@ -799,84 +947,35 @@ input[type="checkbox"] {
   margin-bottom: 0;
 }
 
-.form-actions {
-  display: flex;
-  gap: 15px;
-  justify-content: flex-end;
-  margin-top: 30px;
-  padding-top: 20px;
-  border-top: 1px solid #eee;
-}
-
-.btn {
-  padding: 12px 25px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 600;
-  transition: all 0.3s;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.btn-primary {
-  background-color: var(--secondary);
-  color: white;
-}
-
-.btn-primary:hover {
-  background-color: #2980b9;
-}
-
-.btn-success {
-  background-color: var(--success);
-  color: white;
-}
-
-.btn-success:hover {
-  background-color: #219a52;
-}
-
-.btn-outline {
-  background-color: transparent;
-  border: 1px solid #ddd;
-  color: var(--dark);
-}
-
-.btn-outline:hover {
-  background-color: #f8f9fa;
-}
-
-.btn-danger {
-  background-color: var(--danger);
-  color: white;
-}
-
-.btn-danger:hover {
-  background-color: #c0392b;
-}
-
 /* System Info Cards */
+.system-info {
+  margin-top: 20px;
+}
+
 .info-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 20px;
-  margin-bottom: 30px;
 }
 
 .info-card {
-  background-color: white;
+  background-color: #fff;
   border-radius: 8px;
   padding: 20px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  border: 1px solid #eee;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  transition: transform 0.3s;
+}
+
+.info-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
 }
 
 .info-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 15px;
 }
 
@@ -887,14 +986,14 @@ input[type="checkbox"] {
 }
 
 .info-icon {
-  width: 40px;
-  height: 40px;
+  width: 35px;
+  height: 35px;
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
 }
 
 .info-icon.system {
@@ -914,26 +1013,28 @@ input[type="checkbox"] {
 }
 
 .info-value {
-  font-size: 1.5rem;
+  font-size: 1.4rem;
   font-weight: bold;
+  color: var(--dark);
   margin-bottom: 5px;
 }
 
 .info-description {
   font-size: 0.8rem;
-  color: #7f8c8d;
+  color: #95a5a6;
 }
 
-/* Backup Section */
+/* Backup Options */
 .backup-options {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 20px;
-  margin-bottom: 25px;
+  margin-bottom: 30px;
 }
 
 .backup-option {
-  border: 2px solid #e9ecef;
+  background-color: #fff;
+  border: 2px solid #ecf0f1;
   border-radius: 8px;
   padding: 20px;
   text-align: center;
@@ -943,24 +1044,38 @@ input[type="checkbox"] {
 
 .backup-option:hover {
   border-color: var(--secondary);
-  background-color: #f8f9fa;
+  background-color: #fcfdfe;
+  transform: translateY(-5px);
 }
 
 .backup-option.selected {
   border-color: var(--secondary);
-  background-color: #e3f2fd;
+  background-color: #ebf5fb;
 }
 
 .backup-icon {
-  font-size: 2rem;
-  margin-bottom: 10px;
-  color: var(--secondary);
+  width: 60px;
+  height: 60px;
+  background-color: #ecf0f1;
+  color: var(--dark);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 15px;
+  font-size: 1.5rem;
+  transition: all 0.3s;
+}
+
+.backup-option:hover .backup-icon {
+  background-color: var(--secondary);
+  color: white;
 }
 
 .backup-title {
-  font-weight: 600;
+  font-weight: bold;
   margin-bottom: 5px;
-  color: var(--primary);
+  color: var(--dark);
 }
 
 .backup-desc {
@@ -968,36 +1083,12 @@ input[type="checkbox"] {
   color: #7f8c8d;
 }
 
-/* User Permissions Table */
-.permissions-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-bottom: 25px;
-}
-
-.permissions-table th,
-.permissions-table td {
-  padding: 12px 15px;
-  text-align: left;
-  border-bottom: 1px solid #eee;
-}
-
-.permissions-table th {
-  background-color: #f8f9fa;
-  font-weight: 600;
-  color: var(--dark);
-}
-
-.permission-check {
-  text-align: center;
-}
-
 /* Danger Zone */
 .danger-zone {
-  border: 2px solid var(--danger);
+  border: 1px solid #fab1a0;
+  background-color: #fff5f5;
   border-radius: 8px;
   padding: 25px;
-  background-color: #fff5f5;
 }
 
 .danger-title {
@@ -1010,106 +1101,36 @@ input[type="checkbox"] {
 }
 
 .danger-description {
-  color: #7f8c8d;
+  color: #636e72;
   margin-bottom: 20px;
-  line-height: 1.5;
 }
 
-/* Modal */
-.modal {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
-  z-index: 1000;
-  align-items: center;
-  justify-content: center;
-}
-
-.modal-content {
-  background-color: white;
-  border-radius: 10px;
-  width: 90%;
-  max-width: 500px;
-}
-
-.modal-header {
-  padding: 20px 25px;
-  border-bottom: 1px solid #eee;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.modal-title {
-  font-size: 1.3rem;
-  color: var(--primary);
-}
-
-.modal-close {
-  background: none;
+.btn-danger {
+  background-color: var(--danger);
+  color: white;
   border: none;
-  font-size: 1.5rem;
+  padding: 10px 20px;
+  border-radius: 5px;
   cursor: pointer;
-  color: #7f8c8d;
+  transition: background-color 0.3s;
 }
 
-.modal-body {
-  padding: 25px;
+.btn-danger:hover {
+  background-color: #c0392b;
 }
 
-.modal-actions {
-  display: flex;
-  gap: 15px;
-  justify-content: flex-end;
-  margin-top: 25px;
-  padding-top: 20px;
-  border-top: 1px solid #eee;
+/* Estilos para el botón btn-secondary, que puede que falte */
+.btn-secondary {
+  background-color: var(--secondary);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
 }
 
-/* Responsive */
-@media (max-width: 992px) {
-  .form-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 768px) {
-  .container {
-    flex-direction: column;
-  }
-
-  .sidebar {
-    width: 100%;
-    height: auto;
-  }
-
-  .nav-links {
-    display: flex;
-    overflow-x: auto;
-  }
-
-  .nav-links li {
-    flex: 0 0 auto;
-  }
-
-  .nav-links a {
-    padding: 15px;
-  }
-
-  .config-tabs {
-    flex-wrap: wrap;
-  }
-
-  .form-actions {
-    flex-direction: column;
-  }
-
-  .btn {
-    justify-content: center;
-  }
+.btn-secondary:hover {
+  background-color: #2980b9;
 }
 </style>

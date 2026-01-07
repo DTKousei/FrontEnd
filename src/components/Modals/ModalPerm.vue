@@ -9,9 +9,12 @@ import Swal from "sweetalert2";
 import { userService } from "@/api/services/user.service";
 import { permissionService } from "@/api/services/permission.service";
 import { attendanceService } from "@/api/services/attendance.service";
+import { DepartmentService } from "@/api/services/department.service"; // Import DepartmentService
 import type { BiometricUser } from "@/api/types/users.types";
 import type { CreatePermisoPersonalRequest } from "@/api/types/permissions.types";
+import type { Department } from "@/api/types/department.types"; // Import Department Type
 
+// Definición de Props (Propiedades recibidas del padre)
 const props = defineProps({
   visible: {
     type: Boolean,
@@ -19,14 +22,17 @@ const props = defineProps({
   },
 });
 
+// Emisiones de eventos para actualizar visibilidad y notificar guardado
 const emit = defineEmits(["update:visible", "save"]);
 
 const employees = ref<BiometricUser[]>([]);
+const allUsers = ref<BiometricUser[]>([]); // Almacenar todos los usuarios para resolver nombres
+const departments = ref<Department[]>([]); // Almacenar departamentos
 const papeletaTypes = ref<{ label: string; value: string }[]>([]);
 const loadingEmployees = ref(false);
 const loadingSubmit = ref(false);
 
-// Form Data
+// Datos del Formulario
 const form = ref({
   empleado_id: null as number | null,
   tipo_papeleta: null as string | null,
@@ -37,6 +43,51 @@ const form = ref({
   fecha: new Date(), // Fecha actual por defecto
 });
 
+// Computado: Nombre del Jefe de Área
+const jefeAreaName = computed(() => {
+  if (!form.value.empleado_id) return "--";
+
+  // Buscar al empleado seleccionado en la lista COMPLETA de usuarios (para asegurar que tenemos sus datos)
+  const employee = allUsers.value.find((e) => e.id === form.value.empleado_id);
+
+  if (!employee || !employee.departamento_id) return "--";
+
+  // Buscar el departamento
+  const dept = departments.value.find((d) => d.id === employee.departamento_id);
+
+  if (!dept || !dept.jefe_id) return "--";
+
+  // Buscar al jefe en la lista COMPLETA de usuarios (el jefe podría no estar "presente" hoy)
+  // jefe_id suele ser una cadena (DNI) en el objeto departamento según la definición de tipo
+  const chief = allUsers.value.find(
+    (u) => String(u.user_id) === String(dept.jefe_id)
+  );
+
+  return chief ? chief.nombre : "--";
+});
+
+// Computado: Nombre del Jefe de RRHH
+const jefeRRHHName = computed(() => {
+  // Buscar departamento llamado "Recursos Humanos" o similar
+  const rrhhDept = departments.value.find(
+    (d) =>
+      d.nombre.toLowerCase().includes("recursos humanos") ||
+      d.nombre.toLowerCase().includes("RRHH")
+  );
+
+  if (!rrhhDept || !rrhhDept.jefe_id) return "--";
+
+  const chief = allUsers.value.find(
+    (u) => String(u.user_id) === String(rrhhDept.jefe_id)
+  );
+
+  return chief ? chief.nombre : "--";
+});
+
+/**
+ * Carga la lista de empleados.
+ * Filtra solo aquellos que tienen asistencia registrada hoy (PRESENTE, TARDANZA, etc.).
+ */
 const loadEmployees = async () => {
   try {
     loadingEmployees.value = true;
@@ -50,7 +101,8 @@ const loadEmployees = async () => {
       return [];
     };
     // @ts-ignore
-    const allEmployees = extractData(usersResponse.data || usersResponse);
+    const users = extractData(usersResponse.data || usersResponse);
+    allUsers.value = users; // Almacenar todos los usuarios para búsquedas
 
     // 2. Obtener asistencias de hoy para filtrar
     const today = new Date().toISOString().split("T")[0];
@@ -62,9 +114,7 @@ const loadEmployees = async () => {
     // @ts-ignore
     const dailyAttendance = attendanceResponse.data || [];
 
-    // console.log("DEBUG: Daily Attendance Array:", dailyAttendance);
-
-    // Filter only employees present
+    // Filtrar solo empleados presentes
     const presentStatus = ["ASISTENCIA", "PRESENTE", "TARDANZA"];
     const presentRecords = dailyAttendance.filter((record: any) => {
       const status = record.estado_asistencia
@@ -82,7 +132,7 @@ const loadEmployees = async () => {
     );
 
     // 3. Filtrar empleados
-    employees.value = allEmployees.filter((emp: BiometricUser) =>
+    employees.value = users.filter((emp: BiometricUser) =>
       presentEmployeeIds.has(String(emp.user_id))
     );
 
@@ -91,13 +141,28 @@ const loadEmployees = async () => {
     }
   } catch (error) {
     console.error("Error loading employees:", error);
-    // Fallback: mostrar todos si falla el filtro de asistencia?
-    // Por seguridad/rigurosidad, mejor dejar vacía o mostrar error, pero el usuario pidió explícitame filtro.
   } finally {
     loadingEmployees.value = false;
   }
 };
 
+/**
+ * Carga la lista de departamentos disponibles desde el servicio.
+ */
+const loadDepartments = async () => {
+  try {
+    const response = await DepartmentService.getAll();
+    // @ts-ignore
+    departments.value = response.data || [];
+  } catch (error) {
+    console.error("Error loading departments:", error);
+  }
+};
+
+/**
+ * Carga los tipos de papeleta/permiso activos.
+ * Mapea la respuesta para el formato del selector (label, value).
+ */
 const loadTiposPapeleta = async () => {
   try {
     const response = await permissionService.getTiposPermiso({ activo: true });
@@ -114,24 +179,31 @@ const loadTiposPapeleta = async () => {
   }
 };
 
+// Modelo computado para manejar la visibilidad del modal (v-model)
 const visibleModel = computed({
   get: () => props.visible,
   set: (val) => emit("update:visible", val),
 });
 
+/**
+ * Combina un objeto Date (fecha) y un objeto Date (hora) en una cadena ISO.
+ * Se usa para formatear la fecha_inicio y fecha_fin que espera el backend.
+ */
 const combineDateAndTime = (date: Date, time: Date): string => {
   const d = new Date(date);
   const t = new Date(time);
   d.setHours(t.getHours(), t.getMinutes(), 0, 0);
-  // Return ISO format with offset or simply local ISO string if backend expects UTC-neutral
-  // Using standard ISO string:
-  // Manual construction to avoid timezone shifts if backend expects local time string
   const pad = (n: number) => (n < 10 ? "0" + n : n);
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
     d.getHours()
   )}:${pad(d.getMinutes())}:00`;
 };
 
+/**
+ * Maneja el envío del formulario.
+ * Valida campos, construye el payload y llama al servicio para crear el permiso.
+ * Si es exitoso, genera el PDF automáticamente.
+ */
 const handleSubmit = async () => {
   if (
     !form.value.empleado_id ||
@@ -150,7 +222,7 @@ const handleSubmit = async () => {
     return;
   }
 
-  // Find user to get DNI (user_id)
+  // Buscar usuario para obtener DNI (user_id)
   const employee = employees.value.find((e) => e.id === form.value.empleado_id);
   if (!employee || !employee.user_id) {
     Swal.fire(
@@ -174,7 +246,7 @@ const handleSubmit = async () => {
     );
 
     const payload: CreatePermisoPersonalRequest = {
-      empleado_id: String(employee.user_id), // Send DNI
+      empleado_id: String(employee.user_id), // Enviar DNI
       tipo_permiso_id: form.value.tipo_papeleta,
       fecha_hora_inicio: fechaInicio,
       fecha_hora_fin: fechaFin,
@@ -197,7 +269,6 @@ const handleSubmit = async () => {
         await permissionService.generarPDF(newPermiso.id);
       } catch (pdfError) {
         console.error("Error generando PDF inicial:", pdfError);
-        // No bloqueamos el flujo de éxito si falla el PDF, pero lo logueamos
       }
     }
 
@@ -224,11 +295,13 @@ const handleSubmit = async () => {
   }
 };
 
+// Cierra el modal y limpia el formulario
 const handleCancel = () => {
   visibleModel.value = false;
   resetForm();
 };
 
+// Restablece los valores del formulario a su estado inicial
 const resetForm = () => {
   form.value = {
     empleado_id: null,
@@ -241,8 +314,10 @@ const resetForm = () => {
   };
 };
 
+// Ciclo de vida: Cargar datos iniciales al montar el componente
 onMounted(() => {
   loadEmployees();
+  loadDepartments(); // Cargar departamentos al montar
   loadTiposPapeleta();
 });
 </script>
@@ -387,7 +462,7 @@ onMounted(() => {
           <div class="signature-box">
             <div class="role-title">JEFE DE ÁREA</div>
             <div class="signature-line"></div>
-            <div class="signer-name">--</div>
+            <div class="signer-name">{{ jefeAreaName }}</div>
             <div class="status-badge pending">PENDIENTE</div>
           </div>
 
@@ -395,7 +470,7 @@ onMounted(() => {
           <div class="signature-box">
             <div class="role-title">JEFE DE RRHH</div>
             <div class="signature-line"></div>
-            <div class="signer-name">Mg. Elena Mendoza</div>
+            <div class="signer-name">{{ jefeRRHHName }}</div>
             <div class="status-badge pending">PENDIENTE</div>
           </div>
         </div>
@@ -416,6 +491,7 @@ onMounted(() => {
           icon="pi pi-check"
           severity="success"
           @click="handleSubmit"
+          :loading="loadingSubmit"
         />
       </div>
     </template>

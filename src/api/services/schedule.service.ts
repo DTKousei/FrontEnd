@@ -4,8 +4,12 @@ import type {
   CreateScheduleData, 
   UpdateScheduleData,
   CreateSegmentBulk,
+  CreateSegmentData,
+  UpdateSegmentData,
   AssignSchedule,
-  ScheduleSegment
+  ScheduleSegment,
+  Holiday,
+  CreateHolidayData
 } from '@/api/types/schedules.types';
 
 export const scheduleService = {
@@ -43,6 +47,12 @@ export const scheduleService = {
   // SEGMENTOS (TURNOS DETALLADOS)
   // -------------------------------------------------------------
 
+  // Crear segmento individual
+  // POST /api/horarios/segmentos/
+  createSegment(data: CreateSegmentData) {
+    return api.post<ScheduleSegment>('/horarios/segmentos/', data);
+  },
+
   // Crear segmentos masivamente (Bulk)
   // POST /api/horarios/segmentos/bulk
   createSegmentsBulk(data: CreateSegmentBulk) {
@@ -50,9 +60,43 @@ export const scheduleService = {
   },
 
   // Obtener segmentos de un horario específico
-  // GET /api/horarios/{id}/segmentos (Inferido como necesario)
+  // GET /api/horarios/{id}/segmentos
   getSegments(horarioId: number) {
     return api.get<ScheduleSegment[]>(`/horarios/${horarioId}/segmentos`);
+  },
+
+  // Actualizar segmento
+  // PUT /api/horarios/segmentos/{id}
+  updateSegment(id: number, data: UpdateSegmentData) {
+    return api.put<ScheduleSegment>(`/horarios/segmentos/${id}`, data);
+  },
+
+  // Eliminar segmento
+  // DELETE /api/horarios/segmentos/{id}
+  deleteSegment(id: number) {
+    return api.delete<{ message: string }>(`/horarios/segmentos/${id}`);
+  },
+
+  // -------------------------------------------------------------
+  // FERIADOS
+  // -------------------------------------------------------------
+
+  // Listar feriados
+  // GET /api/horarios/feriados/
+  getHolidays() {
+    return api.get<Holiday[]>('/horarios/feriados/');
+  },
+
+  // Crear feriado
+  // POST /api/horarios/feriados/
+  createHoliday(data: CreateHolidayData) {
+    return api.post<Holiday>('/horarios/feriados/', data);
+  },
+
+  // Eliminar feriado
+  // DELETE /api/horarios/feriados/{id}
+  deleteHoliday(id: number) {
+    return api.delete<{ message: string }>(`/horarios/feriados/${id}`);
   },
 
   // -------------------------------------------------------------

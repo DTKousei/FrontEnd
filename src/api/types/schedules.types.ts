@@ -85,21 +85,65 @@ export interface ScheduleResponse {
 // ------------------------------------
 
 export const DIAS_SEMANA_MAP: Record<number, string> = {
-  1: 'Lunes',
-  2: 'Martes',
-  3: 'Miércoles',
-  4: 'Jueves',
-  5: 'Viernes',
-  6: 'Sábado',
-  7: 'Domingo'
+  0: 'Lunes',
+  1: 'Martes',
+  2: 'Miércoles',
+  3: 'Jueves',
+  4: 'Viernes',
+  5: 'Sábado',
+  6: 'Domingo'
 };
 
 export const LISTA_DIAS = [
-  { id: 1, nombre: 'Lunes' },
-  { id: 2, nombre: 'Martes' },
-  { id: 3, nombre: 'Miércoles' },
-  { id: 4, nombre: 'Jueves' },
-  { id: 5, nombre: 'Viernes' },
-  { id: 6, nombre: 'Sábado' },
-  { id: 7, nombre: 'Domingo' },
+  { id: 0, nombre: 'Lunes' },
+  { id: 1, nombre: 'Martes' },
+  { id: 2, nombre: 'Miércoles' },
+  { id: 3, nombre: 'Jueves' },
+  { id: 4, nombre: 'Viernes' },
+  { id: 5, nombre: 'Sábado' },
+  { id: 6, nombre: 'Domingo' },
 ];
+
+/**
+ * Payload para crear un segmento individual
+ * POST /api/horarios/segmentos/
+ */
+export interface CreateSegmentData {
+  horario_id: number;
+  dia_semana: number;
+  hora_inicio: string;
+  hora_fin: string;
+  tolerancia_minutos: number;
+  orden_turno: number;
+}
+
+/**
+ * Payload para actualizar un segmento
+ * PUT /api/horarios/segmentos/{id}
+ */
+export interface UpdateSegmentData {
+  hora_inicio?: string;
+  hora_fin?: string;
+  tolerancia_minutos?: number;
+  orden_turno?: number;
+  // Nota: dia_semana y horario_id usualmente no se cambian al editar un segmento específico, 
+  // pero si la API lo permite, se agregarían aquí. Según docs: hora_inicio, tolerancia.
+}
+
+/**
+ * Representa un feriado
+ */
+export interface Holiday {
+  id: number;
+  fecha: string; // YYYY-MM-DD
+  nombre: string;
+}
+
+/**
+ * Payload para crear un feriado
+ * POST /api/horarios/feriados/
+ */
+export interface CreateHolidayData {
+  fecha: string;
+  nombre: string;
+}
