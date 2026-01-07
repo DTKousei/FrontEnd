@@ -239,42 +239,18 @@
         <div class="charts-container">
           <div class="chart-card">
             <div class="chart-header">
-              <div class="chart-title">Registros por Área</div>
-              <!-- <div class="chart-actions">
-                <button class="btn btn-outline">
-                  <i class="fas fa-download"></i>
-                </button>
-              </div> -->
+              <div class="chart-title">Asistencia por Área (Polar)</div>
             </div>
-            <!-- Gráfico de Barras -->
-            <div class="chart-wrapper">
-              <VueApexCharts
-                type="bar"
-                height="300"
-                :options="barChartOptions"
-                :series="barChartSeries"
-              />
-            </div>
+            <!-- Gráfico Polar -->
+            <PolarAsisAreaView :data="attendanceRecords" />
           </div>
 
           <div class="chart-card">
             <div class="chart-header">
               <div class="chart-title">Distribución de Asistencia</div>
-              <!-- <div class="chart-actions">
-                <button class="btn btn-outline">
-                  <i class="fas fa-download"></i>
-                </button>
-              </div> -->
             </div>
             <!-- Gráfico Circular -->
-            <div class="chart-wrapper">
-              <VueApexCharts
-                type="donut"
-                height="300"
-                :options="pieChartOptions"
-                :series="pieChartSeries"
-              />
-            </div>
+            <DistAsisView :metrics="metrics" />
           </div>
         </div>
 
@@ -345,9 +321,11 @@
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import Swal from "sweetalert2";
-import VueApexCharts from "vue3-apexcharts";
+
 import ReportPerView from "@/components/tables/ReportPerView.vue";
 import ReportRegisView from "@/components/tables/ReportRegisView.vue";
+import DistAsisView from "@/components/Graficas/DistAsisView.vue";
+import PolarAsisAreaView from "@/components/Graficas/PolarAsisAreaView.vue";
 import { userService } from "@/api/services/user.service";
 import { reportService } from "@/api/services/report.service";
 import { DepartmentService } from "@/api/services/department.service";
@@ -384,56 +362,8 @@ const metrics = ref({
   horas_extras: 0,
 });
 
-// Estado para Gráficos
-const pieChartSeries = ref<number[]>([]);
-const pieChartOptions = ref({
-  chart: { type: "donut" },
-  labels: ["Puntual", "Tardanzas", "Faltas"],
-  colors: ["#27ae60", "#f39c12", "#e74c3c"],
-  legend: { position: "bottom" },
-  dataLabels: { enabled: true },
-  plotOptions: {
-    pie: {
-      donut: {
-        size: "65%",
-        labels: {
-          show: true,
-          total: {
-            show: true,
-            label: "Total",
-            formatter: function (w: any) {
-              return w.globals.seriesTotals.reduce(
-                (a: any, b: any) => a + b,
-                0
-              );
-            },
-          },
-        },
-      },
-    },
-  },
-});
-
-const barChartSeries = ref<any[]>([]);
-const barChartOptions = ref({
-  chart: { type: "bar", toolbar: { show: false } },
-  plotOptions: {
-    bar: { horizontal: false, columnWidth: "55%", borderRadius: 4 },
-  },
-  dataLabels: { enabled: false },
-  stroke: { show: true, width: 2, colors: ["transparent"] },
-  xaxis: { categories: [] as string[] },
-  yaxis: { title: { text: "Registros" } },
-  fill: { opacity: 1 },
-  colors: ["#3498db"],
-  tooltip: {
-    y: {
-      formatter: function (val: any) {
-        return val + " registros";
-      },
-    },
-  },
-});
+// Datos para Gráficos
+const attendanceRecords = ref<any[]>([]);
 
 const loadTableData = async () => {
   try {
@@ -531,6 +461,8 @@ const fetchMetrics = async () => {
     // @ts-ignore
     const rawData = response.data?.data || [];
 
+    attendanceRecords.value = rawData;
+
     // 1. Métricas Principales
     metrics.value = {
       puntual: data.puntual || 0,
@@ -539,42 +471,7 @@ const fetchMetrics = async () => {
       horas_extras: data.horas_extras || 0,
     };
 
-    // 2. Gráfico Circular (Donut) - Distribución General
-    pieChartSeries.value = [
-      metrics.value.puntual,
-      metrics.value.tardanzas,
-      metrics.value.faltas,
-    ];
-
-    // 3. Gráfico de Barras - Asistencia por Área
-    const deptCounts: Record<string, number> = {};
-
-    rawData.forEach((record: any) => {
-      let deptName = "Otros";
-      if (record.departamento) {
-        deptName = record.departamento;
-      } else if (record.area) {
-        deptName = record.area;
-      }
-
-      if (!deptCounts[deptName]) deptCounts[deptName] = 0;
-      deptCounts[deptName]++;
-    });
-
-    const categories = Object.keys(deptCounts);
-    const seriesData = Object.values(deptCounts);
-
-    // Actualizar gráfico de barras
-    barChartOptions.value = {
-      ...barChartOptions.value,
-      xaxis: { categories: categories },
-    };
-    barChartSeries.value = [
-      {
-        name: "Registros",
-        data: seriesData,
-      },
-    ];
+    // 2. Gráficos se actualizan automáticamente mediante props
   } catch (error) {
     console.error("Error obteniendo métricas:", error);
   }
