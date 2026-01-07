@@ -248,7 +248,7 @@ const attributes = computed(() => {
     customData: h,
   }));
 
-  // 2. Mapear Cumpleaños (Dots)
+  // 2. Mapear Cumpleaños (Highlights)
   const currentYear = new Date().getFullYear();
   // Mostrar cumpleaños del año actual y el siguiente
   const yearsToShow = [currentYear, currentYear + 1];
@@ -260,18 +260,19 @@ const attributes = computed(() => {
       // Asumiendo formato YYYY-MM-DD
       const parts = user.fecha_nacimiento.split("-");
       if (parts.length === 3) {
-        const month = parseInt(parts[1], 10) - 1; // 0-based
-        const day = parseInt(parts[2], 10);
+        // parts[1] es mes, parts[2] es día
 
         yearsToShow.forEach((y) => {
+          // Construcción de fecha consistente con feriados para evitar desfase
+          const bdayDate = new Date(`${y}-${parts[1]}-${parts[2]}T00:00:00`);
+
           birthdayAttrs.push({
             key: `bday-${user.id}-${y}`,
-            dot: {
+            highlight: {
               color: "yellow",
-              class: "bg-yellow-400",
+              fillMode: "solid",
             },
-            // Usar Date para el año específico
-            dates: new Date(y, month, day),
+            dates: bdayDate,
             popover: {
               label: `🎉 Cumpleaños de ${user.nombre}`,
               visibility: "hover",
