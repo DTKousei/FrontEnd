@@ -117,7 +117,20 @@ const populateForm = async (
   form.value.observaciones = user.comentarios || "";
 
   if (user.fecha_nacimiento) {
-    form.value.fecha_nacimiento = new Date(user.fecha_nacimiento);
+    // Solución para evitar el desfase de zona horaria (UTC a Local)
+    // Extraemos partes y creamos fecha al mediodía local
+    const parts = user.fecha_nacimiento.split("-");
+    if (parts.length === 3) {
+      const year = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const day = parseInt(parts[2], 10);
+      form.value.fecha_nacimiento = new Date(year, month, day, 12, 0, 0);
+    } else {
+      // Fallback
+      form.value.fecha_nacimiento = new Date(
+        user.fecha_nacimiento + "T12:00:00"
+      );
+    }
   } else {
     form.value.fecha_nacimiento = null;
   }

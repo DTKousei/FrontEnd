@@ -260,11 +260,14 @@ const attributes = computed(() => {
       // Asumiendo formato YYYY-MM-DD
       const parts = user.fecha_nacimiento.split("-");
       if (parts.length === 3) {
-        // parts[1] es mes, parts[2] es día
+        // Extrar mes y día directos del string "YYYY-MM-DD"
+        // parts[0] = YYYY, parts[1] = MM, parts[2] = DD
+        const monthStr = parts[1];
+        const dayStr = parts[2];
 
         yearsToShow.forEach((y) => {
-          // Construcción de fecha consistente con feriados para evitar desfase
-          const bdayDate = new Date(`${y}-${parts[1]}-${parts[2]}T00:00:00`);
+          // Construir string fecha exacto "YYYY-MM-DDT00:00:00" como los feriados
+          const dateString = `${y}-${monthStr}-${dayStr}T00:00:00`;
 
           birthdayAttrs.push({
             key: `bday-${user.id}-${y}`,
@@ -272,7 +275,7 @@ const attributes = computed(() => {
               color: "yellow",
               fillMode: "solid",
             },
-            dates: bdayDate,
+            dates: new Date(dateString),
             popover: {
               label: `🎉 Cumpleaños de ${user.nombre}`,
               visibility: "hover",

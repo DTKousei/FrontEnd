@@ -1,74 +1,14 @@
 <template>
   <div class="container">
     <!-- Sidebar -->
-    <div class="sidebar">
-      <div class="logo">
-        <h2><i class="fas fa-fingerprint"></i> Control Asistencia</h2>
-        <p>UGEL Sucre</p>
-      </div>
-      <ul class="nav-links">
-        <li>
-          <router-link to="/dashboard"
-            ><i class="fas fa-tachometer-alt"></i> Dashboard</router-link
-          >
-        </li>
-        <li>
-          <router-link to="/biometrico"
-            ><i class="fas fa-user-clock"></i> Registro Asistencia</router-link
-          >
-        </li>
-        <li>
-          <router-link to="/personal"
-            ><i class="fas fa-users"></i> Gestión Personal</router-link
-          >
-        </li>
-        <li>
-          <router-link to="/papeletas"
-            ><i class="fas fa-chart-bar"></i> Papeletas</router-link
-          >
-        </li>
-        <li>
-          <router-link to="/incidencias" class="active"
-            ><i class="fas fa-question-circle"></i> Registro
-            Incidencias</router-link
-          >
-        </li>
-        <li>
-          <router-link to="/reportes"
-            ><i class="fas fa-chart-bar"></i> Reportes</router-link
-          >
-        </li>
-        <li>
-          <router-link to="/configuracion"
-            ><i class="fas fa-cog"></i> Configuración</router-link
-          >
-        </li>
-      </ul>
-    </div>
+    <!-- Sidebar -->
+    <AdminNavbar />
 
     <!-- Main Content -->
     <div class="main-content">
       <!-- Header -->
-      <div class="header">
-        <div class="search-bar">
-          <input type="text" placeholder="Buscar..." />
-        </div>
-        <div class="user-info">
-          <img
-            src="https://ui-avatars.com/api/?name=Admin+User&background=3498db&color=fff"
-            alt="Usuario"
-          />
-          <div>
-            <div class="user-name">{{ currentUser }}</div>
-            <div class="user-role">Administrador</div>
-            <div>
-              <button @click="logout" class="logout-btn" title="Cerrar Sesión">
-                <i class="fas fa-sign-out-alt"></i>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <!-- Header -->
+      <HeaderView />
 
       <!-- Page Content -->
       <div class="page-content">
@@ -286,7 +226,6 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from "vue";
-import { useRouter } from "vue-router";
 import Button from "primevue/button";
 import Select from "primevue/select";
 import DatePicker from "primevue/datepicker";
@@ -297,11 +236,11 @@ import Swal from "sweetalert2";
 import ModalTipoIncidencia from "@/components/Modals/ModalTipoIncidencia.vue"; // Para Tipos
 import ModalIncidencia from "@/components/Modals/ModalIncidencia.vue"; // Para Detalle
 import IncidenciaView from "@/components/tables/IncidenciaView.vue";
+import AdminNavbar from "@/components/Admin/NavbarView.vue";
+import HeaderView from "@/components/header/HeaderView.vue";
 import { incidentService } from "@/api/services/incident.service";
 import { userService } from "@/api/services/user.service";
 import type { BiometricUser } from "@/api/types/users.types";
-
-const router = useRouter();
 
 // Estado de la aplicación
 const showModalType = ref(false); // Controla la visibilidad del modal para crear tipos de incidencia
@@ -327,8 +266,6 @@ const getCurrentUser = () => {
   }
   return "Administrador";
 };
-
-const currentUser = ref(getCurrentUser());
 
 // Datos reactivos
 const incidencias = ref<any[]>([]); // Lista principal de incidencias
@@ -668,10 +605,6 @@ const handleView = (data: any) => {
 };
 
 // Cerrar sesión
-const logout = () => {
-  localStorage.removeItem("token");
-  router.push({ name: "Login" });
-};
 
 // Inicialización
 onMounted(async () => {

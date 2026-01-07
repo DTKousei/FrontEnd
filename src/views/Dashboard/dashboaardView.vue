@@ -1,54 +1,19 @@
 <template>
   <div class="container">
-    <!-- Sidebar -->
+    <!-- Barra Lateral (Sidebar) -->
 
     <AdminNavbar />
 
-    <!-- Main Content -->
+    <!-- Contenido Principal -->
     <div class="main-content">
-      <!-- Header -->
-      <div class="header">
-        <div class="search-bar">
-          <input type="text" placeholder="Buscar..." />
-        </div>
-        <div class="user-info">
-          <img
-            :src="`https://ui-avatars.com/api/?name=${
-              currentUser?.nombre || 'Usuario'
-            }&background=3498db&color=fff`"
-            alt="Usuario"
-          />
-          <div>
-            <div class="user-name">
-              {{ currentUser?.nombre || "Cargando..." }}
-            </div>
-            <div class="user-role">{{ userRole }}</div>
-            <div>
-              <button @click="logout" class="logout-btn" title="Cerrar Sesión">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke-width="1.5"
-                  stroke="currentColor"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75"
-                  />
-                </svg>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <!-- Encabezado (Header) -->
+      <HeaderView />
 
-      <!-- Dashboard Content -->
+      <!-- Contenido del Dashboard -->
       <div class="dashboard-content">
         <h1 class="page-title">Dashboard de Asistencia</h1>
 
-        <!-- Cards -->
+        <!-- Tarjetas de Resumen (Cards) -->
         <div class="cards">
           <div class="card">
             <div class="card-header">
@@ -95,7 +60,7 @@
           </div>
         </div>
 
-        <!-- Charts and Tables -->
+        <!-- Gráficos y Tablas -->
         <div class="dashboard-row">
           <div class="chart-container">
             <h3 class="chart-title">Asistencia por Área - Última Semana</h3>
@@ -215,50 +180,18 @@
 </template>
 
 <script setup lang="ts">
-import { useRouter } from "vue-router";
-import { ref, onMounted } from "vue";
+// Importación del componente de barra de navegación lateral (Sidebar)
+// Contiene la navegación principal del sistema
 import AdminNavbar from "@/components/Admin/NavbarView.vue";
-import { userService } from "@/api/services/user.service";
-import type { BiometricUser } from "@/api/types/users.types";
 
-const router = useRouter();
-const currentUser = ref<BiometricUser | null>(null);
-const userRole = ref<string>("");
+// Importación del componente de encabezado (Header)
+// Maneja la información del usuario, búsqueda y cierre de sesión
+import HeaderView from "@/components/header/HeaderView.vue";
 
-const fetchUserData = async () => {
-  try {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      const parsedUser = JSON.parse(storedUser);
-      // Assuming 'usuario' field in auth user corresponds to 'user_id' in biometric system (DNI)
-      const userId = parsedUser.usuario;
-
-      if (userId) {
-        const response = await userService.getByUserId(userId);
-        currentUser.value = response.data;
-
-        // Map privilege to readable role or use cargo/rol from different sources if needed
-        // Here we use the privilege from the biometric user or fallback to Auth role if available locally
-        // For now, let's display the cargo or map privilege
-        userRole.value =
-          currentUser.value.cargo ||
-          (currentUser.value.privilegio === 14 ? "Administrador" : "Usuario");
-      }
-    }
-  } catch (error) {
-    console.error("Error fetching user data:", error);
-  }
-};
-
-onMounted(() => {
-  fetchUserData();
-});
-
-const logout = () => {
-  localStorage.removeItem("token");
-  localStorage.removeItem("user");
-  router.push({ name: "Login" });
-};
+// Nota: La lógica para inicializar los gráficos (Charts) debería implementarse aquí,
+// usualmente utilizando el hook onMounted.
+// Actualmente, los gráficos se muestran como contenedores vacíos en el template
+// y requieren una librería de gráficos (como ApexCharts o Chart.js) para renderizarse.
 </script>
 
 <style>

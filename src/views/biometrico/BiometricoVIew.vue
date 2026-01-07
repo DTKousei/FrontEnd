@@ -6,38 +6,8 @@
     <!-- Main Content -->
     <div class="main-content">
       <!-- Header -->
-      <div class="header">
-        <div class="search-bar">
-          <input type="text" placeholder="Buscar empleado..." />
-        </div>
-        <div class="user-info">
-          <img
-            src="https://ui-avatars.com/api/?name=Supervisor+User&background=3498db&color=fff"
-            alt="Usuario"
-          />
-          <div>
-            <div class="user-name">Supervisor User</div>
-            <div class="user-role">Supervisor</div>
-            <div>
-              <button @click="logout" class="logout-btn" title="Cerrar Sesión">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke-width="1.5"
-                  stroke="currentColor"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75"
-                  />
-                </svg>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <!-- Header -->
+      <HeaderView />
 
       <!-- Page Content -->
       <div class="page-content">
@@ -119,13 +89,12 @@
 </template>
 
 <script setup lang="ts">
-import { useRouter } from "vue-router";
 import AdminNavbar from "@/components/Admin/NavbarView.vue";
+import HeaderView from "@/components/header/HeaderView.vue";
 import PersonalAsis from "@/components/tables/PersonalAsis.vue";
 import ModalRegisManu from "@/components/Admin/ModalRegisManu.vue";
 import { ref } from "vue";
 
-const router = useRouter();
 const showManualModal = ref(false);
 const manualModalType = ref<"ENTRADA" | "SALIDA">("ENTRADA");
 
@@ -137,11 +106,6 @@ const handleManualOpen = (type: "ENTRADA" | "SALIDA") => {
 const handleSuccess = () => {
   // Opcional: refrescar PersonalAsis si fuera necesario usando un ref o event bus
   // Por ahora el modal muestra el sweet alert de éxito
-};
-
-const logout = () => {
-  localStorage.removeItem("token");
-  router.push({ name: "Login" });
 };
 </script>
 

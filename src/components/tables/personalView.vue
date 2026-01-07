@@ -16,6 +16,7 @@ import Tag from "primevue/tag";
 import Avatar from "primevue/avatar";
 import Swal from "sweetalert2";
 
+// 1. Interface Update
 interface ExtendedUser extends BiometricUser {
   rol?: string;
   estado?: string;
@@ -23,6 +24,7 @@ interface ExtendedUser extends BiometricUser {
   auth_id?: string;
   esta_activo?: boolean;
   raw_created_at?: Date;
+  cumpleanos?: string;
 }
 
 const emit = defineEmits(["edit-user", "update-stats"]);
@@ -57,8 +59,6 @@ const getSeverity = (status: string) => {
 };
 
 const getRoleSeverity = (role: string) => {
-  // Determina el color de la etiqueta (badge) basándose en el rol del usuario
-  // Utilizado para visualización rápida de jerarquías en la interfaz
   switch (role?.toUpperCase()) {
     case "ADMINISTRADOR":
     case "ADMIN":
@@ -76,9 +76,6 @@ const loadUsers = async () => {
   try {
     loading.value = true;
 
-    // Ejecución paralela de solicitudes para optimizar el rendimiento.
-    // Utilizamos Promise.allSettled para garantizar que la falla de un servicio
-    // no bloquee la carga de datos del otro, permitiendo una degradación elegante.
     const results = await Promise.allSettled([
       userService.getAll(),
       authService.getAllUsers(),
@@ -89,12 +86,9 @@ const loadUsers = async () => {
     const authResult = results[1];
     const deptResult = results[2];
 
-    // Procesamiento de datos del servicio Biométrico
     let biometricUsers: BiometricUser[] = [];
-
     if (biometricResult.status === "fulfilled") {
       const response = biometricResult.value;
-      // Verificación de integridad estructural de la respuesta
       // @ts-ignore
       if (response.data && Array.isArray(response.data.data)) {
         // @ts-ignore
@@ -103,21 +97,9 @@ const loadUsers = async () => {
       } else if (Array.isArray(response.data)) {
         // @ts-ignore
         biometricUsers = response.data;
-      } else {
-        console.warn(
-          "Estructura de respuesta biométrica no reconocida:",
-          response
-        );
       }
-    } else {
-      console.error(
-        "Fallo en la obtención de usuarios del biométrico:",
-        biometricResult.reason
-      );
     }
 
-    // Procesamiento de datos del servicio de Autenticación (Roles y Estados)
-    // Estos datos enriquecen la información base del biométrico
     let authUsers: AuthUser[] = [];
     if (authResult.status === "fulfilled") {
       const response = authResult.value;
@@ -127,78 +109,47 @@ const loadUsers = async () => {
         authUsers = response.data.users;
         // @ts-ignore
       } else if (response.data && Array.isArray(response.data.data)) {
-        // Estructura común donde los datos están en una propiedad 'data' anidada
         // @ts-ignore
         authUsers = response.data.data;
         // @ts-ignore
       } else if (Array.isArray(response.data)) {
-        // Respaldo para casos donde el array de usuarios se devuelve directamente
         // @ts-ignore
         authUsers = response.data;
-      } else {
-        console.warn(
-          "Estructura de respuesta de autenticación no reconocida:",
-          response
-        );
       }
-    } else {
-      console.error(
-        "Error cargando usuarios de autenticación (puede que el endpoint no exista):",
-        authResult.reason
-      );
     }
 
-    // Process Department Data
-    // (We kept existing getAll call in Promise.allSettled but we will prioritize per-user fetch as requested)
-    let departments: Department[] = [];
+    const deptMap = new Map<number, string>();
     if (deptResult.status === "fulfilled") {
-      // Use 'any' to safely inspect the axios response structure vs the expected Departments array
       const resp = deptResult.value as any;
       const dData = resp.data;
+      let departments: Department[] = [];
       if (Array.isArray(dData)) {
         departments = dData;
       } else if (dData && Array.isArray(dData.data)) {
         departments = dData.data;
-      } else {
-        departments = [];
       }
+      departments.forEach((d) => deptMap.set(d.id, d.nombre));
     }
-    // We can keeps map as fallback
-    const deptMap = new Map<number, string>();
-    departments.forEach((d) => deptMap.set(d.id, d.nombre));
-
-    console.log("Biometric Users Count:", biometricUsers.length);
-    console.log("Auth Users Count:", authUsers.length);
-    if (biometricUsers.length > 0)
-      console.log("Sample Biometric User:", biometricUsers[0]);
-    if (authUsers.length > 0) console.log("Sample Auth User:", authUsers[0]);
 
     if (biometricUsers.length === 0) {
       users.value = [];
       return;
     }
 
-    // Lógica de Fusión (Merge) de Datos con Fetch de Departamento por Usuario
-    // Solicitado explicitamente: usar endpoint /api/departamentos/usuario/[DNI]
     users.value = await Promise.all(
       biometricUsers.map(async (bUser) => {
-        // Vinculación mediante DNI
         const aUser = authUsers.find(
           (a) => String(a.usuario).trim() === String(bUser.user_id).trim()
         );
 
-        // Fetch Department name individually
         let deptName = "-";
         try {
-          // Try fetching
           const resp = await DepartmentService.getByUserDni(bUser.user_id);
           const d = resp.data as any;
           const dept = d && d.data ? d.data : d;
-
           if (dept && dept.nombre) {
             deptName = dept.nombre;
           } else {
-            // Fallback to map or existing data
             deptName = bUser.departamento_id
               ? deptMap.get(bUser.departamento_id) || "Desconocido"
               : (typeof bUser.departamento === "object"
@@ -206,12 +157,21 @@ const loadUsers = async () => {
                   : bUser.departamento) || "Sin Asignar";
           }
         } catch (err) {
-          // Fallback on error (e.g. 404 if not assigned)
           deptName = bUser.departamento_id
             ? deptMap.get(bUser.departamento_id) || "Desconocido"
             : (typeof bUser.departamento === "object"
                 ? bUser.departamento?.nombre
                 : bUser.departamento) || "Sin Asignar";
+        }
+
+        // Birthday Logic
+        const currentYear = new Date().getFullYear();
+        let bdayStr = "-";
+        if (bUser.fecha_nacimiento) {
+          const parts = bUser.fecha_nacimiento.split("-");
+          if (parts.length === 3) {
+            bdayStr = `${parts[2]}/${parts[1]}/${currentYear}`;
+          }
         }
 
         return {
@@ -227,6 +187,7 @@ const loadUsers = async () => {
           fecha_creacion: bUser.fecha_creacion
             ? new Date(bUser.fecha_creacion).toLocaleDateString()
             : "-",
+          cumpleanos: bdayStr,
         };
       })
     );
@@ -236,7 +197,6 @@ const loadUsers = async () => {
     const active = users.value.filter((u) => u.estado === "Activo").length;
     const inactive = users.value.filter((u) => u.estado === "Inactivo").length;
 
-    // Nuevos este mes
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
@@ -253,7 +213,7 @@ const loadUsers = async () => {
       total,
       active,
       inactive,
-      pending: 0, // Pendiente de definir lógica para 'Pendientes'
+      pending: 0,
       newMonth: newCount,
     });
   } catch (error) {
@@ -422,10 +382,10 @@ defineExpose({
         </template>
       </Column>
 
-      <!-- Fecha Ingreso Column -->
+      <!-- Cumpleaños Column (Replaces Fecha Ingreso) -->
       <Column
-        field="fecha_creacion"
-        header="Fecha Ingreso"
+        field="cumpleanos"
+        header="Cumpleaños"
         sortable
         style="min-width: 10rem"
       ></Column>
