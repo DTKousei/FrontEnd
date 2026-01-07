@@ -143,25 +143,17 @@ const loadUsers = async () => {
         );
 
         let deptName = "-";
-        try {
-          const resp = await DepartmentService.getByUserDni(bUser.user_id);
-          const d = resp.data as any;
-          const dept = d && d.data ? d.data : d;
-          if (dept && dept.nombre) {
-            deptName = dept.nombre;
-          } else {
-            deptName = bUser.departamento_id
-              ? deptMap.get(bUser.departamento_id) || "Desconocido"
-              : (typeof bUser.departamento === "object"
-                  ? bUser.departamento?.nombre
-                  : bUser.departamento) || "Sin Asignar";
-          }
-        } catch (err) {
-          deptName = bUser.departamento_id
-            ? deptMap.get(bUser.departamento_id) || "Desconocido"
-            : (typeof bUser.departamento === "object"
-                ? bUser.departamento?.nombre
-                : bUser.departamento) || "Sin Asignar";
+
+        // Usar datos locales ya cargados para evitar N+1 requests y errores 404
+        if (bUser.departamento_id) {
+          deptName = deptMap.get(bUser.departamento_id) || "Desconocido";
+        } else if (bUser.departamento) {
+          deptName =
+            typeof bUser.departamento === "object"
+              ? bUser.departamento.nombre
+              : String(bUser.departamento);
+        } else {
+          deptName = "Sin Asignar";
         }
 
         // Birthday Logic

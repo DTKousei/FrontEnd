@@ -4,6 +4,8 @@ import { useRouter } from "vue-router";
 import { authService } from "@/api/services/auth.service";
 import { userService } from "@/api/services/user.service";
 
+import Swal from "sweetalert2";
+
 const router = useRouter();
 
 // Estado para el usuario actual
@@ -13,31 +15,58 @@ const userRole = ref<string>("Cargando...");
 // Función para obtener los datos del usuario actual
 const fetchCurrentUser = async () => {
   try {
-    // 1. Obtener perfil de autenticación (rol, dni/usuario)
+    // 1. Obtener perfil de autenticación para conseguir el DNI (usuario)
     const authProfile = await authService.getProfile();
+
     if (authProfile && authProfile.data && authProfile.data.user) {
       const authUser = authProfile.data.user;
 
       // Asignar rol
       userRole.value = authUser.rol?.nombre || "Usuario";
 
-      // 2. Obtener datos biométricos (nombre real) usando el DNI (usuario)
+      // 2. Usar el DNI (authUser.usuario) para buscar el nombre real en la tabla de usuarios
+      // Esto asegura que mostremos "Juan Perez" en lugar de solo el DNI si es posible.
       if (authUser.usuario) {
         try {
+          // Buscamos explícitamente por el ID de usuario (DNI)
+          console.log(
+            "Buscando usuario en biométrico con DNI:",
+            authUser.usuario
+          );
           const bioUser = await userService.getByUserId(authUser.usuario);
-          // @ts-ignore - bioUser podría venir anidado según la respuesta
-          const userData = bioUser.data || bioUser;
+          console.log("Respuesta biométrico completa:", bioUser);
+
+          // @ts-ignore - bioUser podría venir anidado según la respuesta de axios/api
+          const responseBody = bioUser.data || bioUser;
+          console.log("Cuerpo de respuesta:", responseBody);
+
+          // Manejar respuesta directa o envuelta en { data: ... }
+          // Algunas APIs devuelven { success: true, data: { ... } }
+          const userData = (responseBody as any).data || responseBody;
+          console.log("Datos de usuario para mostrar:", userData);
 
           if (userData && userData.nombre) {
-            currentUser.value = { nombre: userData.nombre };
+            // Priorizamos el nombre real encontrado
+            console.log("Nombre validado:", userData.nombre);
+            currentUser.value = {
+              nombre: userData.nombre,
+            };
           } else {
-            // Fallback si no encuentra en biométrico
+            console.warn("Propiedad 'nombre' no encontrada en:", userData);
+            // Fallback: mostrar el usuario (DNI) si no se encuentran datos biométricos
             currentUser.value = { nombre: authUser.usuario };
           }
         } catch (bioError) {
-          console.warn("No se pudo obtener datos biométricos:", bioError);
+          console.warn(
+            "No se pudo obtener datos biométricos para el nombre real:",
+            bioError
+          );
+          // Fallback en caso de error en el servicio de usuarios
           currentUser.value = { nombre: authUser.usuario };
         }
+      } else {
+        // Fallback si no hay usuario en el perfil
+        currentUser.value = { nombre: "Usuario" };
       }
     }
   } catch (error) {
@@ -47,15 +76,45 @@ const fetchCurrentUser = async () => {
   }
 };
 
-// Función para cerrar sesión
+// Función para cerrar sesión con confirmación
 const logout = async () => {
-  try {
-    await authService.logout();
-    router.push("/");
-  } catch (error) {
-    console.error("Error al cerrar sesión:", error);
-    // Forzar redirección aunque falle la API
-    router.push("/");
+  const result = await Swal.fire({
+    title: "¿Cerrar Sesión?",
+    text: "¿Estás seguro que deseas salir del sistema?",
+    icon: "question",
+    showCancelButton: true,
+    confirmButtonColor: "#3085d6",
+    cancelButtonColor: "#d33",
+    confirmButtonText: "Sí, cerrar sesión",
+    cancelButtonText: "Cancelar",
+  });
+
+  if (result.isConfirmed) {
+    try {
+      await authService.logout();
+    } catch (error) {
+      console.error("Error al cerrar sesión:", error);
+    } finally {
+      // Limpiar cookies/localStorage para asegurar redirección
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+
+      // Mostrar feedback visual rápido
+      const Toast = Swal.mixin({
+        toast: true,
+        position: "top-end",
+        showConfirmButton: false,
+        timer: 1500,
+        timerProgressBar: true,
+      });
+
+      Toast.fire({
+        icon: "success",
+        title: "Sesión cerrada correctamente",
+      });
+
+      router.push("/");
+    }
   }
 };
 

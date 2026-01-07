@@ -79,11 +79,10 @@
 
 <script setup lang="ts">
 import { ref } from "vue";
-import { useRouter } from "vue-router"; // Import router
+
 import { authService } from "@/api";
 import Swal from "sweetalert2";
 
-const router = useRouter(); // Use router
 const email = ref("");
 const password = ref("");
 const isLoading = ref(false); // Add loading state
@@ -115,7 +114,9 @@ async function handleLogin() {
         confirmButtonColor: "#27ae60",
       });
 
-      router.push("/dashboard"); // Redirect to dashboard
+      // router.push("/dashboard"); // Redirect to dashboard
+      // Force reload to fix style issues
+      window.location.href = "/dashboard";
     } else {
       // Handle explicit failure in response
       errorMessage.value = response.data.message || "Error desconocido";

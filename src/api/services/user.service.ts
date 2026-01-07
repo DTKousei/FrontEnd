@@ -21,7 +21,7 @@ export const userService = {
 
   // Obtener usuario por DNI/UserID (GET /api/usuarios/user_id/{user_id})
   getByUserId(user_id: string) {
-    return api.get<BiometricUser>(`/usuarios/user_id/${user_id}/`);
+    return api.get<BiometricUser>(`/usuarios/user_id/${user_id}`);
   },
 
   // Crear nuevo usuario (POST /api/usuarios)
