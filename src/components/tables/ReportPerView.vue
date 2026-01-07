@@ -101,6 +101,7 @@ const getDepartmentName = (dept: any) => {
         header="Todos"
         headerStyle="width: 3rem; text-align: center"
         bodyStyle="text-align: center"
+        clas
       ></Column>
     </DataTable>
   </div>

@@ -9,10 +9,23 @@ import Checkbox from "primevue/checkbox";
 import Calendar from "primevue/calendar"; // Para hora
 import DataTable from "primevue/datatable";
 import Column from "primevue/column";
+import Dropdown from "primevue/dropdown";
 import Swal from "sweetalert2";
 import { scheduleService } from "@/api/services/schedule.service";
-import type { Schedule, ScheduleSegment } from "@/api/types/schedules.types";
+import type { Schedule } from "@/api/types/schedules.types";
 import { LISTA_DIAS, DIAS_SEMANA_MAP } from "@/api/types/schedules.types";
+
+const turnoOptions = [
+  { label: "Mañana", value: 1 },
+  { label: "Tarde", value: 2 },
+  { label: "Noche", value: 3 },
+  { label: "Madrugada", value: 4 },
+];
+
+const getTurnoLabel = (orden: number) => {
+  const found = turnoOptions.find((o) => o.value === orden);
+  return found ? found.label : `Turno ${orden}`;
+};
 
 const props = defineProps({
   visible: {
@@ -395,10 +408,11 @@ const saveSchedule = async () => {
                 <Checkbox
                   v-model="newSegment.dias_semana"
                   :value="dia.id"
-                  :inputId="'d' + dia.id"
+                  :inputId="'chk-dia-' + dia.id"
+                  name="dias"
                 />
                 <label
-                  :for="'d' + dia.id"
+                  :for="'chk-dia-' + dia.id"
                   class="ml-1 text-sm cursor-pointer"
                   >{{ dia.nombre }}</label
                 >
@@ -440,11 +454,13 @@ const saveSchedule = async () => {
             </div>
             <div class="w-32">
               <label class="block text-sm font-bold mb-1">Orden (Turno)</label>
-              <InputNumber
+              <Dropdown
                 v-model="newSegment.orden_turno"
-                :min="1"
-                :max="5"
-                showButtons
+                :options="turnoOptions"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Seleccione"
+                class="w-full"
               />
             </div>
           </div>
@@ -473,7 +489,15 @@ const saveSchedule = async () => {
 
       <!-- Tabla de Segmentos -->
       <DataTable :value="segments" size="small" stripedRows class="text-sm">
-        <Column header="Orden" field="orden_turno" style="width: 50px"></Column>
+        <Column header="Turno" style="width: 100px">
+          <template #body="slotProps">
+            <span
+              class="font-semibold text-blue-700 bg-blue-50 px-2 py-1 rounded text-xs"
+            >
+              {{ getTurnoLabel(slotProps.data.orden_turno) }}
+            </span>
+          </template>
+        </Column>
         <Column header="Días">
           <template #body="slotProps">
             {{ getDiasLabel(slotProps.data.dias_semana) }}
@@ -533,3 +557,10 @@ const saveSchedule = async () => {
     </template>
   </Dialog>
 </template>
+
+<style>
+/* Forzar que SweetAlert aparezca encima del modal de PrimeVue */
+.swal2-container {
+  z-index: 9999 !important;
+}
+</style>

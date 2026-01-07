@@ -34,13 +34,13 @@ export const scheduleService = {
   // Actualizar horario
   // PUT /api/horarios/{id}
   update(id: number, data: UpdateScheduleData) {
-    return api.put<Schedule>(`/horarios/${id}/`, data);
+    return api.put<Schedule>(`/horarios/${id}`, data);
   },
 
   // Eliminar horario
   // DELETE /api/horarios/{id}
   delete(id: number) {
-    return api.delete<{ message: string }>(`/horarios/${id}/`);
+    return api.delete<{ message: string }>(`/horarios/${id}`);
   },
 
   // -------------------------------------------------------------

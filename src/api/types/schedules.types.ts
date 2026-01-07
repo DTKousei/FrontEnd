@@ -137,6 +137,8 @@ export interface Holiday {
   id: number;
   fecha: string; // YYYY-MM-DD
   nombre: string;
+  tipo: 'FERIADO' | 'NO_LABORABLE';
+  repetir_anual?: boolean;
 }
 
 /**
@@ -146,4 +148,6 @@ export interface Holiday {
 export interface CreateHolidayData {
   fecha: string;
   nombre: string;
+  tipo: 'FERIADO' | 'NO_LABORABLE';
+  repetir_anual?: boolean;
 }

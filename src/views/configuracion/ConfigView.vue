@@ -122,7 +122,7 @@
               :class="{ active: activeTab === 'notificaciones' }"
               @click="activeTab = 'notificaciones'"
             >
-              Notificaciones
+              Feriados y Alertas
             </button>
             <button
               class="config-tab"
@@ -497,6 +497,14 @@
           </div>
         </div>
 
+        <!-- Sección Notificaciones (Feriados y Alertas) -->
+        <div
+          class="config-section"
+          :class="{ active: activeTab === 'notificaciones' }"
+        >
+          <CalenFerView />
+        </div>
+
         <!-- Sección Backup y Restauración -->
         <div class="config-section" :class="{ active: activeTab === 'backup' }">
           <h2 class="section-title">Backup y Restauración</h2>
@@ -623,6 +631,7 @@ import Swal from "sweetalert2";
 import "@fortawesome/fontawesome-free/css/all.min.css";
 import ModalArea from "@/components/Modals/ModalArea.vue";
 import ModalHorario from "@/components/Modals/ModalHorario.vue";
+import CalenFerView from "@/components/Calendario/CalenFerView.vue";
 import Button from "primevue/button"; // Necesario para la sección de horarios
 import DataTable from "primevue/datatable";
 import Column from "primevue/column";
