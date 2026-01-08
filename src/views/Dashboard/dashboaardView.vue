@@ -22,7 +22,7 @@
                 <i class="fas fa-user-check"></i>
               </div>
             </div>
-            <div class="card-value">42</div>
+            <div class="card-value">{{ totalPresent }}</div>
             <div class="card-footer">Hoy</div>
           </div>
 
@@ -33,7 +33,7 @@
                 <i class="fas fa-user-times"></i>
               </div>
             </div>
-            <div class="card-value">8</div>
+            <div class="card-value">{{ totalAbsent }}</div>
             <div class="card-footer">Hoy</div>
           </div>
 
@@ -44,7 +44,7 @@
                 <i class="fas fa-clock"></i>
               </div>
             </div>
-            <div class="card-value">5</div>
+            <div class="card-value">{{ totalLate }}</div>
             <div class="card-footer">Hoy</div>
           </div>
 
@@ -55,7 +55,7 @@
                 <i class="fas fa-users"></i>
               </div>
             </div>
-            <div class="card-value">55</div>
+            <div class="card-value">{{ totalPersonnel }}</div>
             <div class="card-footer">Activos</div>
           </div>
         </div>
@@ -71,90 +71,14 @@
 
           <div class="table-container">
             <h3 class="table-title">Incidencias Recientes</h3>
-            <table>
-              <thead>
-                <tr>
-                  <th>Empleado</th>
-                  <th>Tipo</th>
-                  <th>Fecha</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>Juan Pérez</td>
-                  <td><span class="status status-late">Tardanza</span></td>
-                  <td>15/05/2023</td>
-                </tr>
-                <tr>
-                  <td>María García</td>
-                  <td><span class="status status-absent">Permiso</span></td>
-                  <td>14/05/2023</td>
-                </tr>
-                <tr>
-                  <td>Carlos López</td>
-                  <td><span class="status status-absent">Vacaciones</span></td>
-                  <td>14/05/2023</td>
-                </tr>
-                <tr>
-                  <td>Ana Rodríguez</td>
-                  <td><span class="status status-late">Tardanza</span></td>
-                  <td>13/05/2023</td>
-                </tr>
-                <tr>
-                  <td>Luis Martínez</td>
-                  <td><span class="status status-absent">Licencia</span></td>
-                  <td>12/05/2023</td>
-                </tr>
-              </tbody>
-            </table>
+            <InsiRecView />
           </div>
         </div>
 
         <div class="dashboard-row">
           <div class="table-container">
             <h3 class="table-title">Registro de Asistencia de Hoy</h3>
-            <table>
-              <thead>
-                <tr>
-                  <th>Empleado</th>
-                  <th>Hora Entrada</th>
-                  <th>Hora Salida</th>
-                  <th>Estado</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>Juan Pérez</td>
-                  <td>08:05 AM</td>
-                  <td>--:--</td>
-                  <td><span class="status status-late">Tardanza</span></td>
-                </tr>
-                <tr>
-                  <td>María García</td>
-                  <td>07:55 AM</td>
-                  <td>--:--</td>
-                  <td><span class="status status-present">Presente</span></td>
-                </tr>
-                <tr>
-                  <td>Carlos López</td>
-                  <td>--:--</td>
-                  <td>--:--</td>
-                  <td><span class="status status-absent">Ausente</span></td>
-                </tr>
-                <tr>
-                  <td>Ana Rodríguez</td>
-                  <td>08:10 AM</td>
-                  <td>--:--</td>
-                  <td><span class="status status-late">Tardanza</span></td>
-                </tr>
-                <tr>
-                  <td>Luis Martínez</td>
-                  <td>07:50 AM</td>
-                  <td>--:--</td>
-                  <td><span class="status status-present">Presente</span></td>
-                </tr>
-              </tbody>
-            </table>
+            <AsisRecView />
           </div>
 
           <div class="chart-container">
@@ -180,18 +104,49 @@
 </template>
 
 <script setup lang="ts">
-// Importación del componente de barra de navegación lateral (Sidebar)
-// Contiene la navegación principal del sistema
+import { ref, onMounted } from "vue";
 import AdminNavbar from "@/components/Admin/NavbarView.vue";
-
-// Importación del componente de encabezado (Header)
-// Maneja la información del usuario, búsqueda y cierre de sesión
 import HeaderView from "@/components/header/HeaderView.vue";
+import { reportService } from "@/api/services/report.service";
+import InsiRecView from "@/components/tables/InsiRecView.vue";
+import AsisRecView from "@/components/tables/AsisRecView.vue";
 
-// Nota: La lógica para inicializar los gráficos (Charts) debería implementarse aquí,
-// usualmente utilizando el hook onMounted.
-// Actualmente, los gráficos se muestran como contenedores vacíos en el template
-// y requieren una librería de gráficos (como ApexCharts o Chart.js) para renderizarse.
+const totalPresent = ref(0);
+const totalAbsent = ref(0);
+const totalLate = ref(0);
+const totalPersonnel = ref(0);
+
+const fetchDashboardStats = async () => {
+  try {
+    const today = new Date();
+    // Ajustar zona horaria si es necesario. Para fecha local 'YYYY-MM-DD':
+    const localDate = today.toLocaleDateString("en-CA"); // Formato YYYY-MM-DD
+
+    console.log("Fetching dashboard stats for:", localDate);
+    const response = await reportService.getAttendanceMetrics(
+      localDate,
+      localDate
+    );
+
+    if (response.data) {
+      const metrics = response.data;
+      // Mapeo de datos
+      totalPersonnel.value = metrics.total_empleados || 0;
+      totalAbsent.value = metrics.totales.faltas || 0;
+      totalLate.value = metrics.totales.tardanzas || 0;
+
+      // Presentes = Puntuales + Tardanzas
+      totalPresent.value =
+        (metrics.totales.puntual || 0) + (metrics.totales.tardanzas || 0);
+    }
+  } catch (error) {
+    console.error("Error fetching dashboard stats:", error);
+  }
+};
+
+onMounted(() => {
+  fetchDashboardStats();
+});
 </script>
 
 <style>

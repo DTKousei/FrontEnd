@@ -21,6 +21,11 @@ export default defineConfig({
         target: 'http://localhost:8000',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api-biometrico/, '/api')
+      },
+      '/api-reportes': {
+        target: 'http://localhost:8001',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api-reportes/, '/api')
       }
     }
   }
