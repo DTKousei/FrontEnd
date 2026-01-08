@@ -99,9 +99,24 @@ async function handleLogin() {
     });
 
     if (response.data.success && response.data.token) {
+      const user = response.data.user;
+
+      // Validar Rol de Administrador
+      const roleName = user?.rol?.nombre?.toUpperCase() || "";
+      if (roleName !== "ADMINISTRADOR") {
+        await Swal.fire({
+          icon: "warning",
+          title: "Acceso Restringido",
+          text: "El sistema solo está habilitado para administradores por el momento.",
+          confirmButtonColor: "#f39c12",
+        });
+        isLoading.value = false;
+        return;
+      }
+
       localStorage.setItem("token", response.data.token);
-      if (response.data.user) {
-        localStorage.setItem("user", JSON.stringify(response.data.user));
+      if (user) {
+        localStorage.setItem("user", JSON.stringify(user));
       }
 
       // Show success alert

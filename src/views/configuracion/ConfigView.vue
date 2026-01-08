@@ -464,6 +464,34 @@
                 Administrar departamentos y asignar jefes de área
               </div>
             </div>
+
+            <div class="form-group">
+              <label>Gestión de Tipos de Papeletas</label>
+              <button
+                class="btn btn-secondary"
+                style="width: 100%"
+                @click="modalTipoPerVisible = true"
+              >
+                <i class="fas fa-file-alt"></i> Gestionar Tipos
+              </button>
+              <div class="label-hint">
+                Configurar tipos de permisos, tiempos y requisitos
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Gestión de Tipos de Incidencias</label>
+              <button
+                class="btn btn-secondary"
+                style="width: 100%"
+                @click="modalTipoInciVisible = true"
+              >
+                <i class="fas fa-exclamation-circle"></i> Gestionar Incidencias
+              </button>
+              <div class="label-hint">
+                Configurar tipos de faltas, sanciones y justificaciones
+              </div>
+            </div>
           </div>
 
           <div class="danger-zone" style="margin-top: 40px">
@@ -486,6 +514,8 @@
 
     <!-- Modals -->
     <ModalArea v-model:visible="modalAreaVisible" />
+    <ModalTipoPer v-model:visible="modalTipoPerVisible" />
+    <ModalTipoInci v-model:visible="modalTipoInciVisible" />
     <ModalHorario
       v-model:visible="modalHorarioVisible"
       :scheduleToEdit="selectedSchedule"
@@ -499,6 +529,8 @@ import { ref, onMounted } from "vue";
 import Swal from "sweetalert2";
 import "@fortawesome/fontawesome-free/css/all.min.css";
 import ModalArea from "@/components/Modals/ModalArea.vue";
+import ModalTipoPer from "@/components/Modals/ModalTipoPer.vue";
+import ModalTipoInci from "@/components/Modals/ModalTipoInci.vue";
 import ModalHorario from "@/components/Modals/ModalHorario.vue";
 import CalenFerView from "@/components/Calendario/CalenFerView.vue";
 import AdminNavbar from "@/components/Admin/NavbarView.vue";
@@ -512,6 +544,8 @@ import type { Schedule } from "@/api/types/schedules.types";
 
 const activeTab = ref("general");
 const modalAreaVisible = ref(false);
+const modalTipoPerVisible = ref(false);
+const modalTipoInciVisible = ref(false);
 
 // Horarios State
 const modalHorarioVisible = ref(false);

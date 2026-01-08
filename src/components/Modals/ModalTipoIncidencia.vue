@@ -1,24 +1,32 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import Dialog from "primevue/dialog";
 import InputText from "primevue/inputtext";
 import Button from "primevue/button";
 import Checkbox from "primevue/checkbox";
 import Swal from "sweetalert2";
 import { incidentService } from "@/api/services/incident.service";
+import type {
+  CreateTipoIncidenciaRequest,
+  TipoIncidencia,
+  UpdateTipoIncidenciaRequest,
+} from "@/api/types/incidents.types";
 
 const props = defineProps({
   visible: {
     type: Boolean,
     required: true,
   },
+  typeToEdit: {
+    type: Object as () => TipoIncidencia | null,
+    default: null,
+  },
 });
 
 const emit = defineEmits(["update:visible", "save"]);
 
-const loadingSubmit = ref(false); // Indicador de carga durante el envío
+const loadingSubmit = ref(false);
 
-// Estado inicial del formulario para crear un Tipo de Incidencia
 const form = ref({
   nombre: "",
   codigo: "",
@@ -28,47 +36,32 @@ const form = ref({
   esta_activo: true,
 });
 
-// Modelo computado para sincronizar la visibilidad con el componente padre
 const visibleModel = computed({
   get: () => props.visible,
   set: (val) => emit("update:visible", val),
 });
 
-/**
- * Maneja el envío del formulario para crear un nuevo tipo de incidencia.
- * Realiza validaciones básicas y llama al servicio de incidencias.
- */
-const handleSubmit = async () => {
-  // Validación de campos obligatorios
-  if (!form.value.nombre || !form.value.codigo) {
-    Swal.fire("Incompleto", "Nombre y Código son obligatorios.", "warning");
-    return;
+watch(
+  () => props.visible,
+  (newVal) => {
+    if (newVal) {
+      if (props.typeToEdit) {
+        form.value = {
+          nombre: props.typeToEdit.nombre,
+          codigo: props.typeToEdit.codigo,
+          requiere_aprobacion: props.typeToEdit.requiere_aprobacion,
+          requiere_documento: props.typeToEdit.requiere_documento,
+          descuenta_salario: props.typeToEdit.descuenta_salario,
+          esta_activo: props.typeToEdit.esta_activo,
+        };
+      } else {
+        resetForm();
+      }
+    }
   }
+);
 
-  try {
-    loadingSubmit.value = true;
-    await incidentService.createTipoIncidencia(form.value);
-    Swal.fire(
-      "Registrado",
-      "Tipo de incidencia creado correctamente",
-      "success"
-    );
-    emit("save"); // Notificar al padre para recargar la lista
-    handleCancel(); // Cerrar y limpiar
-  } catch (error: any) {
-    console.error("Error creando tipo", error);
-    Swal.fire("Error", "No se pudo crear el tipo de incidencia", "error");
-  } finally {
-    loadingSubmit.value = false;
-  }
-};
-
-/**
- * Cancela la operación, cierra el modal y reinicia el formulario.
- */
-const handleCancel = () => {
-  visibleModel.value = false;
-  // Reiniciar formulario a valores por defecto
+const resetForm = () => {
   form.value = {
     nombre: "",
     codigo: "",
@@ -78,13 +71,58 @@ const handleCancel = () => {
     esta_activo: true,
   };
 };
+
+const handleSubmit = async () => {
+  if (!form.value.nombre || !form.value.codigo) {
+    Swal.fire("Incompleto", "Nombre y Código son obligatorios.", "warning");
+    return;
+  }
+
+  loadingSubmit.value = true;
+  try {
+    if (props.typeToEdit) {
+      const updateData: UpdateTipoIncidenciaRequest = { ...form.value };
+      await incidentService.updateTipoIncidencia(
+        props.typeToEdit.id,
+        updateData
+      );
+      Swal.fire(
+        "Actualizado",
+        "Tipo de incidencia actualizado correctamente",
+        "success"
+      );
+    } else {
+      const createData: CreateTipoIncidenciaRequest = { ...form.value };
+      await incidentService.createTipoIncidencia(createData);
+      Swal.fire(
+        "Registrado",
+        "Tipo de incidencia creado correctamente",
+        "success"
+      );
+    }
+    emit("save");
+    handleCancel();
+  } catch (error: any) {
+    console.error("Error saving incident type:", error);
+    Swal.fire("Error", "No se pudo guardar el tipo de incidencia", "error");
+  } finally {
+    loadingSubmit.value = false;
+  }
+};
+
+const handleCancel = () => {
+  visibleModel.value = false;
+  resetForm();
+};
 </script>
 
 <template>
   <Dialog
     v-model:visible="visibleModel"
     modal
-    header="Nuevo Tipo de Incidencia"
+    :header="
+      typeToEdit ? 'Editar Tipo de Incidencia' : 'Nuevo Tipo de Incidencia'
+    "
     :style="{ width: '40vw', minWidth: '400px' }"
     class="p-fluid"
   >
@@ -95,6 +133,7 @@ const handleCancel = () => {
           v-model="form.nombre"
           class="w-full"
           placeholder="Ej. Falta Injustificada"
+          autofocus
         />
       </div>
 
@@ -117,8 +156,8 @@ const handleCancel = () => {
           <label for="doc" class="ml-2">Requiere Documento</label>
         </div>
         <div class="flex align-items-center">
-          <Checkbox v-model="form.descuenta_salario" binary inputId="desc" />
-          <label for="desc" class="ml-2">Descuenta Salario</label>
+          <Checkbox v-model="form.esta_activo" binary inputId="activo" />
+          <label for="activo" class="ml-2 font-bold">Activo</label>
         </div>
       </div>
     </div>

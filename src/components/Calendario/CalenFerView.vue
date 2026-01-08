@@ -287,7 +287,21 @@ const attributes = computed(() => {
     }
   });
 
-  return [...holidayAttrs, ...birthdayAttrs];
+  // 3. Mapear Día Actual (Highlight Celeste)
+  const todayAttr = {
+    key: "today",
+    highlight: {
+      color: "blue",
+      fillMode: "light",
+    },
+    dates: new Date(),
+    popover: {
+      label: "Hoy",
+      visibility: "hover",
+    },
+  };
+
+  return [...holidayAttrs, ...birthdayAttrs, todayAttr];
 });
 
 /**

@@ -15,6 +15,7 @@ import InputIcon from "primevue/inputicon";
 import Tag from "primevue/tag";
 import Avatar from "primevue/avatar";
 import Swal from "sweetalert2";
+import ModalDatos from "@/components/Modals/ModalDatos.vue";
 
 // 1. Interface Update
 interface ExtendedUser extends BiometricUser {
@@ -34,6 +35,10 @@ const loading = ref(true);
 const filters = ref<any>({
   global: { value: null, matchMode: "contains" },
 });
+
+// Modal Datos State
+const showModalDatos = ref(false);
+const selectedUserForDetails = ref<ExtendedUser | null>(null);
 
 const getInitials = (name: string) => {
   if (!name) return "??";
@@ -266,6 +271,11 @@ const toggleUserStatus = async (user: ExtendedUser) => {
   }
 };
 
+const openDetails = (user: ExtendedUser) => {
+  selectedUserForDetails.value = user;
+  showModalDatos.value = true;
+};
+
 onMounted(() => {
   loadUsers();
 });
@@ -400,6 +410,7 @@ defineExpose({
               rounded
               severity="info"
               aria-label="Ver"
+              @click="openDetails(slotProps.data)"
             />
             <Button
               :icon="
@@ -424,6 +435,11 @@ defineExpose({
         </template>
       </Column>
     </DataTable>
+
+    <ModalDatos
+      v-model:visible="showModalDatos"
+      :user="selectedUserForDetails"
+    />
   </div>
 </template>
 
