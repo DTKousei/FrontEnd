@@ -8,19 +8,19 @@ import type {
 } from '@/api/types/devices.types';
 
 export const deviceService = {
-  // GET /api/dispositivos
+  // GET /api/dispositivos/
   getAll() {
-    return api.get<Device[]>('/dispositivos');
+    return api.get<Device[]>('/dispositivos/');
   },
 
-  // GET /api/dispositivos/{id}
+  // GET /api/dispositivos/{id}/
   getById(id: number) {
     return api.get<DeviceConnectionInfo>(`/dispositivos/${id}`);
   },
 
-  // POST /api/dispositivos
+  // POST /api/dispositivos/
   create(data: CreateDeviceData) {
-    return api.post<Device>('/dispositivos', data);
+    return api.post<Device>('/dispositivos/', data);
   },
 
   // PUT /api/dispositivos/{id}
@@ -28,7 +28,7 @@ export const deviceService = {
     return api.put<Device>(`/dispositivos/${id}`, data);
   },
 
-  // DELETE /api/dispositivos/{id}
+  // DELETE /api/dispositivos/{id}/
   delete(id: number) {
     return api.delete<{ message: string }>(`/dispositivos/${id}`);
   },
@@ -38,7 +38,7 @@ export const deviceService = {
     return api.post<TestConnectionResponse>(`/dispositivos/${id}/test-conexion`);
   },
 
-  // GET /api/dispositivos/{id}/info
+  // GET /api/dispositivos/{id}/info/
   getInfo(id: number) {
     return api.get<DeviceConnectionInfo>(`/dispositivos/${id}/info`);
   }

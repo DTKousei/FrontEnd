@@ -94,6 +94,15 @@ const handleSubmit = async () => {
     if (props.departmentToEdit) {
       // Pasamos el payload completo incluyendo jefe_id
       await DepartmentService.update(props.departmentToEdit.id, form.value);
+
+      // Asignar jefe explícitamente si se seleccionó uno
+      if (form.value.jefe_id) {
+        await DepartmentService.assignBoss(
+          props.departmentToEdit.id,
+          form.value.jefe_id
+        );
+      }
+
       Swal.fire(
         "Actualizado",
         "Departamento actualizado correctamente",

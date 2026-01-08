@@ -269,70 +269,12 @@
         </div>
 
         <!-- Sección Control Biométrico -->
+        <!-- Sección Control Biométrico -->
         <div
           class="config-section"
           :class="{ active: activeTab === 'biometrico' }"
         >
-          <h2 class="section-title">Control Biométrico</h2>
-          <p class="section-description">
-            Configura los dispositivos biométricos y parámetros de verificación.
-          </p>
-
-          <div class="form-grid">
-            <div class="form-group">
-              <label for="tipo-dispositivo">Tipo de Dispositivo</label>
-              <select id="tipo-dispositivo">
-                <option value="huella" selected>Lector de Huellas</option>
-                <option value="rostro">Reconocimiento Facial</option>
-                <option value="tarjeta">Lector de Tarjetas</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label for="puerto-dispositivo">Puerto del Dispositivo</label>
-              <select id="puerto-dispositivo">
-                <option value="usb" selected>USB</option>
-                <option value="serial">Serial (COM)</option>
-                <option value="red">Red (TCP/IP)</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label for="modelo-dispositivo">Modelo del Dispositivo</label>
-              <input type="text" id="modelo-dispositivo" value="ZK4500" />
-            </div>
-
-            <div class="form-group">
-              <label for="sensibilidad">Sensibilidad de Verificación</label>
-              <select id="sensibilidad">
-                <option value="baja">Baja</option>
-                <option value="media" selected>Media</option>
-                <option value="alta">Alta</option>
-              </select>
-              <div class="label-hint">
-                Ajusta el nivel de precisión requerido
-              </div>
-            </div>
-          </div>
-
-          <div class="checkbox-group">
-            <input type="checkbox" id="verificacion-dual" checked />
-            <label for="verificacion-dual" class="checkbox-label"
-              >Habilitar verificación dual (huella + código)</label
-            >
-          </div>
-
-          <div class="checkbox-group">
-            <input type="checkbox" id="registro-fotos" />
-            <label for="registro-fotos" class="checkbox-label"
-              >Capturar fotografía en cada registro</label
-            >
-          </div>
-
-          <div class="form-actions">
-            <button class="btn btn-outline">Probar Conexión</button>
-            <button class="btn btn-primary">Guardar Configuración</button>
-          </div>
+          <TestConexView />
         </div>
 
         <!-- Sección Permisos y Roles -->
@@ -561,6 +503,7 @@ import ModalHorario from "@/components/Modals/ModalHorario.vue";
 import CalenFerView from "@/components/Calendario/CalenFerView.vue";
 import AdminNavbar from "@/components/Admin/NavbarView.vue";
 import HeaderView from "@/components/header/HeaderView.vue";
+import TestConexView from "@/components/Biometrico/TestConexView.vue";
 import Button from "primevue/button"; // Necesario para la sección de horarios
 import DataTable from "primevue/datatable";
 import Column from "primevue/column";
