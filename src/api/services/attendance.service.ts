@@ -29,6 +29,11 @@ export const attendanceService = {
     return api.post<SyncAttendanceResponse>(`/asistencias/sincronizar/${dispositivoId}`);
   },
 
+  // POST /api/asistencias/sincronizar-hoy/{dispositivo_id}
+  syncToday(dispositivoId: number) {
+    return api.post<SyncAttendanceResponse>(`/asistencias/sincronizar-hoy/${dispositivoId}`);
+  },
+
   // POST /api/asistencias/sincronizar-todos
   syncAll() {
     return api.post<SyncAllDevicesResponse>(`/asistencias/sincronizar-todos`);

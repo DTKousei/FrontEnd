@@ -46,6 +46,6 @@ export const userService = {
 
   // Sincronizar todos los usuarios desde un dispositivo (POST /api/usuarios/dispositivos/{id}/sincronizar)
   syncAllFromDevice(deviceId: number) {
-    return api.post<SyncUsersResponse>(`/usuarios/dispositivos/${deviceId}/sincronizar/`);
+    return api.post<SyncUsersResponse>(`/usuarios/dispositivos/${deviceId}/sincronizar`);
   }
 };

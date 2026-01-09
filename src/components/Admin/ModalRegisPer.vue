@@ -313,13 +313,13 @@ const handleSubmit = async () => {
       dispositivo_id: 1, // Default
       cargo: form.value.cargo,
       departamento_id: form.value.departamento_id || undefined, // Send ID
-      telefono: form.value.telefono,
-      email: form.value.email,
+      telefono: form.value.telefono || undefined,
+      email: form.value.email || undefined,
       fecha_nacimiento: form.value.fecha_nacimiento
         ? formatDate(form.value.fecha_nacimiento)
         : undefined,
-      direccion: form.value.direccion,
-      comentarios: form.value.observaciones,
+      direccion: form.value.direccion || undefined,
+      comentarios: form.value.observaciones || undefined,
     };
 
     console.log("Carga útil Biométrica:", biometricData);
@@ -344,25 +344,97 @@ const handleSubmit = async () => {
       console.error("Falló la Operación Biométrica:", bioError);
       throw bioError;
     }
+
+    // Validar DNI Actual (Source of Truth)
+    // Usamos el DNI retornado por el backend para asegurar consistencia
+    // A veces la respuesta puede venir anidada en 'data'
+    const actualDni =
+      (biometricResult as any).data?.user_id ||
+      (biometricResult as any).user_id ||
+      form.value.dni;
+
+    if (actualDni !== form.value.dni) {
+      console.warn(
+        `El backend no actualizó el DNI. Solicitado: ${form.value.dni}, Actual: ${actualDni}`
+      );
+      Swal.fire({
+        icon: "warning",
+        title: "DNI no actualizado",
+        text: "El sistema biométrico no permitió cambiar el DNI. Se mantendrá el DNI original para los demás registros.",
+      });
+    }
+
     // Las operaciones de autenticación siguen...
 
     // OPERACIÓN DE AUTENTICACIÓN
     let generatedPassword = "";
     if (isEdit) {
+      // Identificar DNI original vs nuevo
+      // props.userToEdit.user_id es el DNI original con el que se cargó el formulario
+      const originalDni = props.userToEdit?.user_id || form.value.dni;
+      const dniChanged = originalDni !== actualDni; // Comparar con actualDni
+
       // Usar nuevo endpoint PUT /api/users/usuario/:DNI
       const authData: any = {
         correo_electronico: form.value.email,
         rol_id: form.value.rol_id,
-        esta_activo: true, // O mapear desde el form si agregamos campo
+        esta_activo: true,
       };
-      console.log("Carga útil Actualización Auth (DNI):", authData);
-      promises.push(authService.updateUserByDNI(form.value.dni, authData));
+
+      // Si el DNI cambió (y el backend lo aceptó), incluirlo en el payload
+      if (dniChanged) {
+        authData.usuario = actualDni;
+        console.log(
+          `Detectado cambio de DNI confirmado: ${originalDni} -> ${actualDni}`
+        );
+      }
+
+      console.log(
+        "Carga útil Actualización Auth (lookup by original DNI):",
+        authData
+      );
+
+      // Try update, if fails with 404 then Create
+      try {
+        await authService.updateUserByDNI(originalDni, authData);
+      } catch (authError: any) {
+        console.warn("Error updating auth user:", authError);
+        // Check if error is 404 (Not Found) or 400 (Prisma "No record found")
+        const isNotFound =
+          (authError.response && authError.response.status === 404) ||
+          (authError.response &&
+            authError.response.status === 400 &&
+            authError.response.data?.message &&
+            authError.response.data.message.includes("No record was found"));
+
+        if (isNotFound) {
+          console.log("User not found in Auth system. Creating new...");
+          generatedPassword = generatePassword(actualDni, form.value.nombres);
+          const regData: RegisterData = {
+            usuario: actualDni,
+            correo_electronico: form.value.email || `${actualDni}@example.com`,
+            contrasena: generatedPassword,
+            rol_id: form.value.rol_id,
+          };
+          await authService.register(regData);
+
+          // Notify user that account was created
+          Swal.fire({
+            icon: "info",
+            title: "Cuenta de Sistema Creada",
+            text: `El usuario no existía en el sistema de autenticación, así que se ha creado. Contraseña: ${generatedPassword}`,
+          });
+        } else {
+          // Re-throw if it's another error
+          throw authError;
+        }
+      }
     } else {
       // Crear nuevo
-      generatedPassword = generatePassword(form.value.dni, form.value.nombres);
+      generatedPassword = generatePassword(actualDni, form.value.nombres);
       const authData: RegisterData = {
-        usuario: form.value.dni,
-        correo_electronico: form.value.email || `${form.value.dni}@example.com`,
+        usuario: actualDni,
+        correo_electronico: form.value.email || `${actualDni}@example.com`,
         contrasena: generatedPassword,
         rol_id: form.value.rol_id,
       };
@@ -378,12 +450,12 @@ const handleSubmit = async () => {
       try {
         console.log(
           "Asignando horario user_id(DNI):",
-          form.value.dni,
+          actualDni,
           "Horario:",
           form.value.horario_id
         );
         await scheduleService.assignToUser({
-          user_id: form.value.dni, // USAR DNI COMO PIDE EL USUARIO / BACKEND
+          user_id: actualDni, // USAR DNI REAL CONFIRMADO
           horario_id: form.value.horario_id,
           fecha_inicio: `${new Date().toISOString().split("T")[0]}T00:00:00`, // Fecha actual con hora
         });

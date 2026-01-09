@@ -65,7 +65,7 @@
           <div class="chart-container">
             <h3 class="chart-title">Asistencia por Área - Última Semana</h3>
             <div id="attendance-chart">
-              <div id="chart"></div>
+              <LineaAsisView :data="chartData" />
             </div>
           </div>
 
@@ -110,11 +110,13 @@ import HeaderView from "@/components/header/HeaderView.vue";
 import { reportService } from "@/api/services/report.service";
 import InsiRecView from "@/components/tables/InsiRecView.vue";
 import AsisRecView from "@/components/tables/AsisRecView.vue";
+import LineaAsisView from "@/components/Graficas/LineaAsisView.vue";
 
 const totalPresent = ref(0);
 const totalAbsent = ref(0);
 const totalLate = ref(0);
 const totalPersonnel = ref(0);
+const chartData = ref([]);
 
 const fetchDashboardStats = async () => {
   try {
@@ -144,8 +146,30 @@ const fetchDashboardStats = async () => {
   }
 };
 
+const fetchChartStats = async () => {
+  try {
+    const today = new Date();
+    const pastDate = new Date();
+    pastDate.setDate(today.getDate() - 6); // Últimos 7 días
+
+    // Formato YYYY-MM-DD
+    const fToday = today.toLocaleDateString("en-CA");
+    const fPast = pastDate.toLocaleDateString("en-CA");
+
+    console.log(`Fetching chart stats from ${fPast} to ${fToday}`);
+    const response = await reportService.getAttendanceMetrics(fPast, fToday);
+
+    // Asumimos que response.data.data trae el array de registros
+    // @ts-ignore
+    chartData.value = response.data?.data || [];
+  } catch (error) {
+    console.error("Error fetching chart stats:", error);
+  }
+};
+
 onMounted(() => {
   fetchDashboardStats();
+  fetchChartStats();
 });
 </script>
 

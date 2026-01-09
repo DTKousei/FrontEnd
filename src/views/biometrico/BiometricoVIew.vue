@@ -26,7 +26,11 @@
               Coloque su dedo en el lector biométrico para registrar su
               asistencia
             </div>
-            <button class="biometric-btn" id="biometric-scan">
+            <button
+              class="biometric-btn"
+              id="biometric-scan"
+              @click="handleSyncOpen"
+            >
               <i class="fas fa-fingerprint"></i>
               Escanear Huella Digital
             </button>
@@ -86,6 +90,7 @@
     :type="manualModalType"
     @success="handleSuccess"
   />
+  <ModalSyncDevice v-model:visible="showSyncModal" />
 </template>
 
 <script setup lang="ts">
@@ -93,14 +98,20 @@ import AdminNavbar from "@/components/Admin/NavbarView.vue";
 import HeaderView from "@/components/header/HeaderView.vue";
 import PersonalAsis from "@/components/tables/PersonalAsis.vue";
 import ModalRegisManu from "@/components/Admin/ModalRegisManu.vue";
+import ModalSyncDevice from "@/components/Biometrico/ModalSyncDevice.vue"; // Import
 import { ref } from "vue";
 
 const showManualModal = ref(false);
+const showSyncModal = ref(false); // Sync Modal State
 const manualModalType = ref<"ENTRADA" | "SALIDA">("ENTRADA");
 
 const handleManualOpen = (type: "ENTRADA" | "SALIDA") => {
   manualModalType.value = type;
   showManualModal.value = true;
+};
+
+const handleSyncOpen = () => {
+  showSyncModal.value = true;
 };
 
 const handleSuccess = () => {

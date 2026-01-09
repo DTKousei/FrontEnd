@@ -93,6 +93,9 @@ const getDepartmentName = (dept: any) => {
       class="p-datatable-sm"
       responsiveLayout="scroll"
       stripedRows
+      :metaKeySelection="false"
+      stateStorage="session"
+      stateKey="dt-state-report-per"
     >
       <template #header>
         <div class="flex justify-content-between align-items-center">
@@ -130,10 +133,8 @@ const getDepartmentName = (dept: any) => {
       <!-- Columna de Selección -->
       <Column
         selectionMode="multiple"
-        header="Todos"
         headerStyle="width: 3rem; text-align: center"
         bodyStyle="text-align: center"
-        clas
       ></Column>
     </DataTable>
   </div>
