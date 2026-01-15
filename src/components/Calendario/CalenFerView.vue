@@ -132,7 +132,7 @@ const getEasterDate = (year: number) => {
 const importarFeriadosPeru = async () => {
   const result = await Swal.fire({
     title: "Sincronizar Feriados Perú",
-    text: "Se agregarán los feriados nacionales estándar para el año actual si no existen. ¿Continuar?",
+    text: "Se agregarán los feriados nacionales desde 2020 en adelante si no existen. ¿Continuar?",
     icon: "info",
     showCancelButton: true,
     confirmButtonText: "Sí, Sincronizar",
@@ -141,7 +141,10 @@ const importarFeriadosPeru = async () => {
 
   if (!result.isConfirmed) return;
 
-  const currentYear = new Date().getFullYear();
+  const startYear = 2020;
+  const endYear = new Date().getFullYear() + 1; // Hasta el próximo año
+  let addedCount = 0;
+
   const fixedHolidays = [
     { d: "01-01", n: "Año Nuevo" },
     { d: "05-01", n: "Día del Trabajo" },
@@ -157,59 +160,58 @@ const importarFeriadosPeru = async () => {
     { d: "12-25", n: "Navidad" },
   ];
 
-  // Calcular Jueves y Viernes Santo
-  const easter = getEasterDate(currentYear);
-  // Jueves Santo: -3 días desde Pascua (Domingo)
-  const juevesSanto = new Date(easter);
-  juevesSanto.setDate(easter.getDate() - 3);
-  // Viernes Santo: -2 días desde Pascua
-  const viernesSanto = new Date(easter);
-  viernesSanto.setDate(easter.getDate() - 2);
+  for (let year = startYear; year <= endYear; year++) {
+    // Calcular Jueves y Viernes Santo
+    const easter = getEasterDate(year);
+    // Jueves Santo: -3 días desde Pascua (Domingo)
+    const juevesSanto = new Date(easter);
+    juevesSanto.setDate(easter.getDate() - 3);
+    // Viernes Santo: -2 días desde Pascua
+    const viernesSanto = new Date(easter);
+    viernesSanto.setDate(easter.getDate() - 2);
 
-  const movableHolidays = [
-    { date: juevesSanto, n: "Jueves Santo" },
-    { date: viernesSanto, n: "Viernes Santo" },
-  ];
+    const movableHolidays = [
+      { date: juevesSanto, n: "Jueves Santo" },
+      { date: viernesSanto, n: "Viernes Santo" },
+    ];
 
-  let addedCount = 0;
-  const errors = [];
-
-  // Procesar Fijos
-  for (const fh of fixedHolidays) {
-    const fullDate = `${currentYear}-${fh.d}`; // YYYY-MM-DD
-    if (!holidays.value.some((h) => h.fecha === fullDate)) {
-      try {
-        await scheduleService.createHoliday({
-          fecha: fullDate,
-          nombre: fh.n,
-          tipo: "FERIADO",
-          repetir_anual: true,
-        });
-        addedCount++;
-      } catch (e) {
-        errors.push(fh.n);
+    // Procesar Fijos
+    for (const fh of fixedHolidays) {
+      const fullDate = `${year}-${fh.d}`; // YYYY-MM-DD
+      if (!holidays.value.some((h) => h.fecha === fullDate)) {
+        try {
+          await scheduleService.createHoliday({
+            fecha: fullDate,
+            nombre: fh.n,
+            tipo: "FERIADO",
+            repetir_anual: false, // Ahora se crean individualmente por año
+          });
+          addedCount++;
+        } catch (e) {
+          // errors.push(fh.n);
+        }
       }
     }
-  }
 
-  // Procesar Movibles (Semana Santa)
-  for (const mh of movableHolidays) {
-    const y = mh.date.getFullYear();
-    const m = (mh.date.getMonth() + 1).toString().padStart(2, "0");
-    const d = mh.date.getDate().toString().padStart(2, "0");
-    const fullDate = `${y}-${m}-${d}`;
+    // Procesar Movibles (Semana Santa)
+    for (const mh of movableHolidays) {
+      const y = mh.date.getFullYear();
+      const m = (mh.date.getMonth() + 1).toString().padStart(2, "0");
+      const d = mh.date.getDate().toString().padStart(2, "0");
+      const fullDate = `${y}-${m}-${d}`;
 
-    if (!holidays.value.some((h) => h.fecha === fullDate)) {
-      try {
-        await scheduleService.createHoliday({
-          fecha: fullDate,
-          nombre: mh.n,
-          tipo: "FERIADO",
-          repetir_anual: false, // Estos cambian cada año
-        });
-        addedCount++;
-      } catch (e) {
-        errors.push(mh.n);
+      if (!holidays.value.some((h) => h.fecha === fullDate)) {
+        try {
+          await scheduleService.createHoliday({
+            fecha: fullDate,
+            nombre: mh.n,
+            tipo: "FERIADO",
+            repetir_anual: false,
+          });
+          addedCount++;
+        } catch (e) {
+          // errors.push(mh.n);
+        }
       }
     }
   }
@@ -219,7 +221,7 @@ const importarFeriadosPeru = async () => {
   if (addedCount > 0) {
     Swal.fire(
       "Sincronizado",
-      `Se agregaron ${addedCount} feriados nuevos.`,
+      `Se agregaron ${addedCount} feriados nuevos (2020-${endYear}).`,
       "success"
     );
   } else {

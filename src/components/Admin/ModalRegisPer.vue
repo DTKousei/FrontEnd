@@ -64,6 +64,8 @@ const form = ref({
   direccion: "",
   rol_id: "",
   observaciones: "", // This maps to 'comentarios' in API
+  fecha_inicio_asignacion: new Date() as Date | null,
+  fecha_fin_asignacion: null as Date | null,
 });
 
 // Observar cambios (Abrir modal o cambiar usuario)
@@ -159,13 +161,27 @@ const populateForm = async (
       if (assignment && assignment.horario_id) {
         console.log("Horario encontrado:", assignment.horario_id);
         form.value.horario_id = assignment.horario_id;
+
+        // Populate start/end dates if available
+        if (assignment.fecha_inicio) {
+          form.value.fecha_inicio_asignacion = new Date(
+            assignment.fecha_inicio
+          );
+        }
+        if (assignment.fecha_fin) {
+          form.value.fecha_fin_asignacion = new Date(assignment.fecha_fin);
+        }
       } else {
         console.log("No se encontró asignación válida en la respuesta");
         form.value.horario_id = null;
+        form.value.fecha_inicio_asignacion = new Date();
+        form.value.fecha_fin_asignacion = null;
       }
     } catch (error) {
       console.warn("No se pudo cargar el horario asignado:", error);
       form.value.horario_id = null;
+      form.value.fecha_inicio_asignacion = new Date();
+      form.value.fecha_fin_asignacion = null;
     }
 
     // 2. Fetch Department by User DNI
@@ -260,6 +276,8 @@ const resetForm = () => {
     direccion: "",
     rol_id: "",
     observaciones: "",
+    fecha_inicio_asignacion: new Date(),
+    fecha_fin_asignacion: null,
   };
 };
 
@@ -457,7 +475,12 @@ const handleSubmit = async () => {
         await scheduleService.assignToUser({
           user_id: actualDni, // USAR DNI REAL CONFIRMADO
           horario_id: form.value.horario_id,
-          fecha_inicio: `${new Date().toISOString().split("T")[0]}T00:00:00`, // Fecha actual con hora
+          fecha_inicio: form.value.fecha_inicio_asignacion
+            ? `${formatDate(form.value.fecha_inicio_asignacion)}T00:00:00`
+            : `${formatDate(new Date())}T00:00:00`,
+          fecha_fin: form.value.fecha_fin_asignacion
+            ? `${formatDate(form.value.fecha_fin_asignacion)}T00:00:00`
+            : undefined,
         });
         console.log("Horario asignado correctamente");
       } catch (scheduleError) {
@@ -610,6 +633,37 @@ const visibleModel = computed({
           optionValue="id"
           placeholder="Seleccionar horario"
           class="w-full"
+        />
+      </div>
+
+      <!-- Fecha Inicio Asignación (Obligatorio) -->
+      <div class="field col-12 md:col-6" v-if="form.horario_id">
+        <label for="fecha_inicio_asignacion" class="font-bold block mb-2"
+          >Fecha Inicio Asignación *</label
+        >
+        <DatePicker
+          id="fecha_inicio_asignacion"
+          v-model="form.fecha_inicio_asignacion"
+          placeholder="dd/mm/aaaa"
+          dateFormat="dd/mm/yy"
+          class="w-full"
+          showIcon
+        />
+      </div>
+
+      <!-- Fecha Fin Asignación (Opcional) -->
+      <div class="field col-12 md:col-6" v-if="form.horario_id">
+        <label for="fecha_fin_asignacion" class="font-bold block mb-2"
+          >Fecha Fin Asignación (Opcional)</label
+        >
+        <DatePicker
+          id="fecha_fin_asignacion"
+          v-model="form.fecha_fin_asignacion"
+          placeholder="dd/mm/aaaa"
+          dateFormat="dd/mm/yy"
+          class="w-full"
+          showIcon
+          showButtonBar
         />
       </div>
 
