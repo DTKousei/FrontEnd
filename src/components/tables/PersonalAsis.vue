@@ -128,7 +128,9 @@ const loadData = async () => {
     }
 
     if (reportRes.status === "fulfilled") {
-      rawRecords = reportRes.value.data;
+      rawRecords = reportRes.value.data.filter(
+        (rec: any) => rec.estado_asistencia !== "SIN_HORARIO"
+      );
     }
 
     // Map logic

@@ -98,8 +98,15 @@ const getStatusClass = (tipo: string | undefined) => {
 
 const formatDate = (dateString: string) => {
   if (!dateString) return "-";
-  // Ajuste simple de fecha para visualización, asumiendo ISO string
-  return new Date(dateString).toLocaleDateString("es-PE");
+  // Ajuste para evitar desfase de zona horaria (UTC -> Local)
+  // Al crear new Date('YYYY-MM-DD'), JS usa UTC. Al mostrar local en Perú (UTC-5), resta horas y cambia de día.
+  // Usamos getUTC* para mantener la fecha original del string.
+  const date = new Date(dateString);
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const year = date.getUTCFullYear();
+
+  return `${day}/${month}/${year}`;
 };
 
 const loadRecentIncidents = async () => {

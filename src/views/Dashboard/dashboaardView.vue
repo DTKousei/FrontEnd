@@ -63,7 +63,27 @@
         <!-- Gráficos y Tablas -->
         <div class="dashboard-row">
           <div class="chart-container">
-            <h3 class="chart-title">Asistencia por Área - Última Semana</h3>
+            <div
+              class="flex justify-content-between align-items-center mb-3 flex-wrap gap-2"
+              style="
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+              "
+            >
+              <h3 class="chart-title m-0">Asistencia Semanal por Área</h3>
+              <div class="flex align-items-center gap-2">
+                <span class="text-gray-600 mr-2 font-semibold">{{
+                  dateRangeText
+                }}</span>
+                <DatePicker
+                  v-model="selectedChartDate"
+                  showIcon
+                  dateFormat="dd/mm/yy"
+                  placeholder="Seleccionar semana"
+                />
+              </div>
+            </div>
             <div id="attendance-chart">
               <LineaAsisView :data="chartData" />
             </div>
@@ -82,19 +102,20 @@
           </div>
 
           <div class="chart-container">
-            <h3 class="chart-title">Distribución por Estado</h3>
-            <div
-              id="distribution-chart"
-              style="
-                height: 300px;
-                background-color: #f8f9fa;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                border-radius: 5px;
-              "
-            >
-              <div id="chart1"></div>
+            <!-- Gráfico Circular Hoy -->
+            <div class="dashboard-row">
+              <div
+                class="chart-container"
+                style="
+                  width: 100%;
+                  display: flex;
+                  flex-direction: column;
+                  align-items: center;
+                "
+              >
+                <h3 class="chart-title mb-3">Asistencia Hoy por Área</h3>
+                <PieAsisView :series="pieSeries" :labels="pieLabels" />
+              </div>
             </div>
           </div>
         </div>
@@ -104,43 +125,164 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed, watch } from "vue";
 import AdminNavbar from "@/components/Admin/NavbarView.vue";
 import HeaderView from "@/components/header/HeaderView.vue";
-import { reportService } from "@/api/services/report.service";
+
+import { attendanceService } from "@/api/services/attendance.service";
+import { userService } from "@/api/services/user.service";
+import { DepartmentService } from "@/api/services/department.service";
 import InsiRecView from "@/components/tables/InsiRecView.vue";
 import AsisRecView from "@/components/tables/AsisRecView.vue";
 import LineaAsisView from "@/components/Graficas/LineaAsisView.vue";
+import DatePicker from "primevue/datepicker";
+import PieAsisView from "@/components/Graficas/PieAsisView.vue";
 
 const totalPresent = ref(0);
 const totalAbsent = ref(0);
 const totalLate = ref(0);
 const totalPersonnel = ref(0);
 const chartData = ref([]);
+const pieSeries = ref<number[]>([]);
+const pieLabels = ref<string[]>([]);
+const selectedChartDate = ref(new Date());
+
+// Computed para mostrar el rango seleccionado
+const dateRangeText = computed(() => {
+  const { start, end } = getWeekRange(selectedChartDate.value);
+  return `${start.toLocaleDateString("es-ES")} - ${end.toLocaleDateString(
+    "es-ES"
+  )}`;
+});
+
+const getWeekRange = (date: Date) => {
+  const d = new Date(date);
+  const day = d.getDay();
+  // Ajustar para que el 0 sea Domingo, pero queremos Lunes (1) como inicio.
+  // diff: si es lunes (1) -> 1 - 1 = 0. si es domingo (0) -> 0 - 1 = -1 (lo cual iría al lunes pasado? no, domingo suele ser final o inicio).
+  // Asumiremos Domingo es el día 0. Queremos el Lunes PREVIO o el mismo si es Lunes.
+  // Si day es 0 (domingo), diff = -6 (lunes pasado).
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+
+  const start = new Date(d.setDate(diff));
+  const end = new Date(d);
+  end.setDate(start.getDate() + 4); // Viernes (+4 días desde Lunes)
+
+  return { start, end };
+};
 
 const fetchDashboardStats = async () => {
   try {
     const today = new Date();
-    // Ajustar zona horaria si es necesario. Para fecha local 'YYYY-MM-DD':
-    const localDate = today.toLocaleDateString("en-CA"); // Formato YYYY-MM-DD
+    const fToday = today.toLocaleDateString("en-CA");
 
-    console.log("Fetching dashboard stats for:", localDate);
-    const response = await reportService.getAttendanceMetrics(
-      localDate,
-      localDate
-    );
-
-    if (response.data) {
-      const metrics = response.data;
-      // Mapeo de datos
-      totalPersonnel.value = metrics.total_empleados || 0;
-      totalAbsent.value = metrics.totales.faltas || 0;
-      totalLate.value = metrics.totales.tardanzas || 0;
-
-      // Presentes = Puntuales + Tardanzas
-      totalPresent.value =
-        (metrics.totales.puntual || 0) + (metrics.totales.tardanzas || 0);
+    // 1. Asegurar cálculo de asistencia para hoy
+    try {
+      await attendanceService.calculateAttendance({
+        fecha_inicio: fToday,
+        fecha_fin: fToday,
+      });
+    } catch (err) {
+      console.warn("Auto-calculation for today failed or already done:", err);
     }
+
+    // 2. Fetch de Datos (Reporte Hoy, Usuarios, Depts)
+    const [reportRes, usersRes, deptRes] = await Promise.all([
+      attendanceService.getDailyReport({
+        fecha_inicio: fToday,
+        fecha_fin: fToday,
+      }),
+      userService.getAll(),
+      DepartmentService.getAll(),
+    ]);
+
+    // 3. Procesar Usuarios y Depts map
+    let usersList: any[] = [];
+    if (usersRes.data) {
+      // @ts-ignore
+      usersList = Array.isArray(usersRes.data.data)
+        ? usersRes.data.data
+        : Array.isArray(usersRes.data)
+        ? usersRes.data
+        : [];
+    }
+    totalPersonnel.value = usersList.length;
+
+    const deptMap = new Map<number, string>();
+    const safeDeptRes = deptRes as any;
+    if (safeDeptRes.data) {
+      // @ts-ignore
+      const depts = Array.isArray(safeDeptRes.data)
+        ? safeDeptRes.data
+        : safeDeptRes.data.data || [];
+      depts.forEach((d: any) => {
+        if (d.id && d.nombre) deptMap.set(d.id, d.nombre);
+      });
+    }
+
+    // 4. Procesar Registros
+    const records = reportRes.data || [];
+
+    let p = 0; // Puntual
+    let l = 0; // Tarde
+    let a = 0; // Falta
+    const areaCounts = new Map<string, number>();
+
+    records.forEach((rec: any) => {
+      // Identificar Área
+      const user = usersList.find(
+        (u: any) => String(u.user_id) === String(rec.user_id)
+      );
+      let deptName = "Sin Área";
+      if (user) {
+        if (user.departamento_id && deptMap.has(user.departamento_id)) {
+          deptName = deptMap.get(user.departamento_id)!;
+        } else if (
+          user.departamento &&
+          typeof user.departamento === "object" &&
+          user.departamento.nombre
+        ) {
+          deptName = user.departamento.nombre;
+        } else if (typeof user.departamento === "string") {
+          deptName = user.departamento;
+        } else if (user.area) {
+          deptName = user.area;
+        }
+      }
+
+      // Identificar Estado
+      const estado = (rec.estado_asistencia || rec.estado || "").toLowerCase();
+
+      let isPresent = false;
+
+      if (
+        estado === "presente" ||
+        estado === "asistencia" ||
+        estado === "puntual"
+      ) {
+        p++;
+        isPresent = true;
+      } else if (estado === "tardanza" || estado === "tarde") {
+        l++;
+        isPresent = true;
+      } else if (estado === "falta" || estado === "ausente") {
+        a++;
+      }
+
+      // Pie Chart: Conteo por Área (Solo presentes/tardanzas)
+      if (isPresent && deptName !== "Sin Área") {
+        areaCounts.set(deptName, (areaCounts.get(deptName) || 0) + 1);
+      }
+    });
+
+    // Actualizar Refs Cards
+    totalPresent.value = p + l;
+    totalLate.value = l;
+    totalAbsent.value = a;
+
+    // Actualizar Pie Chart
+    pieLabels.value = Array.from(areaCounts.keys());
+    pieSeries.value = Array.from(areaCounts.values());
   } catch (error) {
     console.error("Error fetching dashboard stats:", error);
   }
@@ -148,24 +290,105 @@ const fetchDashboardStats = async () => {
 
 const fetchChartStats = async () => {
   try {
-    const today = new Date();
-    const pastDate = new Date();
-    pastDate.setDate(today.getDate() - 6); // Últimos 7 días
+    const { start, end } = getWeekRange(selectedChartDate.value);
 
-    // Formato YYYY-MM-DD
-    const fToday = today.toLocaleDateString("en-CA");
-    const fPast = pastDate.toLocaleDateString("en-CA");
+    // Formato YYYY-MM-DD para API
+    const fStart = start.toLocaleDateString("en-CA");
+    const fEnd = end.toLocaleDateString("en-CA");
 
-    console.log(`Fetching chart stats from ${fPast} to ${fToday}`);
-    const response = await reportService.getAttendanceMetrics(fPast, fToday);
+    // Fetch en paralelo: Reportes, Usuarios y Departamentos
+    console.log(`[Chart Debug] Selected Date: ${selectedChartDate.value}`);
+    console.log(`[Chart Debug] Range: ${fStart} to ${fEnd}`);
 
-    // Asumimos que response.data.data trae el array de registros
+    // Asegurar cálculo de asistencia antes de pedir reporte
+    try {
+      await attendanceService.calculateAttendance({
+        fecha_inicio: fStart,
+        fecha_fin: fEnd,
+      });
+    } catch (err) {
+      console.warn("Error calculating attendance range:", err);
+    }
+
+    const [reportRes, usersRes, deptRes] = await Promise.all([
+      attendanceService.getDailyReport({
+        fecha_inicio: fStart,
+        fecha_fin: fEnd,
+      }),
+      userService.getAll(),
+      DepartmentService.getAll(),
+    ]);
+
+    const rawRecords = reportRes.data || [];
+    console.log(`[Chart Debug] Records found: ${rawRecords.length}`);
+
+    let usersList: any[] = [];
+    if (usersRes.data) {
+      // @ts-ignore
+      usersList = Array.isArray(usersRes.data.data)
+        ? usersRes.data.data
+        : Array.isArray(usersRes.data)
+        ? usersRes.data
+        : [];
+    }
+
+    // Crear mapa de departamentos
+    const deptMap = new Map<number, string>();
+    const safeDeptRes = deptRes as any;
+    if (safeDeptRes.data) {
+      // @ts-ignore
+      const depts = Array.isArray(safeDeptRes.data)
+        ? safeDeptRes.data
+        : safeDeptRes.data.data || [];
+      depts.forEach((d: any) => {
+        if (d.id && d.nombre) deptMap.set(d.id, d.nombre);
+      });
+    }
+
+    // Mapear registros con el departamento del usuario
     // @ts-ignore
-    chartData.value = response.data?.data || [];
+    chartData.value = rawRecords.map((rec: any) => {
+      const user = usersList.find(
+        (u: any) => String(u.user_id) === String(rec.user_id)
+      );
+
+      let deptName = "Sin Área";
+      if (user) {
+        // Prioridad 1: ID de departamento macheado con lista de departamentos
+        if (user.departamento_id && deptMap.has(user.departamento_id)) {
+          deptName = deptMap.get(user.departamento_id)!;
+        }
+        // Prioridad 2: Objeto departamento anidado
+        else if (
+          user.departamento &&
+          typeof user.departamento === "object" &&
+          user.departamento.nombre
+        ) {
+          deptName = user.departamento.nombre;
+        }
+        // Prioridad 3: String directo
+        else if (typeof user.departamento === "string") {
+          deptName = user.departamento;
+        }
+        // Prioridad 4: Propiedad 'area'
+        else if (user.area) {
+          deptName = user.area;
+        }
+      }
+
+      return {
+        ...rec,
+        departamento: deptName,
+      };
+    });
   } catch (error) {
     console.error("Error fetching chart stats:", error);
   }
 };
+
+watch(selectedChartDate, () => {
+  fetchChartStats();
+});
 
 onMounted(() => {
   fetchDashboardStats();

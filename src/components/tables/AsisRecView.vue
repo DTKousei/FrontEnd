@@ -129,25 +129,27 @@ const loadRecentAttendance = async () => {
     }
 
     // 3. Mapear datos
-    const mappedRecords = rawRecords.map((rec) => {
-      const bUser = biometricUsers.find(
-        (u) => String(u.user_id) === String(rec.user_id)
-      );
-      const aUser = authUsers.find(
-        (u) => String(u.usuario) === String(rec.user_id)
-      );
+    const mappedRecords = rawRecords
+      .filter((rec) => rec.estado_asistencia !== "SIN_HORARIO")
+      .map((rec) => {
+        const bUser = biometricUsers.find(
+          (u) => String(u.user_id) === String(rec.user_id)
+        );
+        const aUser = authUsers.find(
+          (u) => String(u.usuario) === String(rec.user_id)
+        );
 
-      const fullName = bUser
-        ? bUser.nombre
-        : aUser
-        ? `User ${rec.user_id}`
-        : `ID: ${rec.user_id}`;
+        const fullName = bUser
+          ? bUser.nombre
+          : aUser
+          ? `User ${rec.user_id}`
+          : `ID: ${rec.user_id}`;
 
-      return {
-        ...rec,
-        employeeName: fullName, // Campo unificado para la vista
-      };
-    });
+        return {
+          ...rec,
+          employeeName: fullName, // Campo unificado para la vista
+        };
+      });
 
     // 4. Filtrar/Ordenar: Queremos los ULTIMOS 5.
     // Si la API no ordena por hora, deberíamos ordenar nosotros si es posible.

@@ -253,16 +253,16 @@ watch(
  * Formatea una fecha ISO o YYYY-MM-DD a formato local legible (dd/mm/yyyy).
  * Maneja zonas horarias agregando hora fija si es necesario.
  */
-const formatDate = (date: string) => {
-  if (!date) return "-";
-  // Si tiene 'T' es ISO completo. Si no, es YYYY-MM-DD, agregamos hora inicio para evitar desfase de zona horaria.
-  const dateString = date.includes("T") ? date : `${date}T00:00:00`;
-  const d = new Date(dateString);
-  return d.toLocaleDateString("es-PE", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
+const formatDate = (dateString: string) => {
+  if (!dateString) return "-";
+  // Ajuste para evitar desfase de zona horaria (UTC -> Local)
+  // Usamos getUTC* para mantener la fecha original del string.
+  const date = new Date(dateString);
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const year = date.getUTCFullYear();
+
+  return `${day}/${month}/${year}`;
 };
 
 /**
