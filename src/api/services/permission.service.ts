@@ -318,6 +318,23 @@ export const permissionService = {
       },
     });
   },
+  /**
+   * Registrar retorno del empleado
+   * Actualiza la fecha de fin a la hora actual y regenera el PDF
+   */
+  async registrarRetorno(id: string) {
+      /* Adjust timezone offset if necessary, but this creates ISO in local time representation approximately if we build it manually, 
+         or just use new Date() and let backend handle it if it expects UTC.
+         The previous implementation in modals used manual construction.
+      */
+      const d = new Date();
+      const pad = (n: number) => (n < 10 ? "0" + n : n);
+      // Construct ISO string in local time to preserve what user sees (roughly)
+      const localIso = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:00`;
+
+      await this.updatePermiso(id, { fecha_hora_fin: localIso });
+      return this.generarPDF(id);
+  },
 };
 
 // Interfaz opcional para el servicio completo

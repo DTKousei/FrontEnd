@@ -6,40 +6,50 @@
       <p>UGEL Sucre</p>
     </div>
     <ul class="nav-links">
-      <li>
+      <li v-if="hasRole(['ADMINISTRADOR', 'JEFE', 'SUPERVISOR'])">
         <router-link to="/dashboard"
           ><i class="fas fa-tachometer-alt"></i> Dashboard</router-link
         >
       </li>
-      <li>
+      <li v-if="hasRole(['ADMINISTRADOR'])">
         <router-link to="/biometrico"
           ><i class="fas fa-user-clock"></i> Registro Asistencia</router-link
         >
       </li>
-      <li>
+      <li v-if="hasRole(['ADMINISTRADOR', 'JEFE'])">
         <router-link to="/personal"
           ><i class="fas fa-users"></i> Gestión Personal</router-link
         >
       </li>
-      <li>
+      <li v-if="hasRole(['ADMINISTRADOR', 'JEFE', 'SUPERVISOR'])">
         <router-link to="/papeletas"
           ><i class="fas fa-chart-bar"></i> Papeletas</router-link
         >
       </li>
-      <li>
+      <li v-if="hasRole(['ADMINISTRADOR', 'JEFE'])">
         <router-link to="/incidencias"
           ><i class="fas fa-question-circle"></i> Registro de
           incidencias</router-link
         >
       </li>
-      <li>
+      <li v-if="hasRole(['ADMINISTRADOR', 'JEFE'])">
         <router-link to="/reportes"
           ><i class="fas fa-chart-bar"></i> Reportes</router-link
         >
       </li>
-      <li>
+      <li v-if="hasRole(['ADMINISTRADOR'])">
         <router-link to="/configuracion"
           ><i class="fas fa-cog"></i> Configuración</router-link
+        >
+      </li>
+      <li v-if="hasRole(['EMPLEADO'])">
+        <router-link to="/mis-asistencias"
+          ><i class="fas fa-clock"></i> Mis Asistencias</router-link
+        >
+      </li>
+      <li v-if="hasRole(['EMPLEADO'])">
+        <router-link to="/mis-papeletas"
+          ><i class="fas fa-file-alt"></i> Mis Papeletas</router-link
         >
       </li>
     </ul>
@@ -47,10 +57,39 @@
 </template>
 
 <script setup lang="ts">
-// Navbar Component logic if needed
+import { ref, onMounted } from "vue";
+
+const userRole = ref("");
+
+onMounted(() => {
+  try {
+    const userStr = localStorage.getItem("user");
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      userRole.value = user.rol?.nombre?.toUpperCase() || "";
+    }
+  } catch (e) {
+    console.error("Error parsing user role", e);
+  }
+});
+
+const hasRole = (roles: string[]) => {
+  return roles.includes(userRole.value);
+};
 </script>
 
 <style>
+/* Global Variables for Navbar context if not defined */
+:root {
+  --primary: #2c5aa0;
+  --secondary: #3498db;
+  --success: #27ae60;
+  --warning: #f39c12;
+  --danger: #e74c3c;
+  --light: #ecf0f1;
+  --dark: #34495e;
+}
+
 /* Sidebar */
 .sidebar {
   width: 250px;

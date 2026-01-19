@@ -4,11 +4,11 @@ import Dialog from "primevue/dialog";
 import Select from "primevue/select";
 import DatePicker from "primevue/datepicker";
 import Textarea from "primevue/textarea";
+import InputText from "primevue/inputtext";
 import Button from "primevue/button";
 import Swal from "sweetalert2";
 import { userService } from "@/api/services/user.service";
 import { permissionService } from "@/api/services/permission.service";
-import { attendanceService } from "@/api/services/attendance.service";
 import { DepartmentService } from "@/api/services/department.service"; // Import DepartmentService
 import type { BiometricUser } from "@/api/types/users.types";
 import type { CreatePermisoPersonalRequest } from "@/api/types/permissions.types";
@@ -19,6 +19,14 @@ const props = defineProps({
   visible: {
     type: Boolean,
     required: true,
+  },
+  preselectedEmployeeId: {
+    type: [Number, String],
+    default: null,
+  },
+  lockEmployee: {
+    type: Boolean,
+    default: false,
   },
 });
 
@@ -36,7 +44,7 @@ const rawPapeletaTypes = ref<any[]>([]); // Store full permission types for meta
 
 // Datos del Formulario
 const form = ref({
-  empleado_id: null as number | null,
+  empleado_id: null as number | string | null,
   tipo_papeleta: null as string | null,
   hora_salida: null as Date | null,
   hora_retorno: null as Date | null,
@@ -104,49 +112,34 @@ const loadEmployees = async () => {
     };
     // @ts-ignore
     const users = extractData(usersResponse.data || usersResponse);
-    allUsers.value = users; // Almacenar todos los usuarios para búsquedas
+    allUsers.value = users; // Almacenar todos los usuarios para búsquedas de jefes
 
-    // 2. Obtener asistencias de hoy para filtrar
-    const today = new Date().toISOString().split("T")[0];
-    const attendanceResponse = await attendanceService.getDailyReport({
-      fecha_inicio: today,
-      fecha_fin: today,
-    });
-
-    // @ts-ignore
-    const dailyAttendance = attendanceResponse.data || [];
-
-    // Filtrar solo empleados presentes
-    const presentStatus = ["ASISTENCIA", "PRESENTE", "TARDANZA"];
-    const presentRecords = dailyAttendance.filter((record: any) => {
-      const status = record.estado_asistencia
-        ? record.estado_asistencia.toUpperCase()
-        : "";
-      return (
-        presentStatus.includes(status) ||
-        (record.entrada_real && record.entrada_real !== null)
+    // 2. Si hay un empleado preseleccionado, lo configuramos directamente
+    if (props.preselectedEmployeeId) {
+      const targetId = String(props.preselectedEmployeeId);
+      const targetUser = users.find(
+        (u: BiometricUser) =>
+          String(u.id) === targetId || String(u.user_id) === targetId,
       );
-    });
 
-    // Extraer IDs de empleados con asistencia
-    const presentEmployeeIds = new Set(
-      presentRecords.map((a: any) => String(a.user_id || a.empleado_id)),
-    );
-
-    // 3. Filtrar empleados
-    employees.value = users.filter((emp: BiometricUser) =>
-      presentEmployeeIds.has(String(emp.user_id)),
-    );
-
-    if (employees.value.length === 0) {
-      console.warn("No hay empleados con asistencia registrada para hoy.");
+      if (targetUser) {
+        // Solo mostramos al empleado actual en la lista
+        employees.value = [targetUser];
+        form.value.empleado_id = targetUser.id;
+      } else {
+        console.warn(
+          "Empleado preseleccionado no encontrado en la lista de usuarios.",
+        );
+        employees.value = [];
+      }
+    } else {
+      // Si no hay preselección, mostramos todos (aunque este modal es específico para empleados)
+      employees.value = users;
     }
   } catch (error) {
     console.error("Error loading employees:", error);
   } finally {
     loadingEmployees.value = false;
-
-    // Auto-select if prop is provided
   }
 };
 
@@ -332,7 +325,10 @@ const handleCancel = () => {
 // Restablece los valores del formulario a su estado inicial
 const resetForm = () => {
   form.value = {
-    empleado_id: null,
+    empleado_id:
+      props.lockEmployee && props.preselectedEmployeeId
+        ? props.preselectedEmployeeId
+        : null,
     tipo_papeleta: null,
     hora_salida: null,
     hora_retorno: null,
@@ -365,23 +361,12 @@ onMounted(() => {
         <label class="font-bold block mb-2"
           >Empleado <span class="text-red-500">*</span></label
         >
-        <Select
-          v-model="form.empleado_id"
-          :options="employees"
-          optionLabel="nombre"
-          optionValue="id"
-          filter
-          placeholder="Seleccionar"
+        <InputText
+          :value="employees[0]?.nombre || 'Cargando...'"
           class="w-full"
-          :loading="loadingEmployees"
-          emptyFilterMessage="No se encontraron empleados"
-        >
-          <template #option="slotProps">
-            <div class="flex align-items-center">
-              <span>{{ slotProps.option.nombre }}</span>
-            </div>
-          </template>
-        </Select>
+          readonly
+          disabled
+        />
       </div>
 
       <div class="field col-12 md:col-6">
@@ -418,17 +403,6 @@ onMounted(() => {
         >
         <DatePicker
           v-model="form.hora_salida"
-          timeOnly
-          showIcon
-          placeholder="00:00"
-          class="w-full"
-        />
-      </div>
-
-      <div class="field col-12 md:col-4">
-        <label class="font-bold block mb-2">Hora Retorno</label>
-        <DatePicker
-          v-model="form.hora_retorno"
           timeOnly
           showIcon
           placeholder="00:00"

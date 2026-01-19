@@ -26,8 +26,8 @@ const filters = ref({
 });
 
 const loadUserNames = async () => {
-  // Only load if we have permissions to look up
-  // Or load all users once to map names (more efficient for pages with many different users)
+  // Solo cargamos si hay permisos para consultar
+  // O cargamos todos los usuarios una vez para mapear nombres (más eficiente para páginas con muchos usuarios diferentes)
   try {
     loadingUsers.value = true;
     const response = await userService.getAll();
@@ -63,7 +63,7 @@ const displayData = computed(() => {
 
 const formatDate = (dateString: string | undefined) => {
   if (!dateString) return "-";
-  // Format: 10:30 AM
+  // Formato: 10:30 AM
   const date = new Date(dateString);
   return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 };
@@ -112,15 +112,19 @@ const isRejected = (status: any) => {
   return name.includes("rechazado");
 };
 
-const isSignedByRRHH = (permiso: Permiso) => {
-  // If status is APROBADO or firma_rrhh is present
-  const name = permiso.estado?.nombre?.toUpperCase() || "";
-  // Check if status is Approved OR specifically signed by RRHH
-  // assuming 'APROBADO' implies fully signed including RRHH
-  if (name.includes("APROBADO")) return true;
-  if (permiso.firma_rrhh || permiso.firma_rrhh_digital) return true;
+const isSigned = (permiso: Permiso) => {
+  // Si está firmado explícitamente por el solicitante (digital o tradicional)
+  if (permiso.firma_solicitante || permiso.firma_solicitante_digital) {
+    return true;
+  }
 
-  return false;
+  // Respaldo: Verificar estado
+  // Si el estado NO es 'pendiente' (ej. Pendiente Jefe, Aprobado, Rechazado),
+  // implica que el proceso ha avanzado, por lo que el solicitante probablemente ya firmó.
+  const statusName = permiso.estado?.nombre?.toLowerCase() || "";
+  // Verificar si es estrictamente "Pendiente" (esperando al solicitante).
+  // Si es cualquier otra cosa (como Pendiente Jefe), se considera firmado por el solicitante.
+  return !statusName.includes("pendiente") || statusName.includes("jefe");
 };
 
 onMounted(() => {
@@ -238,8 +242,7 @@ onMounted(() => {
               aria-label="Aprobar"
               @click="$emit('approve', slotProps.data)"
               v-if="
-                !isRejected(slotProps.data.estado) &&
-                !isSignedByRRHH(slotProps.data)
+                !isRejected(slotProps.data.estado) && !isSigned(slotProps.data)
               "
             />
             <Button
@@ -249,18 +252,6 @@ onMounted(() => {
               severity="danger"
               aria-label="Rechazar"
               @click="$emit('reject', slotProps.data)"
-            />
-            <Button
-              icon="pi pi-clock"
-              text
-              rounded
-              title="Marcar Retorno"
-              severity="warning"
-              aria-label="Marcar Retorno"
-              @click="$emit('mark-return', slotProps.data)"
-              v-if="
-                !slotProps.data.fecha_hora_fin && isSignedByRRHH(slotProps.data)
-              "
             />
           </div>
         </template>

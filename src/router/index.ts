@@ -14,7 +14,7 @@ const routes: Array<RouteRecordRaw> = [
     path: '/dashboard',
     name: 'Dashboard',
     component: () => import('@/views/Dashboard/dashboaardView.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, roles: ['ADMINISTRADOR', 'JEFE', 'SUPERVISOR'] }
   },
 
   // --- Biometrico (Registro Asistencia) ---
@@ -22,7 +22,7 @@ const routes: Array<RouteRecordRaw> = [
     path: '/biometrico',
     name: 'Biometrico',
     component: () => import('@/views/biometrico/BiometricoVIew.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, roles: ['ADMINISTRADOR'] }
   },
 
    // --- Biometrico (Registro Personal) ---
@@ -30,14 +30,14 @@ const routes: Array<RouteRecordRaw> = [
     path: '/Personal',
     name: 'personal',
     component: () => import('@/views/Personal/PersonalView.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, roles: ['ADMINISTRADOR', 'JEFE'] }
   },
   // --- Papeletas ---
   {
     path: '/papeletas',
     name: 'Papeletas',
     component: () => import('@/views/papeletas/PermissionListView.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, roles: ['ADMINISTRADOR', 'JEFE', 'SUPERVISOR'] }
   },
 
   // --- Incidencias ---
@@ -45,7 +45,7 @@ const routes: Array<RouteRecordRaw> = [
     path: '/incidencias',
     name: 'Incidencias',
     component: () => import('@/views/incidencias/IncidentListView.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, roles: ['ADMINISTRADOR', 'JEFE'] }
   },
 
   // --- Reportes ---
@@ -53,7 +53,7 @@ const routes: Array<RouteRecordRaw> = [
     path: '/reportes',
     name: 'Reportes',
     component: () => import('@/views/reportes/ReportGeneratorView.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, roles: ['ADMINISTRADOR', 'JEFE'] }
   },
 
   // --- Configuración ---
@@ -61,7 +61,7 @@ const routes: Array<RouteRecordRaw> = [
     path: '/configuracion',
     name: 'Configuracion',
     component: () => import('@/views/configuracion/ConfigView.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, roles: ['ADMINISTRADOR'] }
   },
   
   // --- Departamentos ---
@@ -69,7 +69,21 @@ const routes: Array<RouteRecordRaw> = [
       path: '/departamentos',
       name: 'Departamentos',
       component: () => import('@/views/DepartmentsView.vue'),
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: true, roles: ['ADMINISTRADOR'] }
+  },
+  
+  // --- Empleados (Self Service) ---
+  {
+      path: '/mis-asistencias',
+      name: 'MisAsistencias',
+      component: () => import('@/views/employee/MyAttendanceView.vue'),
+      meta: { requiresAuth: true, roles: ['EMPLEADO', 'ADMINISTRADOR'] }
+  },
+  {
+      path: '/mis-papeletas',
+      name: 'MisPapeletas',
+      component: () => import('@/views/employee/MyPermissionsView.vue'),
+      meta: { requiresAuth: true, roles: ['EMPLEADO', 'ADMINISTRADOR'] }
   },
 ];
 
@@ -81,10 +95,43 @@ const router = createRouter({
 // Navigation Guard
 router.beforeEach((to, _from, next) => {
   const token = localStorage.getItem('token');
-  if (to.meta.requiresAuth && !token) {
-    next({ name: 'Login' });
+  const userStr = localStorage.getItem('user');
+
+  if (to.meta.requiresAuth) {
+    if (!token) {
+      // No autenticado
+      next({ name: 'Login' });
+    } else {
+       // Autenticado: Verificar Roles
+       if (to.meta.roles && Array.isArray(to.meta.roles)) {
+          let userRole = '';
+          try {
+             if (userStr) {
+                const user = JSON.parse(userStr);
+                userRole = user.rol?.nombre?.toUpperCase() || '';
+             }
+          } catch(e) {}
+
+          if ((to.meta.roles as string[]).includes(userRole)) {
+             next(); // Rol permitido
+          } else {
+             // Rol no permitido
+             if (userRole === 'EMPLEADO') {
+                 next({ name: 'MisAsistencias' });
+             } else {
+                 // Si es otro rol (ej. Supervisor intentando entrar a config), 
+                 // mandarlo al dashboard si tiene acceso, o quedarse donde estaba
+                 // Por seguridad, mejor redirección explícita al Dashboard que seguro tienen acceso
+                 next({ name: 'Dashboard' }); 
+             }
+          }
+       } else {
+          // Ruta no requiere rol especifico (solo auth)
+          next();
+       }
+    }
   } else if ((to.name === 'Login') && token) {
-    next({ name: 'Dashboard' });
+     next({ name: 'Dashboard' });
   } else {
     next();
   }

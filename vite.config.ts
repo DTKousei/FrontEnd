@@ -26,6 +26,21 @@ export default defineConfig({
         target: 'http://localhost:8001',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api-reportes/, '/api')
+      },
+      '/api-auth': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api-auth/, '/api')
+      },
+      '/api-papeletas': {
+        target: 'http://localhost:3002',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api-papeletas/, '/api')
+      },
+      '/api-incidencias': {
+        target: 'http://localhost:3003',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api-incidencias/, '/api')
       }
     }
   }

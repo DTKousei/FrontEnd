@@ -101,19 +101,6 @@ async function handleLogin() {
     if (response.data.success && response.data.token) {
       const user = response.data.user;
 
-      // Validar Rol de Administrador
-      const roleName = user?.rol?.nombre?.toUpperCase() || "";
-      if (roleName !== "ADMINISTRADOR") {
-        await Swal.fire({
-          icon: "warning",
-          title: "Acceso Restringido",
-          text: "El sistema solo está habilitado para administradores por el momento.",
-          confirmButtonColor: "#f39c12",
-        });
-        isLoading.value = false;
-        return;
-      }
-
       localStorage.setItem("token", response.data.token);
       if (user) {
         localStorage.setItem("user", JSON.stringify(user));
@@ -129,9 +116,13 @@ async function handleLogin() {
         confirmButtonColor: "#27ae60",
       });
 
-      // router.push("/dashboard"); // Redirect to dashboard
-      // Force reload to fix style issues
-      window.location.href = "/dashboard";
+      // Redirect based on role
+      const roleName = user?.rol?.nombre?.toUpperCase() || "";
+      if (roleName === "EMPLEADO") {
+        window.location.href = "/mis-asistencias";
+      } else {
+        window.location.href = "/dashboard";
+      }
     } else {
       // Handle explicit failure in response
       errorMessage.value = response.data.message || "Error desconocido";

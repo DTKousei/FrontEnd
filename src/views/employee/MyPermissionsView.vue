@@ -13,7 +13,7 @@
       <!-- Page Content -->
       <div class="page-content">
         <div class="page-title">
-          <h1>Gestión de Papeletas</h1>
+          <h1>Mis Papeletas</h1>
           <button
             class="btn btn-success"
             id="nueva-papeleta-btn"
@@ -72,7 +72,7 @@
 
         <!-- Tabla de Papeletas (New Component) -->
         <div class="papeletas-container">
-          <PermisosView
+          <TablesPerm
             :data="permissions"
             :loading="loading"
             @view="handleView"
@@ -84,19 +84,26 @@
       </div>
     </div>
   </div>
-  <ModalPerm v-model:visible="showModal" @save="handleSavePapeleta" />
+
+  <ModalEmpPerm
+    v-model:visible="showModal"
+    @save="handleSavePapeleta"
+    :preselectedEmployeeId="currentUser?.user_id || currentUser?.usuario"
+    :lockEmployee="true"
+  />
   <ModalFirmaOnpe
     v-model:visible="showFirmaModal"
     :permiso="selectedPermiso"
     @signed="handleSigned"
+    forcedRole="solicitante"
   />
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from "vue";
-import ModalPerm from "@/components/Modals/ModalPerm.vue";
+import ModalEmpPerm from "@/components/Employed/ModalEmpPerm.vue";
 import ModalFirmaOnpe from "@/components/Modals/ModalFirmaOnpe.vue";
-import PermisosView from "@/components/tables/PermisosView.vue";
+import TablesPerm from "@/components/Employed/TablesPerm.vue";
 import AdminNavbar from "@/components/Admin/NavbarView.vue";
 import HeaderView from "@/components/header/HeaderView.vue";
 import { permissionService } from "@/api/services/permission.service";
@@ -108,6 +115,20 @@ const showFirmaModal = ref(false);
 const selectedPermiso = ref<Permiso | null>(null);
 const permissions = ref<Permiso[]>([]);
 const loading = ref(false);
+
+const getCurrentUser = () => {
+  try {
+    const userStr = localStorage.getItem("user");
+    if (userStr) {
+      return JSON.parse(userStr);
+    }
+  } catch (e) {
+    console.error("Error reading user", e);
+  }
+  return null;
+};
+
+const currentUser = computed(() => getCurrentUser());
 
 // Estadísticas Computadas
 const pendientesCount = computed(() => {
@@ -147,9 +168,14 @@ const comisionesCount = computed(() => {
 });
 
 const loadPermissions = async () => {
+  const user = getCurrentUser();
+  if (!user || !user.usuario) return; // user.usuario is DNI
+
   try {
     loading.value = true;
-    const response = await permissionService.getPermisos();
+    const response = await permissionService.getPermisos({
+      empleado_id: user.usuario,
+    });
     // @ts-ignore
     const data = response.data?.data || response.data || [];
     permissions.value = Array.isArray(data) ? data : [];
@@ -194,9 +220,27 @@ const handleApprove = (permiso: Permiso) => {
   showFirmaModal.value = true;
 };
 
-const handleSigned = () => {
-  console.log("Documento enviado a firma (simulado)");
-  loadPermissions(); // Recargar para actualizar estados si fuera el caso
+const handleSigned = async () => {
+  console.log("Firma realizada");
+  // Update status explicitly to PENDIENTE_JEFE if signed by applicant
+  // We assume here it was applicant since forcedRole="solicitante"
+  if (selectedPermiso.value) {
+    try {
+      await permissionService.cambiarEstado(
+        selectedPermiso.value.id,
+        "PENDIENTE_JEFE",
+      );
+      Swal.fire({
+        icon: "success",
+        title: "Enviado",
+        text: "La papeleta ha sido firmada y enviada a su jefe inmediato (Estado: Pendiente de Jefe).",
+        timer: 2500,
+      });
+    } catch (e) {
+      console.error("Error updating status after signature", e);
+    }
+  }
+  loadPermissions();
 };
 
 const handleReject = async (permiso: Permiso) => {
@@ -365,6 +409,7 @@ body {
 .page-content {
   padding: 30px;
   flex: 1;
+  overflow-x: auto;
 }
 
 .page-title {

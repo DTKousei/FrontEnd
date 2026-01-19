@@ -147,11 +147,21 @@ const pieSeries = ref<number[]>([]);
 const pieLabels = ref<string[]>([]);
 const selectedChartDate = ref(new Date());
 
+// Helper para manejar errores individualmente
+const safeFetch = async (promise: Promise<any>, fallback: any) => {
+  try {
+    return await promise;
+  } catch (e) {
+    console.warn("Fetch failed, using fallback", e);
+    return fallback;
+  }
+};
+
 // Computed para mostrar el rango seleccionado
 const dateRangeText = computed(() => {
   const { start, end } = getWeekRange(selectedChartDate.value);
   return `${start.toLocaleDateString("es-ES")} - ${end.toLocaleDateString(
-    "es-ES"
+    "es-ES",
   )}`;
 });
 
@@ -187,13 +197,17 @@ const fetchDashboardStats = async () => {
     }
 
     // 2. Fetch de Datos (Reporte Hoy, Usuarios, Depts)
+
     const [reportRes, usersRes, deptRes] = await Promise.all([
-      attendanceService.getDailyReport({
-        fecha_inicio: fToday,
-        fecha_fin: fToday,
-      }),
-      userService.getAll(),
-      DepartmentService.getAll(),
+      safeFetch(
+        attendanceService.getDailyReport({
+          fecha_inicio: fToday,
+          fecha_fin: fToday,
+        }),
+        { data: [] },
+      ),
+      safeFetch(userService.getAll(), { data: [] }),
+      safeFetch(DepartmentService.getAll(), { data: [] }),
     ]);
 
     // 3. Procesar Usuarios y Depts map
@@ -203,8 +217,8 @@ const fetchDashboardStats = async () => {
       usersList = Array.isArray(usersRes.data.data)
         ? usersRes.data.data
         : Array.isArray(usersRes.data)
-        ? usersRes.data
-        : [];
+          ? usersRes.data
+          : [];
     }
     totalPersonnel.value = usersList.length;
 
@@ -231,7 +245,7 @@ const fetchDashboardStats = async () => {
     records.forEach((rec: any) => {
       // Identificar Área
       const user = usersList.find(
-        (u: any) => String(u.user_id) === String(rec.user_id)
+        (u: any) => String(u.user_id) === String(rec.user_id),
       );
       let deptName = "Sin Área";
       if (user) {
@@ -311,12 +325,15 @@ const fetchChartStats = async () => {
     }
 
     const [reportRes, usersRes, deptRes] = await Promise.all([
-      attendanceService.getDailyReport({
-        fecha_inicio: fStart,
-        fecha_fin: fEnd,
-      }),
-      userService.getAll(),
-      DepartmentService.getAll(),
+      safeFetch(
+        attendanceService.getDailyReport({
+          fecha_inicio: fStart,
+          fecha_fin: fEnd,
+        }),
+        { data: [] },
+      ),
+      safeFetch(userService.getAll(), { data: [] }),
+      safeFetch(DepartmentService.getAll(), { data: [] }),
     ]);
 
     const rawRecords = reportRes.data || [];
@@ -328,8 +345,8 @@ const fetchChartStats = async () => {
       usersList = Array.isArray(usersRes.data.data)
         ? usersRes.data.data
         : Array.isArray(usersRes.data)
-        ? usersRes.data
-        : [];
+          ? usersRes.data
+          : [];
     }
 
     // Crear mapa de departamentos
@@ -349,7 +366,7 @@ const fetchChartStats = async () => {
     // @ts-ignore
     chartData.value = rawRecords.map((rec: any) => {
       const user = usersList.find(
-        (u: any) => String(u.user_id) === String(rec.user_id)
+        (u: any) => String(u.user_id) === String(rec.user_id),
       );
 
       let deptName = "Sin Área";

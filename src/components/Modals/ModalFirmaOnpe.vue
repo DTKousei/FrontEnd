@@ -12,11 +12,16 @@ import type { Permiso, TipoFirma } from "@/api/types/permissions.types";
 const props = defineProps<{
   visible: boolean;
   permiso: Permiso | null;
+  forcedRole?: string; // Optional: Force a specific role (e.g. 'solicitante')
 }>();
 
 const emit = defineEmits(["update:visible", "signed"]);
 
 const selectedRole = ref<string>("solicitante");
+// Initialize with forced role if present
+if (props.forcedRole) {
+  selectedRole.value = props.forcedRole;
+}
 const loading = ref(false);
 const signatureImage = ref<string | null>(null);
 
@@ -107,25 +112,34 @@ const handleCancel = () => {
     class="p-fluid"
   >
     <div class="flex flex-column gap-4 py-4">
-      <!-- Selección de Rol -->
-      <div class="font-bold text-center mb-2">
-        Seleccione el rol con el que desea firmar:
-      </div>
-      <div class="flex justify-content-center gap-3 mb-3">
-        <div
-          v-for="role in roles"
-          :key="role.value"
-          class="field-checkbox flex align-items-center gap-2"
-        >
-          <RadioButton
-            v-model="selectedRole"
-            :inputId="role.value"
-            :value="role.value"
-          />
-          <label :for="role.value" class="cursor-pointer">{{
-            role.label
-          }}</label>
+      <!-- Selección de Rol (Solo si no está forzado) -->
+      <div v-if="!forcedRole">
+        <div class="font-bold text-center mb-2">
+          Seleccione el rol con el que desea firmar:
         </div>
+        <div class="flex justify-content-center gap-3 mb-3">
+          <div
+            v-for="role in roles"
+            :key="role.value"
+            class="field-checkbox flex align-items-center gap-2"
+          >
+            <RadioButton
+              v-model="selectedRole"
+              :inputId="role.value"
+              :value="role.value"
+            />
+            <label :for="role.value" class="cursor-pointer">{{
+              role.label
+            }}</label>
+          </div>
+        </div>
+      </div>
+      <div v-else class="text-center font-bold text-xl text-primary mb-3">
+        Firmando como:
+        {{
+          roles.find((r) => r.value === forcedRole)?.label ||
+          forcedRole.toUpperCase()
+        }}
       </div>
 
       <!-- Carga de Imagen -->

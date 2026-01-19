@@ -3,11 +3,11 @@ import { createApi } from './core';
 // Define base URLs for each module
 // You can also use environment variables here: import.meta.env.VITE_AUTH_API_URL, etc.
 
-const AUTH_API_URL = 'http://localhost:3001/api';      // Módulo 1
-const BIOMETRIC_API_URL = '/api-biometrico';           // Módulo 2 (Proxied to 8000)
-const PAPELETA_API_URL = 'http://localhost:3002/api';  // Módulo 3
-export const INCIDENT_API_URL = 'http://localhost:3003/api';  // Módulo 4
-const PYTHON_REPORT_API_URL = '/api-reportes'; // Módulo 6 (Python proxied)
+const AUTH_API_URL = '/api-auth';      // Módulo 1 (Proxied)
+const BIOMETRIC_API_URL = '/api-biometrico';           // Módulo 2 (Proxied)
+const PAPELETA_API_URL = '/api-papeletas';  // Módulo 3 (Proxied)
+export const INCIDENT_API_URL = '/api-incidencias';  // Módulo 4 (Proxied)
+const PYTHON_REPORT_API_URL = '/api-reportes'; // Módulo 6 (Proxied)
 
 // Create instances
 export const authApi = createApi(AUTH_API_URL);
