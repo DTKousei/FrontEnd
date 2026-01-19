@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, computed, watch } from "vue";
 import Dialog from "primevue/dialog";
 import Select from "primevue/select";
 import DatePicker from "primevue/datepicker";
@@ -30,7 +30,9 @@ const allUsers = ref<BiometricUser[]>([]); // Almacenar todos los usuarios para 
 const departments = ref<Department[]>([]); // Almacenar departamentos
 const papeletaTypes = ref<{ label: string; value: string }[]>([]);
 const loadingEmployees = ref(false);
+
 const loadingSubmit = ref(false);
+const rawPapeletaTypes = ref<any[]>([]); // Store full permission types for metadata access
 
 // Datos del Formulario
 const form = ref({
@@ -60,7 +62,7 @@ const jefeAreaName = computed(() => {
   // Buscar al jefe en la lista COMPLETA de usuarios (el jefe podría no estar "presente" hoy)
   // jefe_id suele ser una cadena (DNI) en el objeto departamento según la definición de tipo
   const chief = allUsers.value.find(
-    (u) => String(u.user_id) === String(dept.jefe_id)
+    (u) => String(u.user_id) === String(dept.jefe_id),
   );
 
   return chief ? chief.nombre : "--";
@@ -72,13 +74,13 @@ const jefeRRHHName = computed(() => {
   const rrhhDept = departments.value.find(
     (d) =>
       d.nombre.toLowerCase().includes("recursos humanos") ||
-      d.nombre.toLowerCase().includes("RRHH")
+      d.nombre.toLowerCase().includes("RRHH"),
   );
 
   if (!rrhhDept || !rrhhDept.jefe_id) return "--";
 
   const chief = allUsers.value.find(
-    (u) => String(u.user_id) === String(rrhhDept.jefe_id)
+    (u) => String(u.user_id) === String(rrhhDept.jefe_id),
   );
 
   return chief ? chief.nombre : "--";
@@ -128,12 +130,12 @@ const loadEmployees = async () => {
 
     // Extraer IDs de empleados con asistencia
     const presentEmployeeIds = new Set(
-      presentRecords.map((a: any) => String(a.user_id || a.empleado_id))
+      presentRecords.map((a: any) => String(a.user_id || a.empleado_id)),
     );
 
     // 3. Filtrar empleados
     employees.value = users.filter((emp: BiometricUser) =>
-      presentEmployeeIds.has(String(emp.user_id))
+      presentEmployeeIds.has(String(emp.user_id)),
     );
 
     if (employees.value.length === 0) {
@@ -169,6 +171,7 @@ const loadTiposPapeleta = async () => {
     // @ts-ignore
     const tipos = response.data?.data || response.data || [];
     if (Array.isArray(tipos)) {
+      rawPapeletaTypes.value = tipos; // Save raw types
       papeletaTypes.value = tipos.map((t: any) => ({
         label: t.nombre,
         value: t.id,
@@ -178,6 +181,30 @@ const loadTiposPapeleta = async () => {
     console.error("Error cargando tipos de permiso:", error);
   }
 };
+
+/**
+ * Watcher: Auto-calculate return time based on selected type and start time.
+ */
+watch(
+  [() => form.value.tipo_papeleta, () => form.value.hora_salida],
+  ([newType, newTime]) => {
+    if (!newType || !newTime) return;
+
+    const selectedType = rawPapeletaTypes.value.find((t) => t.id === newType);
+    if (
+      selectedType &&
+      selectedType.tiempo_maximo_horas &&
+      selectedType.tiempo_maximo_horas > 0
+    ) {
+      // Calculate return time
+      const startTime = new Date(newTime);
+      const endTime = new Date(
+        startTime.getTime() + selectedType.tiempo_maximo_horas * 60 * 60 * 1000,
+      );
+      form.value.hora_retorno = endTime;
+    }
+  },
+);
 
 // Modelo computado para manejar la visibilidad del modal (v-model)
 const visibleModel = computed({
@@ -195,7 +222,7 @@ const combineDateAndTime = (date: Date, time: Date): string => {
   d.setHours(t.getHours(), t.getMinutes(), 0, 0);
   const pad = (n: number) => (n < 10 ? "0" + n : n);
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
-    d.getHours()
+    d.getHours(),
   )}:${pad(d.getMinutes())}:00`;
 };
 
@@ -209,7 +236,7 @@ const handleSubmit = async () => {
     !form.value.empleado_id ||
     !form.value.tipo_papeleta ||
     !form.value.hora_salida ||
-    !form.value.hora_retorno ||
+    // !form.value.hora_retorno || // Optional now
     !form.value.motivo_salida ||
     !form.value.fundamentacion ||
     !form.value.fecha
@@ -228,7 +255,7 @@ const handleSubmit = async () => {
     Swal.fire(
       "Error",
       "El empleado seleccionado no tiene un ID de usuario válido (DNI)",
-      "error"
+      "error",
     );
     return;
   }
@@ -238,12 +265,11 @@ const handleSubmit = async () => {
   try {
     const fechaInicio = combineDateAndTime(
       form.value.fecha,
-      form.value.hora_salida
+      form.value.hora_salida,
     );
-    const fechaFin = combineDateAndTime(
-      form.value.fecha,
-      form.value.hora_retorno
-    );
+    const fechaFin = form.value.hora_retorno
+      ? combineDateAndTime(form.value.fecha, form.value.hora_retorno)
+      : undefined;
 
     const payload: CreatePermisoPersonalRequest = {
       empleado_id: String(employee.user_id), // Enviar DNI
@@ -398,9 +424,7 @@ onMounted(() => {
       </div>
 
       <div class="field col-12 md:col-4">
-        <label class="font-bold block mb-2"
-          >Hora Retorno <span class="text-red-500">*</span></label
-        >
+        <label class="font-bold block mb-2">Hora Retorno</label>
         <DatePicker
           v-model="form.hora_retorno"
           timeOnly

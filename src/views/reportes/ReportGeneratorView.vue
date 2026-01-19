@@ -246,7 +246,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import Swal from "sweetalert2";
 
 import ReportPerView from "@/components/tables/ReportPerView.vue";
@@ -255,21 +255,34 @@ import DistAsisView from "@/components/Graficas/DistAsisView.vue";
 import PolarAsisAreaView from "@/components/Graficas/PolarAsisAreaView.vue";
 import AdminNavbar from "@/components/Admin/NavbarView.vue";
 import HeaderView from "@/components/header/HeaderView.vue";
-import { userService } from "@/api/services/user.service";
 import { reportService } from "@/api/services/report.service";
-import { DepartmentService } from "@/api/services/department.service";
+
 import type { BiometricUser } from "@/api/types/users.types";
-import type { Department } from "@/api/types/department.types";
+import { useDataStore } from "@/stores/dataStore";
+import { storeToRefs } from "pinia";
 
 // Referencias
 const reportRegisRef = ref();
 
 // Estado para Datos
-const allUsers = ref<BiometricUser[]>([]); // Copia de todos los usuarios cargados
-const users = ref<BiometricUser[]>([]); // Usuarios mostrados (filtrados)
+// Estado para Datos
+const store = useDataStore();
+const {
+  users: storeUsers,
+  authUsers: storeAuthUsers,
+  departments: storeDepartments,
+  loadingUsers: storeLoadingUsers,
+  metrics: storeMetrics,
+  attendanceRecords: storeAttendanceRecords,
+} = storeToRefs(store);
+
+const allUsers = ref<BiometricUser[]>([]); // Usuarios procesados
+const users = ref<BiometricUser[]>([]); // Usuarios filtrados por UI
 const selectedUsers = ref<BiometricUser[]>([]);
-const loadingUsers = ref(false);
-const departments = ref<Department[]>([]);
+const loadingUsers = computed(() => storeLoadingUsers.value);
+const departments = computed(() => storeDepartments.value);
+const metrics = computed(() => storeMetrics.value);
+const attendanceRecords = computed(() => storeAttendanceRecords.value);
 
 // Estado para Filtros
 const selectedArea = ref<string>("");
@@ -281,47 +294,22 @@ const lastDay = new Date(y, now.getMonth() + 1, 0).getDate();
 const fechaDesde = ref<string>(`${y}-${m}-01`);
 const fechaHasta = ref<string>(`${y}-${m}-${lastDay}`);
 
-// Estado para Métricas
-const metrics = ref({
-  puntual: 0,
-  tardanzas: 0,
-  faltas: 0,
-  horas_extras: 0,
-});
-
-// Datos para Gráficos
+/*
+// Metrics and Records are now in store and computed
+const metrics = ref({ ... });
 const attendanceRecords = ref<any[]>([]);
+*/
 
 const loadTableData = async () => {
   try {
-    loadingUsers.value = true;
-
-    // Obtener usuarios y departamentos en paralelo
-    const [usersResponse, deptsResponse] = await Promise.all([
-      userService.getAll(),
-      DepartmentService.getAll(),
-    ]);
-
-    console.log("Respuesta Usuarios:", usersResponse);
-    console.log("Respuesta Deptos:", deptsResponse);
-
-    // Procesar Departamentos
-    // @ts-ignore
-    const deptsData = deptsResponse.data?.data || deptsResponse.data || [];
-    console.log("Datos Deptos Parseados:", deptsData);
-
-    if (Array.isArray(deptsData)) {
-      departments.value = deptsData;
-    }
+    // Fetch data from store (cache first)
+    await store.fetchAll();
 
     const deptsMap = new Map<number, string>();
-    departments.value.forEach((d) => deptsMap.set(d.id, d.nombre));
+    storeDepartments.value.forEach((d) => deptsMap.set(d.id, d.nombre));
 
     // Procesar Usuarios
-    // @ts-ignore
-    const rawUsers = usersResponse.data?.data || usersResponse.data || [];
-
-    const enrichedUsers = rawUsers.map((user: BiometricUser) => {
+    const enrichedUsers = storeUsers.value.map((user: BiometricUser) => {
       let deptName = "-";
       let deptId = user.departamento_id;
 
@@ -342,18 +330,39 @@ const loadTableData = async () => {
       };
     });
 
-    allUsers.value = enrichedUsers;
-    users.value = enrichedUsers; // Inicialmente mostrar todos
+    // Procesar Auth Users del store
+    const authDataRaw = storeAuthUsers.value;
+    console.log("Auth Data From Store:", authDataRaw);
+
+    const activeUserIds = new Set<string>();
+
+    if (Array.isArray(authDataRaw)) {
+      authDataRaw.forEach((u: any) => {
+        if (u.esta_activo) {
+          activeUserIds.add(String(u.usuario).trim());
+        }
+      });
+    }
+    console.log("Active User IDs Count:", activeUserIds.size);
+
+    // Filtrar solo usuarios activos
+    const activeUsers = enrichedUsers.filter((u: BiometricUser) => {
+      const match = activeUserIds.has(String(u.user_id).trim());
+      return match;
+    });
+
+    console.log("Active Users filtered Count:", activeUsers.length);
+
+    allUsers.value = activeUsers;
+    users.value = activeUsers; // Inicialmente mostrar todos
   } catch (error) {
     console.error("Error loading users for report:", error);
     Swal.fire("Error", "No se pudieron cargar los datos.", "error");
-  } finally {
-    loadingUsers.value = false;
   }
 };
 
 const applyFilters = () => {
-  loadingUsers.value = true;
+  // Loading is now handled by store, but filtering is local
 
   // Filtrar por Área
   let filtered = [...allUsers.value];
@@ -364,7 +373,6 @@ const applyFilters = () => {
   }
 
   users.value = filtered;
-  loadingUsers.value = false;
 
   // Actualizar métricas cuando cambian los filtros
   fetchMetrics();
@@ -378,30 +386,8 @@ const applyFilters = () => {
 };
 
 const fetchMetrics = async () => {
-  try {
-    const response = await reportService.getAttendanceMetrics(
-      fechaDesde.value,
-      fechaHasta.value
-    );
-    // @ts-ignore
-    const data = response.data?.totales || response.data || {};
-    // @ts-ignore
-    const rawData = response.data?.data || [];
-
-    attendanceRecords.value = rawData;
-
-    // 1. Métricas Principales
-    metrics.value = {
-      puntual: data.puntual || 0,
-      tardanzas: data.tardanzas || 0,
-      faltas: data.faltas || 0,
-      horas_extras: data.horas_extras || 0,
-    };
-
-    // 2. Gráficos se actualizan automáticamente mediante props
-  } catch (error) {
-    console.error("Error obteniendo métricas:", error);
-  }
+  // Call store action (which handles caching)
+  await store.fetchMetrics(fechaDesde.value, fechaHasta.value);
 };
 
 const handleGenerateReport = async () => {
@@ -517,7 +503,7 @@ const handleGenerateReport = async () => {
     Swal.fire(
       "Éxito",
       "Reporte generado correctamente. Revise la tabla de historial.",
-      "success"
+      "success",
     );
   } catch (error) {
     console.error("Error generating report:", error);

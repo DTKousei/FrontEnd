@@ -188,7 +188,7 @@ export interface CreatePermisoPersonalRequest {
   empleado_id: string; // DNI
   tipo_permiso_id: string;
   fecha_hora_inicio: string; // ISO 8601: "2024-12-03T14:00:00"
-  fecha_hora_fin: string; // ISO 8601: "2024-12-03T16:00:00"
+  fecha_hora_fin?: string; // ISO 8601: "2024-12-03T16:00:00"
   motivo: string;
   justificacion?: string;
 }

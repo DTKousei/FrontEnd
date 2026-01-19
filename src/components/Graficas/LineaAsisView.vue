@@ -97,7 +97,7 @@ const chartOptions = computed<ApexOptions>(() => ({
   grid: {
     borderColor: "#f1f1f1",
   },
-  colors: ["#007bff", "#28a745", "#ffc107", "#dc3545", "#17a2b8"], // Azul, Verde, Amarillo, Rojo,
+  colors: ["#007bff", "#28a745", "#ffc107", "#dc3545", "#17a2b8"], // Azul, Verde, Amarillo, Rojo, Azul claro
 }));
 
 const processData = (records: AttendanceRecord[]) => {

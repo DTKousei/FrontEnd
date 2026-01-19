@@ -6,8 +6,6 @@ import InputText from "primevue/inputtext";
 import IconField from "primevue/iconfield";
 import InputIcon from "primevue/inputicon";
 import type { BiometricUser } from "@/api/types/users.types";
-import { authService } from "@/api/services/auth.service";
-import type { User as AuthUser } from "@/api/types/auth.types";
 
 const props = defineProps<{
   users: BiometricUser[];
@@ -16,40 +14,6 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits(["update:selection"]);
-
-const authUsers = ref<AuthUser[]>([]);
-const loadingAuth = ref(false);
-
-const loadAuthUsers = async () => {
-  loadingAuth.value = true;
-  try {
-    const response = await authService.getAllUsers();
-    // @ts-ignore
-    const rawData = response.data as any;
-    const data = rawData.users || rawData.data || rawData || [];
-    if (Array.isArray(data)) {
-      authUsers.value = data;
-    }
-  } catch (error) {
-    console.error("Error loading auth users:", error);
-  } finally {
-    loadingAuth.value = false;
-  }
-};
-
-const filteredUsers = computed(() => {
-  if (authUsers.value.length === 0) return props.users;
-
-  return props.users.filter((bUser) => {
-    const aUser = authUsers.value.find(
-      (a) => String(a.usuario).trim() === String(bUser.user_id).trim()
-    );
-    // Si existe en auth, verificar estado. Si no existe, asumir activo o mostrar?
-    // Usualmente si no está en auth no puede loguear, pero como empleado biometrico existe.
-    // El requerimiento es "solo mostrar los datos de los usuarios activos".
-    return aUser ? aUser.esta_activo : true;
-  });
-});
 
 const selectedUsers = computed({
   get: () => props.selection,
@@ -61,7 +25,7 @@ const filters = ref({
 });
 
 onMounted(() => {
-  loadAuthUsers();
+  // Logic removed
 });
 
 // Helper para obtener nombre del departamento de forma segura
@@ -76,8 +40,8 @@ const getDepartmentName = (dept: any) => {
   <div class="card p-0 shadow-none border-none">
     <DataTable
       v-model:selection="selectedUsers"
-      :value="filteredUsers"
-      :loading="loading || loadingAuth"
+      :value="users"
+      :loading="loading"
       dataKey="id"
       :paginator="true"
       :rows="5"

@@ -93,6 +93,11 @@ const getStatusLabel = (status: any) => {
   return status?.nombre || "Pendiente";
 };
 
+const isRejected = (status: any) => {
+  const name = status?.nombre?.toLowerCase() || "";
+  return name.includes("rechazado");
+};
+
 onMounted(() => {
   loadUserNames();
 });
@@ -199,6 +204,7 @@ onMounted(() => {
               severity="success"
               aria-label="Aprobar"
               @click="$emit('approve', slotProps.data)"
+              v-if="!isRejected(slotProps.data.estado)"
             />
             <Button
               icon="pi pi-times"
