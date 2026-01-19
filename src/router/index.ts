@@ -14,7 +14,7 @@ const routes: Array<RouteRecordRaw> = [
     path: '/dashboard',
     name: 'Dashboard',
     component: () => import('@/views/Dashboard/dashboaardView.vue'),
-    meta: { requiresAuth: true, roles: ['ADMINISTRADOR', 'JEFE', 'SUPERVISOR'] }
+    meta: { requiresAuth: true, roles: ['ADMINISTRADOR', 'JEFE'] }
   },
 
   // --- Biometrico (Registro Asistencia) ---
@@ -37,7 +37,7 @@ const routes: Array<RouteRecordRaw> = [
     path: '/papeletas',
     name: 'Papeletas',
     component: () => import('@/views/papeletas/PermissionListView.vue'),
-    meta: { requiresAuth: true, roles: ['ADMINISTRADOR', 'JEFE', 'SUPERVISOR'] }
+    meta: { requiresAuth: true, roles: ['ADMINISTRADOR', 'JEFE'] }
   },
 
   // --- Incidencias ---
@@ -85,6 +85,19 @@ const routes: Array<RouteRecordRaw> = [
       component: () => import('@/views/employee/MyPermissionsView.vue'),
       meta: { requiresAuth: true, roles: ['EMPLEADO', 'ADMINISTRADOR'] }
   },
+  // --- Supervisor ---
+  {
+      path: '/supervisor/dashboard',
+      name: 'SupervisorDashboard',
+      component: () => import('@/views/supervisor/SupervisorDashboardView.vue'),
+      meta: { requiresAuth: true, roles: ['SUPERVISOR'] }
+  },
+  {
+      path: '/supervisor/papeletas',
+      name: 'SupervisorPapeletas',
+      component: () => import('@/views/supervisor/SupervisorPermissionsView.vue'),
+      meta: { requiresAuth: true, roles: ['SUPERVISOR'] }
+  },
 ];
 
 const router = createRouter({
@@ -115,13 +128,13 @@ router.beforeEach((to, _from, next) => {
           if ((to.meta.roles as string[]).includes(userRole)) {
              next(); // Rol permitido
           } else {
-             // Rol no permitido
+             // Rol no permitido: Redirigir según rol
              if (userRole === 'EMPLEADO') {
                  next({ name: 'MisAsistencias' });
+             } else if (userRole === 'SUPERVISOR') {
+                 next({ name: 'SupervisorDashboard' });
              } else {
-                 // Si es otro rol (ej. Supervisor intentando entrar a config), 
-                 // mandarlo al dashboard si tiene acceso, o quedarse donde estaba
-                 // Por seguridad, mejor redirección explícita al Dashboard que seguro tienen acceso
+                 // Si es otro rol (ej. Admin), al Dashboard general
                  next({ name: 'Dashboard' }); 
              }
           }
@@ -131,7 +144,22 @@ router.beforeEach((to, _from, next) => {
        }
     }
   } else if ((to.name === 'Login') && token) {
-     next({ name: 'Dashboard' });
+     // Ya logueado, redirigir al home correcto
+     let userRole = '';
+      try {
+          if (userStr) {
+            const user = JSON.parse(userStr);
+            userRole = user.rol?.nombre?.toUpperCase() || '';
+          }
+      } catch(e) {}
+      
+     if (userRole === 'EMPLEADO') {
+         next({ name: 'MisAsistencias' });
+     } else if (userRole === 'SUPERVISOR') {
+         next({ name: 'SupervisorDashboard' });
+     } else {
+        next({ name: 'Dashboard' });
+     }
   } else {
     next();
   }

@@ -120,6 +120,8 @@ async function handleLogin() {
       const roleName = user?.rol?.nombre?.toUpperCase() || "";
       if (roleName === "EMPLEADO") {
         window.location.href = "/mis-asistencias";
+      } else if (roleName === "SUPERVISOR") {
+        window.location.href = "/supervisor/dashboard";
       } else {
         window.location.href = "/dashboard";
       }
