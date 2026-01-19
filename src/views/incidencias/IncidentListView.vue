@@ -338,7 +338,7 @@ const loadMetadata = async () => {
 
     // Establecer estado por defecto 'Pendiente' en el formulario
     const pending = states.find((s: any) =>
-      s.nombre.toLowerCase().includes("pendiente")
+      s.nombre.toLowerCase().includes("pendiente"),
     );
     if (pending) form.value.estado_id = pending.id;
   } catch (e) {
@@ -377,13 +377,13 @@ const loadIncidencias = async () => {
 const computedStats = computed(() => {
   const total = incidencias.value.length;
   const pendientes = incidencias.value.filter((i) =>
-    i.estado?.nombre?.toLowerCase().includes("pendiente")
+    i.estado?.nombre?.toLowerCase().includes("pendiente"),
   ).length;
   const aprobadas = incidencias.value.filter((i) =>
-    i.estado?.nombre?.toLowerCase().includes("aprobado")
+    i.estado?.nombre?.toLowerCase().includes("aprobado"),
   ).length;
   const rechazadas = incidencias.value.filter((i) =>
-    i.estado?.nombre?.toLowerCase().includes("rechazado")
+    i.estado?.nombre?.toLowerCase().includes("rechazado"),
   ).length;
   return { total, pendientes, aprobadas, rechazadas };
 });
@@ -419,7 +419,7 @@ const handleSubmit = async () => {
 
     // Obtener DNI del empleado seleccionado
     const employee = employees.value.find(
-      (e) => e.id === form.value.empleado_id
+      (e) => e.id === form.value.empleado_id,
     );
     const dni = employee?.user_id ? String(employee.user_id) : null;
     if (!dni) throw new Error("Empleado sin DNI");
@@ -452,9 +452,13 @@ const handleSubmit = async () => {
     // Limpiar formulario y recargar lista
     resetForm();
     await loadIncidencias();
-  } catch (e) {
+  } catch (e: any) {
     console.error(e);
-    Swal.fire("Error", "No se pudo crear la incidencia", "error");
+    const msg =
+      e.response?.data?.message ||
+      e.message ||
+      "No se pudo crear la incidencia";
+    Swal.fire("Error", msg, "error");
   } finally {
     loadingSubmit.value = false;
   }
@@ -473,7 +477,7 @@ const resetForm = () => {
 
   // Restablecer estado 'Pendiente' por defecto
   const pending = incidentStates.value.find((s: any) =>
-    s.label.toLowerCase().includes("pendiente")
+    s.label.toLowerCase().includes("pendiente"),
   );
   if (pending) form.value.estado_id = pending.value;
 };
@@ -505,7 +509,7 @@ const handleApprove = async (data: any) => {
 
       // 2. Actualizar el estado a 'Aprobado' explícitamente
       const approvedState = incidentStates.value.find((s) =>
-        s.label.toLowerCase().includes("aprob")
+        s.label.toLowerCase().includes("aprob"),
       );
       if (approvedState) {
         await incidentService.updateIncidencia(data.id, {
@@ -549,7 +553,7 @@ const handleReject = async (data: any) => {
 
       // 2. Actualizar el estado a 'Rechazado' explícitamente
       const rejectedState = incidentStates.value.find((s) =>
-        s.label.toLowerCase().includes("rechaz")
+        s.label.toLowerCase().includes("rechaz"),
       );
       if (rejectedState) {
         await incidentService.updateIncidencia(data.id, {

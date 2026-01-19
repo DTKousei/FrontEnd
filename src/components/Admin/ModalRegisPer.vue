@@ -81,7 +81,7 @@ watch(
         resetForm();
       }
     }
-  }
+  },
 );
 
 watch(
@@ -90,11 +90,11 @@ watch(
     if (props.visible && newUser) {
       populateForm(newUser);
     }
-  }
+  },
 );
 
 const populateForm = async (
-  user: BiometricUser & { auth_id?: string; rol?: string }
+  user: BiometricUser & { auth_id?: string; rol?: string },
 ) => {
   // Campos del Biomético
   // Dado que el biométrico almacena el nombre completo, puede que no se divida perfectamente.
@@ -130,7 +130,7 @@ const populateForm = async (
     } else {
       // Fallback
       form.value.fecha_nacimiento = new Date(
-        user.fecha_nacimiento + "T12:00:00"
+        user.fecha_nacimiento + "T12:00:00",
       );
     }
   } else {
@@ -156,7 +156,22 @@ const populateForm = async (
 
       const data = response.data;
       // Manejar respuesta tipo array [{...}] o objeto {...}
-      const assignment = Array.isArray(data) ? data[0] : data.data || data;
+      let assignments = Array.isArray(data)
+        ? data
+        : data.data
+          ? Array.isArray(data.data)
+            ? data.data
+            : [data.data]
+          : [data];
+
+      // Ordenar por fecha_inicio descendente para obtener el mas actual
+      assignments.sort((a: any, b: any) => {
+        const dateA = new Date(a.fecha_inicio || 0).getTime();
+        const dateB = new Date(b.fecha_inicio || 0).getTime();
+        return dateB - dateA;
+      });
+
+      const assignment = assignments[0];
 
       if (assignment && assignment.horario_id) {
         console.log("Horario encontrado:", assignment.horario_id);
@@ -165,7 +180,7 @@ const populateForm = async (
         // Populate start/end dates if available
         if (assignment.fecha_inicio) {
           form.value.fecha_inicio_asignacion = new Date(
-            assignment.fecha_inicio
+            assignment.fecha_inicio,
           );
         }
         if (assignment.fecha_fin) {
@@ -201,7 +216,7 @@ const populateForm = async (
     } catch (deptError) {
       console.warn(
         "User has no department assigned or error fetching it:",
-        deptError
+        deptError,
       );
       // Fallback: keep existing value if any, or null
       if (!form.value.departamento_id) form.value.departamento_id = null;
@@ -373,7 +388,7 @@ const handleSubmit = async () => {
 
     if (actualDni !== form.value.dni) {
       console.warn(
-        `El backend no actualizó el DNI. Solicitado: ${form.value.dni}, Actual: ${actualDni}`
+        `El backend no actualizó el DNI. Solicitado: ${form.value.dni}, Actual: ${actualDni}`,
       );
       Swal.fire({
         icon: "warning",
@@ -403,13 +418,13 @@ const handleSubmit = async () => {
       if (dniChanged) {
         authData.usuario = actualDni;
         console.log(
-          `Detectado cambio de DNI confirmado: ${originalDni} -> ${actualDni}`
+          `Detectado cambio de DNI confirmado: ${originalDni} -> ${actualDni}`,
         );
       }
 
       console.log(
         "Carga útil Actualización Auth (lookup by original DNI):",
-        authData
+        authData,
       );
 
       // Try update, if fails with 404 then Create
@@ -470,7 +485,7 @@ const handleSubmit = async () => {
           "Asignando horario user_id(DNI):",
           actualDni,
           "Horario:",
-          form.value.horario_id
+          form.value.horario_id,
         );
         await scheduleService.assignToUser({
           user_id: actualDni, // USAR DNI REAL CONFIRMADO
