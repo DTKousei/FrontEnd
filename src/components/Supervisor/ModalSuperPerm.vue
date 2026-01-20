@@ -9,6 +9,7 @@ import Swal from "sweetalert2";
 import { userService } from "@/api/services/user.service";
 import { permissionService } from "@/api/services/permission.service";
 import { DepartmentService } from "@/api/services/department.service";
+import { attendanceService } from "@/api/services/attendance.service";
 import type { BiometricUser } from "@/api/types/users.types";
 import type { CreatePermisoPersonalRequest } from "@/api/types/permissions.types";
 import type { Department } from "@/api/types/department.types";
@@ -85,21 +86,94 @@ const loadEmployees = async () => {
 
     // Identificar el departamento del supervisor
     const supervisorIdStr = String(props.supervisorId);
+    console.log("ModalSuperPerm: Supervisor ID:", supervisorIdStr);
+
     const supervisor = users.find(
       (u: BiometricUser) =>
         String(u.user_id) === supervisorIdStr ||
         String(u.id) === supervisorIdStr,
     );
+    console.log("ModalSuperPerm: Supervisor found:", supervisor);
+
+    let filteredEmployees: BiometricUser[] = [];
 
     if (supervisor && supervisor.departamento_id) {
       // Filtrar empleados que pertenecen al mismo departamento que el supervisor
-      employees.value = users.filter(
+      filteredEmployees = users.filter(
         (u: BiometricUser) => u.departamento_id === supervisor.departamento_id,
+      );
+      console.log(
+        `ModalSuperPerm: Found ${filteredEmployees.length} employees in dept ${supervisor.departamento_id}`,
       );
     } else {
       console.warn(
         "Supervisor no tiene departamento asignado o no encontrado.",
       );
+      filteredEmployees = [];
+    }
+
+    // --- FILTRAR POR ASISTENCIA HOY ---
+    if (filteredEmployees.length > 0) {
+      // Usar fecha local constructiva
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, "0");
+      const day = String(today.getDate()).padStart(2, "0");
+      const todayStr = `${year}-${month}-${day}`;
+
+      console.log("ModalSuperPerm: Fetching attendance report for:", todayStr);
+
+      // Usar getDailyReport que está diseñado para rangos de fechas
+      // getAll devolvía 422 con fecha_inicio/fecha_fin
+      const attResponse = await attendanceService.getDailyReport({
+        fecha_inicio: todayStr,
+        fecha_fin: todayStr,
+      });
+
+      console.log("ModalSuperPerm: Report Response:", attResponse);
+
+      // @ts-ignore
+      const attendanceList = attResponse.data?.data || attResponse.data || [];
+      console.log(`ModalSuperPerm: Fetched ${attendanceList.length} records`);
+
+      if (attendanceList.length > 0) {
+        console.log("ModalSuperPerm: Sample record:", attendanceList[0]);
+      }
+
+      // Crear Set de IDs de usuarios que tienen asistencia hoy Y están PRESENTES/TARDANZA
+      const presentUserIds = new Set();
+
+      attendanceList.forEach((a: any) => {
+        // Normalizar estado
+        const rawStatus = (
+          a.estado_asistencia ||
+          a.estado ||
+          a.status ||
+          ""
+        ).toUpperCase();
+
+        // Consideramos presentes a: PRESENTE, ASISTENCIA, TARDANZA
+        // Excluimos: FALTA, AUSENCIA, FERIADO
+        if (
+          rawStatus.includes("PRESENTE") ||
+          rawStatus.includes("ASISTENCIA") ||
+          rawStatus.includes("TARDANZA")
+        ) {
+          const uid = String(a.user_id || a.empleado_id || a.dni || a.id);
+          if (uid) presentUserIds.add(uid);
+        }
+      });
+      console.log(
+        "ModalSuperPerm: Present IDs (Filtered by Status):",
+        Array.from(presentUserIds),
+      );
+
+      // Filtrar empleados: solo mostrar los que están en presentUserIds
+      employees.value = filteredEmployees.filter((emp) =>
+        presentUserIds.has(String(emp.user_id)),
+      );
+      console.log(`ModalSuperPerm: Final list size: ${employees.value.length}`);
+    } else {
       employees.value = [];
     }
   } catch (error) {
@@ -332,6 +406,7 @@ onMounted(() => {
           dateFormat="dd/mm/yy"
           showIcon
           class="w-full"
+          disabled
         />
       </div>
 

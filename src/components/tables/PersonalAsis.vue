@@ -6,6 +6,9 @@ import Button from "primevue/button";
 import DatePicker from "primevue/datepicker";
 import Tag from "primevue/tag";
 import Avatar from "primevue/avatar";
+import IconField from "primevue/iconfield";
+import InputIcon from "primevue/inputicon";
+import InputText from "primevue/inputtext"; // Added InputText
 import { attendanceService } from "@/api/services/attendance.service";
 import { userService } from "@/api/services/user.service";
 import { authService } from "@/api/services/auth.service";
@@ -23,7 +26,7 @@ interface DailyRecord {
   entrada_real: string | null;
   salida_real: string | null;
 
-  // UI Helpers
+  // Ayudantes de UI
   employeeName?: string;
   employeeRole?: string;
   avatarInitials?: string;
@@ -32,6 +35,9 @@ interface DailyRecord {
 const records = ref<DailyRecord[]>([]);
 const loading = ref(true);
 const selectedDate = ref<Date>(new Date());
+const filters = ref({
+  global: { value: null, matchMode: "contains" },
+});
 
 const getSeverity = (status: string) => {
   switch (status?.toUpperCase()) {
@@ -70,10 +76,10 @@ const formatDateForApi = (date: Date) => {
 
 const formatTime = (isoString: string | null) => {
   if (!isoString) return "--:--";
-  // Assuming ISO string or HH:mm:ss format depending on API, lets handle standard Date parsable strings
-  // or "HH:mm:ss" directly which new Date() might not parse well universally without date part in some browsers,
-  // but if backend sends full ISO, it's fine.
-  // If backend sends just time "08:00:00", we just show it cut to HH:mm
+  // Asumiendo cadena ISO o formato HH:mm:ss dependiendo de la API, manejamos cadenas parseables por Date estándar
+  // o "HH:mm:ss" directamente que new Date() podría no parsear bien universalmente sin parte de fecha en algunos navegadores,
+  // pero si el backend envía ISO completo, está bien.
+  // Si el backend envía solo la hora "08:00:00", simplemente la cortamos a HH:mm
   if (isoString.includes("T")) {
     const d = new Date(isoString);
     return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -96,8 +102,8 @@ const loadData = async () => {
       console.warn("Error en cálculo automático de asistencia:", calcError);
     }
 
-    // 1. Fetch Users & Auth Users in parallel for mapping
-    // We cache this? Ideally yes, but for now simple fetch
+    // 1. Obtener Usuarios y Usuarios Auth en paralelo para mapeo
+    // ¿Caché? Idealmente sí, pero por ahora fetch simple
     const [usersRes, authRes, reportRes] = await Promise.allSettled([
       userService.getAll(),
       authService.getAllUsers(),
@@ -116,8 +122,8 @@ const loadData = async () => {
       biometricUsers = Array.isArray(usersRes.value.data.data)
         ? usersRes.value.data.data
         : Array.isArray(usersRes.value.data)
-        ? usersRes.value.data
-        : [];
+          ? usersRes.value.data
+          : [];
     }
 
     if (authRes.status === "fulfilled") {
@@ -129,24 +135,24 @@ const loadData = async () => {
 
     if (reportRes.status === "fulfilled") {
       rawRecords = reportRes.value.data.filter(
-        (rec: any) => rec.estado_asistencia !== "SIN_HORARIO"
+        (rec: any) => rec.estado_asistencia !== "SIN_HORARIO",
       );
     }
 
-    // Map logic
+    // Lógica de mapeo
     records.value = rawRecords.map((rec) => {
       const bUser = biometricUsers.find(
-        (u) => String(u.user_id) === String(rec.user_id)
+        (u) => String(u.user_id) === String(rec.user_id),
       );
       const aUser = authUsers.find(
-        (u) => String(u.usuario) === String(rec.user_id)
+        (u) => String(u.usuario) === String(rec.user_id),
       );
 
       const fullName = bUser
         ? bUser.nombre
         : aUser
-        ? `User ${rec.user_id}`
-        : `ID: ${rec.user_id}`;
+          ? `User ${rec.user_id}`
+          : `ID: ${rec.user_id}`;
       const role = bUser?.cargo || aUser?.rol?.nombre || "N/A";
 
       return {
@@ -174,11 +180,22 @@ onMounted(() => {
 
 <template>
   <div class="card bg-white p-4 rounded-lg shadow-sm">
-    <!-- Header -->
+    <!-- Encabezado -->
     <div
       class="flex flex-wrap md:flex-nowrap align-items-center justify-content-between w-full mb-4 gap-4"
     >
-      <h2 class="text-xl font-bold text-blue-600 m-0">Registros de Hoy</h2>
+      <div class="flex align-items-center gap-3">
+        <h2 class="text-xl font-bold text-blue-600 m-0">Registros de Hoy</h2>
+        <span class="p-input-icon-left">
+          <IconField>
+            <InputIcon class="pi pi-search" />
+            <InputText
+              v-model="filters['global'].value"
+              placeholder="Buscar..."
+            />
+          </IconField>
+        </span>
+      </div>
 
       <div class="flex align-items-center gap-2">
         <DatePicker v-model="selectedDate" dateFormat="dd/mm/yy" showIcon />
@@ -192,7 +209,7 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- Table -->
+    <!-- Tabla -->
     <DataTable
       :value="records"
       stripedRows
@@ -201,11 +218,18 @@ onMounted(() => {
       paginator
       :rows="10"
       :rowsPerPageOptions="[5, 10, 25]"
+      v-model:filters="filters"
+      :globalFilterFields="[
+        'employeeName',
+        'employeeRole',
+        'user_id',
+        'estado_asistencia',
+      ]"
       currentPageReportTemplate="Mostrando {first} a {last} de {totalRecords} empleados"
     >
       <template #empty>No hay registros para este día.</template>
 
-      <!-- Employee Column -->
+      <!-- Columna Empleado -->
       <Column
         header="Empleado"
         style="min-width: 14rem"
@@ -225,7 +249,7 @@ onMounted(() => {
         </template>
       </Column>
 
-      <!-- Cargo Column -->
+      <!-- Columna Cargo -->
       <Column
         header="Cargo"
         sortable
@@ -251,14 +275,14 @@ onMounted(() => {
         </template>
       </Column>
 
-      <!-- Horas Worked -->
+      <!-- Horas Trabajadas -->
       <Column header="Horas Trabajadas" sortable field="horas_trabajadas">
         <template #body="{ data }">
           {{ data.horas_trabajadas ? data.horas_trabajadas.toFixed(2) : "--" }}
         </template>
       </Column>
 
-      <!-- Status -->
+      <!-- Estado -->
       <Column header="Estado" sortable field="estado_asistencia">
         <template #body="{ data }">
           <Tag
@@ -273,7 +297,7 @@ onMounted(() => {
 </template>
 
 <style scoped>
-/* Optional specific overrides if not covered by global styles */
+/* Sobrescrituras específicas opcionales si no están cubiertas por estilos globales */
 :deep(.p-datepicker) {
   width: 140px;
 }
