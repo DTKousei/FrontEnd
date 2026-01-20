@@ -45,29 +45,86 @@ const form = ref({
   fecha: new Date(),
 });
 
-const jefeAreaName = computed(() => {
-  if (!form.value.empleado_id) return "--";
-  const employee = allUsers.value.find((e) => e.id === form.value.empleado_id);
-  if (!employee || !employee.departamento_id) return "--";
-  const dept = departments.value.find((d) => d.id === employee.departamento_id);
-  if (!dept || !dept.jefe_id) return "--";
-  const chief = allUsers.value.find(
-    (u) => String(u.user_id) === String(dept.jefe_id),
-  );
-  return chief ? chief.nombre : "--";
+import { getSignatureConfig } from "@/helpers/permissions.utils";
+
+// Computado: Configuración de firmas dinámica
+const signatureConfig = computed(() => {
+  const employee = employees.value.find((e) => e.id === form.value.empleado_id);
+  // Pasamos un objeto permiso parcial o null, y el empleado
+  // @ts-ignore
+  return getSignatureConfig({}, employee || {});
 });
 
-const jefeRRHHName = computed(() => {
-  const rrhhDept = departments.value.find(
-    (d) =>
-      d.nombre.toLowerCase().includes("recursos humanos") ||
-      d.nombre.toLowerCase().includes("RRHH"),
+// Helper para buscar jefe de un departamento específico
+const findChiefOfDept = (deptNamePartial: string) => {
+  const dept = departments.value.find((d) =>
+    d.nombre.toLowerCase().includes(deptNamePartial.toLowerCase()),
   );
-  if (!rrhhDept || !rrhhDept.jefe_id) return "--";
-  const chief = allUsers.value.find(
-    (u) => String(u.user_id) === String(rrhhDept.jefe_id),
-  );
-  return chief ? chief.nombre : "--";
+  if (!dept || !dept.jefe_id) return null;
+  return allUsers.value.find((u) => String(u.user_id) === String(dept.jefe_id));
+};
+
+const firstSignerName = computed(() => {
+  const config = signatureConfig.value;
+  if (!config.firma1) return "--";
+
+  // Si el rol es JEFE DE ÁREA
+  if (config.firma1.roleKey === "jefe_area") {
+    // Lógica original de jefe de área
+    const employee = employees.value.find(
+      (e) => e.id === form.value.empleado_id,
+    );
+    if (!employee || !employee.departamento_id) return "--";
+    const dept = departments.value.find(
+      (d) => d.id === employee.departamento_id,
+    );
+    if (!dept || !dept.jefe_id) return "--";
+    const chief = allUsers.value.find(
+      (u) => String(u.user_id) === String(dept.jefe_id),
+    );
+    return chief ? chief.nombre : "--";
+  }
+
+  // Si el rol es RRHH
+  if (config.firma1.roleKey === "rrhh") {
+    const chief =
+      findChiefOfDept("recursos humanos") || findChiefOfDept("rrhh");
+    return chief ? chief.nombre : "--";
+  }
+
+  // Si el rol es SOLICITANTE (Caso raro jefe rrhh)
+  if (config.firma1.roleKey === "solicitante") {
+    const employee = employees.value.find(
+      (e) => e.id === form.value.empleado_id,
+    );
+    return employee ? employee.nombre : "--";
+  }
+
+  return "--";
+});
+
+const secondSignerName = computed(() => {
+  const config = signatureConfig.value;
+  if (!config.firma2) return "--";
+
+  // Si el rol es RRHH
+  if (config.firma2.roleKey === "rrhh") {
+    const chief =
+      findChiefOfDept("recursos humanos") || findChiefOfDept("rrhh");
+    return chief ? chief.nombre : "--";
+  }
+
+  // Si el rol es DIRECTOR / ADMINISTRACION
+  if (config.firma2.roleKey === "institucion") {
+    // Buscar departamento de administración o dirección
+    const chief =
+      findChiefOfDept("administracion") ||
+      findChiefOfDept("direccion") ||
+      findChiefOfDept("gerencia");
+    return chief ? chief.nombre : "--";
+  }
+
+  return "--";
 });
 
 const loadEmployees = async () => {
@@ -467,16 +524,19 @@ onMounted(() => {
             </div>
             <div class="status-badge pending">PENDIENTE</div>
           </div>
-          <div class="signature-box">
-            <div class="role-title">JEFE DE ÁREA</div>
+          <!-- Firma 1 (Dinámica: Jefe Area o RRHH) -->
+          <div class="signature-box" v-if="signatureConfig.firma1">
+            <div class="role-title">{{ signatureConfig.firma1.label }}</div>
             <div class="signature-line"></div>
-            <div class="signer-name">{{ jefeAreaName }}</div>
+            <div class="signer-name">{{ firstSignerName }}</div>
             <div class="status-badge pending">PENDIENTE</div>
           </div>
-          <div class="signature-box">
-            <div class="role-title">JEFE DE RRHH</div>
+
+          <!-- Firma 2 (Dinámica: RRHH o Director) -->
+          <div class="signature-box" v-if="signatureConfig.firma2">
+            <div class="role-title">{{ signatureConfig.firma2.label }}</div>
             <div class="signature-line"></div>
-            <div class="signer-name">{{ jefeRRHHName }}</div>
+            <div class="signer-name">{{ secondSignerName }}</div>
             <div class="status-badge pending">PENDIENTE</div>
           </div>
         </div>

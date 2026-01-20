@@ -182,6 +182,18 @@ export interface Permiso {
     nombre: string;
     codigo: string;
   };
+  empleado?: {
+    id?: number;
+    user_id: string;
+    nombre: string;
+    apellido_paterno?: string;
+    apellido_materno?: string;
+    cargo?: string;
+    dni?: string;
+    es_jefe?: boolean;
+    rol?: any;
+    departamento?: any;
+  };
 }
 
 export interface CreatePermisoPersonalRequest {

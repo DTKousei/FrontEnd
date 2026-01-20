@@ -8,6 +8,7 @@ import RadioButton from "primevue/radiobutton";
 import { permissionService } from "@/api/services/permission.service";
 import Swal from "sweetalert2";
 import type { Permiso, TipoFirma } from "@/api/types/permissions.types";
+import { getSignatureConfig } from "@/helpers/permissions.utils";
 
 const props = defineProps<{
   visible: boolean;
@@ -25,11 +26,37 @@ if (props.forcedRole) {
 const loading = ref(false);
 const signatureImage = ref<string | null>(null);
 
-const roles = [
-  { label: "Solicitante", value: "solicitante" },
-  { label: "Jefe de Área / Supervisor", value: "jefe_area" },
-  { label: "Jefe de RRHH", value: "rrhh" },
-];
+// Computed roles based on permission context
+const roles = computed(() => {
+  if (!props.permiso) return [];
+  // Aquí idealmente pasaríamos el objeto "empleado/solicitante" completo.
+  // Como 'permiso' suele tener 'empleado' populated, lo usamos.
+  // @ts-ignore
+  const config = getSignatureConfig(
+    props.permiso,
+    props.permiso.empleado || {},
+  );
+
+  const dynamicRoles = [];
+
+  // Siempre permitimos solicitante si falta
+  dynamicRoles.push({ label: "Solicitante", value: "solicitante" });
+
+  if (config.firma1) {
+    dynamicRoles.push({
+      label: config.firma1.label,
+      value: config.firma1.roleKey,
+    });
+  }
+  if (config.firma2) {
+    dynamicRoles.push({
+      label: config.firma2.label,
+      value: config.firma2.roleKey,
+    });
+  }
+
+  return dynamicRoles;
+});
 
 const visibleModel = computed({
   get: () => props.visible,
