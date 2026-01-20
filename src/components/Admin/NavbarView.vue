@@ -6,7 +6,7 @@
       <p>UGEL Sucre</p>
     </div>
     <ul class="nav-links">
-      <li v-if="hasRole(['ADMINISTRADOR', 'JEFE', 'SUPERVISOR'])">
+      <li v-if="hasRole(['ADMINISTRADOR', 'JEFE'])">
         <router-link to="/dashboard"
           ><i class="fas fa-tachometer-alt"></i> Dashboard</router-link
         >
@@ -21,7 +21,7 @@
           ><i class="fas fa-users"></i> Gestión Personal</router-link
         >
       </li>
-      <li v-if="hasRole(['ADMINISTRADOR', 'JEFE', 'SUPERVISOR'])">
+      <li v-if="hasRole(['ADMINISTRADOR', 'JEFE'])">
         <router-link to="/papeletas"
           ><i class="fas fa-chart-bar"></i> Papeletas</router-link
         >
@@ -52,29 +52,30 @@
           ><i class="fas fa-file-alt"></i> Mis Papeletas</router-link
         >
       </li>
+      <!-- Supervisor Menu -->
+      <li v-if="hasRole(['SUPERVISOR'])">
+        <router-link to="/supervisor/dashboard"
+          ><i class="fas fa-tachometer-alt"></i> Dashboard</router-link
+        >
+      </li>
+      <li v-if="hasRole(['SUPERVISOR'])">
+        <router-link to="/supervisor/papeletas"
+          ><i class="fas fa-clipboard-list"></i> Gestión Papeletas</router-link
+        >
+      </li>
     </ul>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { useAuthStore } from "@/stores/authStore";
 
-const userRole = ref("");
+const authStore = useAuthStore();
 
-onMounted(() => {
-  try {
-    const userStr = localStorage.getItem("user");
-    if (userStr) {
-      const user = JSON.parse(userStr);
-      userRole.value = user.rol?.nombre?.toUpperCase() || "";
-    }
-  } catch (e) {
-    console.error("Error parsing user role", e);
-  }
-});
-
+// Use computed to reactively check roles from the store
 const hasRole = (roles: string[]) => {
-  return roles.includes(userRole.value);
+  const currentRole = (authStore.user?.rol || "").toUpperCase().trim();
+  return roles.includes(currentRole);
 };
 </script>
 

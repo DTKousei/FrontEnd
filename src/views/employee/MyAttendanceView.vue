@@ -4,56 +4,130 @@
     <div class="main-content">
       <HeaderView />
       <div class="page-content">
-        <h1 class="text-3xl font-bold text-blue-800 mb-4">Mis Asistencias</h1>
+        <h1 class="text-3xl font-bold text-blue-800 mb-4">
+          Dashboard de Asistencia
+        </h1>
 
-        <div class="card bg-white p-4 shadow-1 border-round-lg">
-          <div class="flex justify-content-between align-items-center mb-4">
-            <h3 class="m-0">Historial de Marcaciones</h3>
-            <Button
-              icon="pi pi-refresh"
-              rounded
-              outlined
-              @click="loadAttendance"
-              :loading="loading"
-              tooltip="Recargar"
-            />
+        <div class="dashboard-grid">
+          <!-- Quadrant 1: Line Chart -->
+          <div class="dashboard-card">
+            <!-- Header handled inside component or here -->
+            <GrafiLineas :attendances="attendances" />
           </div>
 
-          <DataTable
-            :value="attendances"
-            :loading="loading"
-            paginator
-            :rows="10"
-            responsiveLayout="scroll"
-            class="p-datatable-sm"
-            stripedRows
-          >
-            <Column field="fecha_hora" header="Fecha y Hora">
-              <template #body="slotProps">
-                {{ formatDateTime(slotProps.data.timestamp) }}
-              </template>
-            </Column>
-            <Column field="status" header="Estado">
-              <template #body="slotProps">
-                <Tag
-                  :value="getStatusLabel(slotProps.data.status)"
-                  severity="info"
+          <!-- Quadrant 2: Recent Incidents -->
+          <div class="dashboard-card">
+            <div class="flex justify-content-between align-items-center mb-3">
+              <h3 class="text-xl font-semibold m-0">
+                Mis Incidencias Recientes
+              </h3>
+            </div>
+            <DataTable
+              :value="incidents"
+              :loading="loadingIncidents"
+              paginator
+              :rows="5"
+              responsiveLayout="scroll"
+              class="p-datatable-sm"
+              stripedRows
+            >
+              <template #empty>No hay incidencias recientes.</template>
+              <Column field="fecha_inicio" header="Fecha">
+                <template #body="slotProps">
+                  {{ formatDate(slotProps.data.fecha_inicio) }}
+                </template>
+              </Column>
+              <Column field="tipo_incidencia.nombre" header="Tipo">
+                <template #body="slotProps">
+                  <Tag
+                    :value="slotProps.data.tipo_incidencia?.nombre || 'General'"
+                    severity="warning"
+                  />
+                </template>
+              </Column>
+              <Column field="descripcion" header="Observación">
+                <template #body="slotProps">
+                  <span
+                    class="text-sm text-gray-600 truncate-text"
+                    :title="slotProps.data.descripcion"
+                    >{{ slotProps.data.descripcion }}</span
+                  >
+                </template>
+              </Column>
+            </DataTable>
+          </div>
+
+          <!-- Quadrant 3: Attendance Log -->
+          <div class="dashboard-card">
+            <div class="flex justify-content-between align-items-center mb-3">
+              <h3 class="text-xl font-semibold m-0">
+                Mi Registro de Asistencia - Este Mes
+              </h3>
+              <div class="flex gap-2">
+                <Calendar
+                  v-model="selectedDate"
+                  view="month"
+                  dateFormat="mm/yy"
+                  :maxDate="maxDate"
+                  showIcon
+                  class="w-8rem"
                 />
-              </template>
-            </Column>
-            <Column field="punch" header="Tipo">
-              <template #body="slotProps">
-                {{ getPunchLabel(slotProps.data.punch) }}
-              </template>
-            </Column>
-            <Column field="dispositivo_id" header="Dispositivo">
-              <template #body="slotProps">
-                <span class="text-gray-600 text-sm"
-                  >ID: {{ slotProps.data.dispositivo_id }}</span
-                >
-              </template>
-            </Column>
-          </DataTable>
+                <Button
+                  icon="pi pi-refresh"
+                  rounded
+                  text
+                  @click="loadData"
+                  :loading="loading"
+                  tooltip="Recargar"
+                />
+              </div>
+            </div>
+            <DataTable
+              :value="attendances"
+              :loading="loading"
+              paginator
+              :rows="5"
+              responsiveLayout="scroll"
+              class="p-datatable-sm"
+              stripedRows
+            >
+              <Column field="fecha" header="Fecha">
+                <template #body="slotProps">
+                  {{ formatDate(slotProps.data.fecha) }}
+                </template>
+              </Column>
+              <Column field="entrada_real" header="Entrada">
+                <template #body="slotProps">
+                  {{ slotProps.data.entrada_real || "-" }}
+                </template>
+              </Column>
+              <Column field="salida_real" header="Salida">
+                <template #body="slotProps">
+                  {{ slotProps.data.salida_real || "-" }}
+                </template>
+              </Column>
+              <Column field="estado_asistencia" header="Estado">
+                <template #body="slotProps">
+                  <Tag
+                    :value="slotProps.data.estado_asistencia"
+                    :severity="getSeverity(slotProps.data.estado_asistencia)"
+                  />
+                </template>
+              </Column>
+            </DataTable>
+          </div>
+
+          <!-- Quadrant 4: Punctuality Chart -->
+          <div class="dashboard-card">
+            <div class="mb-3">
+              <h3 class="text-xl font-semibold m-0">
+                Mi Puntualidad - Este Mes
+              </h3>
+            </div>
+            <div class="flex justify-content-center">
+              <DistAsisView :metrics="metrics" />
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -61,80 +135,180 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, watch } from "vue";
 import AdminNavbar from "@/components/Admin/NavbarView.vue";
 import HeaderView from "@/components/header/HeaderView.vue";
 import DataTable from "primevue/datatable";
 import Column from "primevue/column";
 import Button from "primevue/button";
 import Tag from "primevue/tag";
+import Calendar from "primevue/calendar"; // Import Calendar
+import GrafiLineas from "@/components/Employed/GrafiLineas.vue";
+import DistAsisView from "@/components/Graficas/DistAsisView.vue"; // Reusing Pie Chart
 import { attendanceService } from "@/api/services/attendance.service";
-import { PUNCH_TYPE_LABELS, STATUS_LABELS } from "@/api/types/attendance.types";
+import { incidentService } from "@/api/services/incident.service"; // Import Incident Service
+import type { Attendance } from "@/api/types/attendance.types";
+import type { Incidencia } from "@/api/types/incidents.types";
 
-const attendances = ref([]);
+const attendances = ref<Attendance[]>([]);
+const incidents = ref<Incidencia[]>([]); // Estado para incidencias
 const loading = ref(false);
+const loadingIncidents = ref(false);
+const maxDate = ref(new Date()); // Allow selection up to today
 
 const getCurrentUserDNI = () => {
   try {
     const userStr = localStorage.getItem("user");
     if (userStr) {
       const user = JSON.parse(userStr);
-      // Asumiendo que el 'usuario' es el DNI o hay un campo especifico.
-      // En auth.types.ts User tiene 'usuario' (username), 'correo', etc.
-      // Necesitamos verificar si 'usuario' es el DNI o si el DNI está en otro lado.
-      // Por ahora usaremos 'usuario' asumiendo que es el DNI para empleados.
-      return user.usuario;
+      return user.usuario; // Asumiendo que 'usuario' es el DNI basado en la lógica de auth
     }
   } catch (e) {
-    console.error("Error reading user", e);
+    console.error("Error al leer usuario", e);
   }
   return null;
 };
 
-const loadAttendance = async () => {
+const selectedDate = ref(new Date()); // Default to current date
+
+// --- Métricas Calculadas (desde Backend) ---
+// Initialize metrics with default values
+const metrics = ref({
+  puntual: 0,
+  tardanzas: 0,
+  faltas: 0,
+  horas_extras: 0,
+});
+
+watch(selectedDate, () => {
+  loadData();
+});
+
+const loadData = async () => {
   const dni = getCurrentUserDNI();
   if (!dni) return;
 
   loading.value = true;
+  loadingIncidents.value = true;
+
   try {
-    // Fetch attendances filtered by user_id
-    const response = await attendanceService.getAll({
-      user_id: dni,
-      limit: 100,
+    // 1. Obtener Reporte Diario de Asistencia (Nuevo Endpoint)
+    // Calculamos rango basado en el mes seleccionado
+    const now = new Date();
+    // Ensure selectedDate is valid
+    if (!selectedDate.value) selectedDate.value = now;
+
+    const sel = selectedDate.value;
+
+    // Primer día del mes seleccionado
+    const firstDay = new Date(sel.getFullYear(), sel.getMonth(), 1);
+
+    // Último día del mes seleccionado
+    const lastDayOfMonth = new Date(sel.getFullYear(), sel.getMonth() + 1, 0);
+
+    // Regla: "no permitir el futuro" y "calculo hasta el dia actual"
+    // Si el mes seleccionado es el actual, el fin es hoy.
+    // Si es un mes pasado, el fin es el último día de ese mes.
+    // Si es futuro (aunque el UI lo bloquee), tomamos min(finMes, hoy) por seguridad.
+
+    let endDate = lastDayOfMonth;
+    if (lastDayOfMonth > now) {
+      endDate = now;
+    }
+
+    const formatYMD = (d: Date) => d.toISOString().split("T")[0];
+
+    const reportResponse = await attendanceService.getUserDailyReport(dni, {
+      fecha_inicio: formatYMD(firstDay),
+      fecha_fin: formatYMD(endDate),
+    });
+
+    const reportData = reportResponse.data;
+
+    // A. Actualizar Tabla y Gráfico de Líneas con 'detalle'
+    // El gráfico de líneas ahora soporta 'fecha' + 'entrada_real'
+    //@ts-ignore
+    let data = reportData.detalle || [];
+
+    // Ordenar Inversamente (Más reciente primero) para la tabla
+    // Pero el gráfico suele necesitar orden cronológico.
+    // Opción: Invertir solo para la tabla visualmente, o tener dos listas.
+    // La grafica GrafiLineas hace su propio sort interno? Revisemos.
+    // GrafiLineas: "dailyAtt.sort(...)".
+    // Así que podemos pasarle la lista en cualquier orden.
+    // Para la tabla requerimos descendente.
+    data.sort((a: any, b: any) => {
+      const da = new Date(a.fecha || a.timestamp);
+      const db = new Date(b.fecha || b.timestamp);
+      return db.getTime() - da.getTime(); // Descendente
+    });
+
+    attendances.value = data;
+
+    // B. Actualizar Métricas con 'resumen'
+    if (reportData.resumen) {
+      metrics.value = {
+        puntual: reportData.resumen.dias_trabajados || 0, // Asumiendo días trabajados como puntuales/normales aprox.
+        tardanzas: reportData.resumen.dias_tarde || 0,
+        faltas: reportData.resumen.dias_falta || 0,
+        horas_extras: Math.round(reportData.resumen.total_horas_extras || 0),
+      };
+    }
+
+    // 2. Obtener Incidencias
+    const incResponse = await incidentService.getAllIncidencias({
+      // @ts-ignore
+      search: dni, // Muchas APIs soportan una búsqueda genérica
     });
     // @ts-ignore
-    attendances.value = response.data?.data || response.data || [];
+    const allIncidents = incResponse.data?.data || incResponse.data || [];
+    // Filtrar por DNI por si acaso 'search' fue muy amplio o ignorado
+    incidents.value = allIncidents
+      .filter((i: any) => {
+        const emp = i.empleado;
+        if (emp && (emp.user_id === dni || emp.nro_documento === dni))
+          return true;
+        return false;
+      })
+      .sort((a: any, b: any) => {
+        const da = new Date(a.fecha_inicio);
+        const db = new Date(b.fecha_inicio);
+        return db.getTime() - da.getTime(); // Descendente
+      });
   } catch (error) {
-    console.error("Error loading my attendance", error);
+    console.error("Error cargando datos del dashboard", error);
   } finally {
     loading.value = false;
+    loadingIncidents.value = false;
   }
 };
 
-const formatDateTime = (isoString: string) => {
+const formatDate = (isoString: string) => {
   if (!isoString) return "-";
-  return new Date(isoString).toLocaleString("es-PE", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
+  // Check if it's already a date string YYYY-MM-DD or ISO
+  return new Date(isoString).toLocaleDateString("es-PE");
 };
 
-const getStatusLabel = (status: number) => {
-  // @ts-ignore
-  return STATUS_LABELS[status] || "Desconocido";
-};
-
-const getPunchLabel = (punch: number) => {
-  // @ts-ignore
-  return PUNCH_TYPE_LABELS[punch] || "Normal";
+const getSeverity = (status: string) => {
+  if (!status) return "info";
+  switch (status.toUpperCase()) {
+    case "ASISTENCIA":
+    case "PRESENTE":
+      return "success";
+    case "TARDANZA":
+      return "warning";
+    case "FALTA":
+    case "AUSENCIA":
+      return "danger";
+    case "FERIADO":
+      return "info";
+    default:
+      return "secondary";
+  }
 };
 
 onMounted(() => {
-  loadAttendance();
+  loadData();
 });
 </script>
 
@@ -252,5 +426,37 @@ body {
 }
 .page-content {
   padding: 30px;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  gap: 1.5rem;
+}
+
+@media (min-width: 992px) {
+  .dashboard-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.dashboard-card {
+  background-color: white;
+  padding: 1.5rem;
+  border-radius: 12px; /* Smoother corners */
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06); /* Modern shadow */
+  height: 100%; /* Fill grid cell height */
+  display: flex;
+  flex-direction: column;
+}
+
+.truncate-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
+  display: inline-block;
 }
 </style>

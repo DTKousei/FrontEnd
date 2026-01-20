@@ -1,7 +1,7 @@
 import { createApi } from './core';
 
-// Define base URLs for each module
-// You can also use environment variables here: import.meta.env.VITE_AUTH_API_URL, etc.
+// Define URLs base para cada módulo
+// También puedes usar variables de entorno aquí: import.meta.env.VITE_AUTH_API_URL, etc.
 
 const AUTH_API_URL = '/api-auth';      // Módulo 1 (Proxied)
 const BIOMETRIC_API_URL = '/api-biometrico';           // Módulo 2 (Proxied)
@@ -14,5 +14,5 @@ export const authApi = createApi(AUTH_API_URL);
 export const biometricApi = createApi(BIOMETRIC_API_URL);
 export const papeletaApi = createApi(PAPELETA_API_URL);
 export const incidentApi = createApi(INCIDENT_API_URL);
-// reportApi removed (Node module deprecated)
+// reportApi eliminado (Módulo Node obsoleto)
 export const pythonReportApi = createApi(PYTHON_REPORT_API_URL);

@@ -23,7 +23,6 @@
 
         <!-- Estadísticas (Optional: Add filtered stats later) -->
         <div class="stats-cards">
-          <!-- Placeholders similar to employee view but for area -->
           <div class="stat-card">
             <div class="stat-header">
               <div class="stat-title">Pendientes Área</div>
@@ -33,6 +32,39 @@
             </div>
             <div class="stat-value">{{ pendientesCount }}</div>
             <div class="stat-change">Total pendientes</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-header">
+              <div class="stat-title">Aprobadas Hoy</div>
+              <div class="stat-icon aprobadas">
+                <i class="fas fa-check-circle"></i>
+              </div>
+            </div>
+            <div class="stat-value">{{ aprobadasHoyCount }}</div>
+            <div class="stat-change">Solicitadas hoy</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-header">
+              <div class="stat-title">Rechazadas</div>
+              <div class="stat-icon rechazadas">
+                <i class="fas fa-times-circle"></i>
+              </div>
+            </div>
+            <div class="stat-value">{{ rechazadasCount }}</div>
+            <div class="stat-change">Total rechazadas</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-header">
+              <div class="stat-title">Comisiones</div>
+              <div class="stat-icon comision">
+                <i class="fas fa-briefcase"></i>
+              </div>
+            </div>
+            <div class="stat-value">{{ comisionesCount }}</div>
+            <div class="stat-change">Total activas</div>
           </div>
         </div>
 
@@ -101,6 +133,35 @@ const currentUser = computed(() => getCurrentUser());
 const pendientesCount = computed(() => {
   return permissions.value.filter((p) =>
     p.estado?.nombre?.toLowerCase().includes("pend"),
+  ).length;
+});
+
+const aprobadasHoyCount = computed(() => {
+  const hoy = new Date();
+  return permissions.value.filter((p) => {
+    const isAprobada = p.estado?.nombre?.toLowerCase().includes("aprob");
+
+    if (!p.fecha_hora_inicio) return false;
+
+    const fechaPermiso = new Date(p.fecha_hora_inicio);
+    const esHoy =
+      fechaPermiso.getDate() === hoy.getDate() &&
+      fechaPermiso.getMonth() === hoy.getMonth() &&
+      fechaPermiso.getFullYear() === hoy.getFullYear();
+
+    return isAprobada && esHoy;
+  }).length;
+});
+
+const rechazadasCount = computed(() => {
+  return permissions.value.filter((p) =>
+    p.estado?.nombre?.toLowerCase().includes("rechaz"),
+  ).length;
+});
+
+const comisionesCount = computed(() => {
+  return permissions.value.filter((p) =>
+    p.tipo_permiso?.nombre?.toLowerCase().includes("comisi"),
   ).length;
 });
 
@@ -236,16 +297,23 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Resue styles from MyPermissionsView or global */
+/* Reusing styles from MyPermissionsView */
 .container {
   display: flex;
   min-height: 100vh;
-}
+} /* Sidebar */
+.sidebar {
+  width: 250px;
+  background-color: var(--primary);
+  color: white;
+  transition: all 0.3s;
+} /* Main Content */
 .main-content {
   flex: 1;
   display: flex;
   flex-direction: column;
-}
+} /* Page
+Content */
 .page-content {
   padding: 30px;
   flex: 1;
@@ -253,11 +321,11 @@ onMounted(() => {
 }
 .page-title {
   margin-bottom: 20px;
-  color: var(--primary-color, #2c5aa0);
+  color: var(--primary);
   display: flex;
   justify-content: space-between;
   align-items: center;
-}
+} /* Stats Cards */
 .stats-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -291,7 +359,16 @@ onMounted(() => {
   color: white;
 }
 .stat-icon.pendientes {
-  background-color: #f39c12;
+  background-color: #f39c12; /* var(--warning) */
+}
+.stat-icon.aprobadas {
+  background-color: #27ae60; /* var(--success) */
+}
+.stat-icon.rechazadas {
+  background-color: #e74c3c; /* var(--danger) */
+}
+.stat-icon.comision {
+  background-color: #3498db; /* var(--secondary) */
 }
 .stat-value {
   font-size: 1.8rem;
@@ -301,7 +378,7 @@ onMounted(() => {
 .stat-change {
   font-size: 0.8rem;
   color: #7f8c8d;
-}
+} /* Table Container */
 .papeletas-container {
   background-color: white;
   border-radius: 8px;
@@ -309,7 +386,8 @@ onMounted(() => {
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 .btn-success {
-  background-color: #27ae60;
+  background-color: #27ae60; /*
+var(--success) */
   color: white;
   border: none;
   padding: 10px 20px;

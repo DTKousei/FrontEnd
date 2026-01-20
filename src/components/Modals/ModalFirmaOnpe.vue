@@ -137,8 +137,10 @@ const handleCancel = () => {
       <div v-else class="text-center font-bold text-xl text-primary mb-3">
         Firmando como:
         {{
-          roles.find((r) => r.value === forcedRole)?.label ||
-          forcedRole.toUpperCase()
+          forcedRole === "jefe_area"
+            ? "SUPERVISOR"
+            : roles.find((r) => r.value === forcedRole)?.label ||
+              forcedRole.toUpperCase()
         }}
       </div>
 

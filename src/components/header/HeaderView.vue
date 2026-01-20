@@ -1,87 +1,38 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { authService } from "@/api/services/auth.service";
-import { userService } from "@/api/services/user.service";
-
+import { useAuthStore } from "@/stores/authStore";
+import ModalPerfil from "@/components/Modals/ModalPerfil.vue";
 import Swal from "sweetalert2";
 
 const router = useRouter();
+const authStore = useAuthStore();
+const showProfileModal = ref(false);
+const showDropdown = ref(false);
+const dropdownRef = ref<HTMLElement | null>(null);
 
-// Estado para el usuario actual
-const currentUser = ref<{ nombre: string } | null>(null);
-const userRole = ref<string>("Cargando...");
+const toggleDropdown = () => {
+  showDropdown.value = !showDropdown.value;
+};
 
-// Función para obtener los datos del usuario actual
-const fetchCurrentUser = async () => {
-  try {
-    // 1. Obtener perfil de autenticación para conseguir el DNI (usuario)
-    const authProfile = await authService.getProfile();
-
-    if (authProfile && authProfile.data && authProfile.data.user) {
-      const authUser = authProfile.data.user;
-
-      // Asignar rol
-      userRole.value = authUser.rol?.nombre || "Usuario";
-
-      // 2. Usar el DNI (authUser.usuario) para buscar el nombre real en la tabla de usuarios
-      // Esto asegura que mostremos "Juan Perez" en lugar de solo el DNI si es posible.
-      if (authUser.usuario) {
-        try {
-          // Buscamos explícitamente por el ID de usuario (DNI)
-          console.log(
-            "Buscando usuario en biométrico con DNI:",
-            authUser.usuario
-          );
-          const bioUser = await userService.getByUserId(authUser.usuario);
-          console.log("Respuesta biométrico completa:", bioUser);
-
-          // @ts-ignore - bioUser podría venir anidado según la respuesta de axios/api
-          const responseBody = bioUser.data || bioUser;
-          console.log("Cuerpo de respuesta:", responseBody);
-
-          // Manejar respuesta directa o envuelta en { data: ... }
-          // Algunas APIs devuelven { success: true, data: { ... } }
-          const userData = (responseBody as any).data || responseBody;
-          console.log("Datos de usuario para mostrar:", userData);
-
-          if (userData && userData.nombre) {
-            // Priorizamos el nombre real encontrado
-            console.log("Nombre validado:", userData.nombre);
-            currentUser.value = {
-              nombre: userData.nombre,
-            };
-          } else {
-            console.warn("Propiedad 'nombre' no encontrada en:", userData);
-            // Fallback: mostrar el usuario (DNI) si no se encuentran datos biométricos
-            currentUser.value = { nombre: authUser.usuario };
-          }
-        } catch (bioError) {
-          console.warn(
-            "No se pudo obtener datos biométricos para el nombre real:",
-            bioError
-          );
-          // Fallback en caso de error en el servicio de usuarios
-          currentUser.value = { nombre: authUser.usuario };
-        }
-      } else {
-        // Fallback si no hay usuario en el perfil
-        currentUser.value = { nombre: "Usuario" };
-      }
-    }
-  } catch (error) {
-    console.error("Error al cargar perfil:", error);
-    userRole.value = "Invitado";
-    currentUser.value = { nombre: "Desconocido" };
+const closeDropdown = (event: MouseEvent) => {
+  if (dropdownRef.value && !dropdownRef.value.contains(event.target as Node)) {
+    showDropdown.value = false;
   }
 };
 
-// Función para cerrar sesión con confirmación
+const openProfile = () => {
+  showProfileModal.value = true;
+  showDropdown.value = false;
+};
+
 const logout = async () => {
+  showDropdown.value = false;
   const result = await Swal.fire({
     title: "¿Cerrar Sesión?",
     text: "¿Estás seguro que deseas salir del sistema?",
-    icon: "question",
+    icon: "warning", // Changed to warning for better visibility
     showCancelButton: true,
     confirmButtonColor: "#3085d6",
     cancelButtonColor: "#d33",
@@ -91,15 +42,14 @@ const logout = async () => {
 
   if (result.isConfirmed) {
     try {
+      authStore.logout();
       await authService.logout();
     } catch (error) {
       console.error("Error al cerrar sesión:", error);
     } finally {
-      // Limpiar cookies/localStorage para asegurar redirección
       localStorage.removeItem("token");
       localStorage.removeItem("user");
 
-      // Mostrar feedback visual rápido
       const Toast = Swal.mixin({
         toast: true,
         position: "top-end",
@@ -119,50 +69,73 @@ const logout = async () => {
 };
 
 onMounted(() => {
-  fetchCurrentUser();
+  authStore.init();
+  authStore.fetchProfile();
+  document.addEventListener("click", closeDropdown);
+});
+
+onUnmounted(() => {
+  document.removeEventListener("click", closeDropdown);
 });
 </script>
 
 <template>
   <div class="header">
+    <!-- Modal Perfil -->
+    <ModalPerfil v-model:visible="showProfileModal" />
+
     <div class="search-bar">
-      <!-- Search Placeholder - Puede ser funcional en el futuro -->
-      <!-- <input type="text" placeholder="Buscar..." /> -->
       <h2 class="text-xl font-bold text-gray-700">
         Sistema de Control de Asistencia
       </h2>
     </div>
-    <div class="user-info">
-      <img
-        :src="`https://ui-avatars.com/api/?name=${
-          currentUser?.nombre || 'Usuario'
-        }&background=3498db&color=fff`"
-        alt="Usuario"
-      />
-      <div>
-        <div class="user-name">
-          {{ currentUser?.nombre || "Cargando..." }}
+
+    <!-- User Profile Dropdown -->
+    <div class="user-info-container" ref="dropdownRef">
+      <div class="user-info" @click.stop="toggleDropdown">
+        <img
+          :src="`https://ui-avatars.com/api/?name=${authStore.user?.nombre || 'Usuario'}&background=3498db&color=fff`"
+          alt="Usuario"
+        />
+        <div class="user-details">
+          <div class="user-name">
+            {{ authStore.user?.nombre || "Cargando..." }}
+          </div>
+          <div class="user-role">{{ authStore.user?.rol || "" }}</div>
         </div>
-        <div class="user-role">{{ userRole }}</div>
+        <i
+          class="fas fa-chevron-down dropdown-icon"
+          :class="{ rotate: showDropdown }"
+        ></i>
       </div>
-      <div>
-        <button @click="logout" class="logout-btn" title="Cerrar Sesión">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke-width="1.5"
-            stroke="currentColor"
-            class="w-6 h-6 text-gray-500 hover:text-red-500 transition-colors"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75"
-            />
-          </svg>
-        </button>
-      </div>
+
+      <!-- Dropdown Menu -->
+      <transition name="fade">
+        <div v-if="showDropdown" class="dropdown-menu">
+          <div class="dropdown-header-mobile">
+            <span class="text-sm font-bold text-gray-600">Cuenta</span>
+          </div>
+          <ul class="dropdown-list">
+            <li>
+              <a href="#" @click.prevent="openProfile" class="dropdown-item">
+                <i class="fas fa-user-circle item-icon"></i>
+                <span>Mi Perfil</span>
+              </a>
+            </li>
+            <div class="dropdown-divider"></div>
+            <li>
+              <a
+                href="#"
+                @click.prevent="logout"
+                class="dropdown-item logout-item"
+              >
+                <i class="fas fa-sign-out-alt item-icon"></i>
+                <span>Cerrar Sesión</span>
+              </a>
+            </li>
+          </ul>
+        </div>
+      </transition>
     </div>
   </div>
 </template>
@@ -181,31 +154,44 @@ onMounted(() => {
   z-index: 100;
 }
 
-.search-bar input {
-  padding: 10px 15px;
-  border-radius: 20px;
-  border: 1px solid #ddd;
-  width: 300px;
-  outline: none;
-  transition: all 0.3s;
+.search-bar h2 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 1.25rem;
 }
 
-.search-bar input:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+/* User Info Container & Dropdown */
+.user-info-container {
+  position: relative;
 }
 
 .user-info {
   display: flex;
   align-items: center;
+  cursor: pointer;
+  padding: 5px 10px;
+  border-radius: 8px;
+  transition: background-color 0.2s;
+  user-select: none;
+}
+
+.user-info:hover {
+  background-color: #f8f9fa;
 }
 
 .user-info img {
-  width: 45px;
-  height: 45px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  margin-right: 15px;
+  margin-right: 12px;
   border: 2px solid var(--secondary);
+}
+
+.user-details {
+  margin-right: 15px;
+  text-align: right;
+  display: flex;
+  flex-direction: column;
 }
 
 .user-name {
@@ -215,26 +201,124 @@ onMounted(() => {
 }
 
 .user-role {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: #7f8c8d;
 }
 
-.logout-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  margin-left: 1rem;
-  padding: 5px;
-  border-radius: 50%;
-  transition: background-color 0.3s;
+.dropdown-icon {
+  color: #95a5a6;
+  font-size: 0.8rem;
+  transition: transform 0.3s ease;
 }
 
-.logout-btn:hover {
+.dropdown-icon.rotate {
+  transform: rotate(180deg);
+}
+
+/* Dropdown Menu Styles */
+.dropdown-menu {
+  position: absolute;
+  top: 120%;
+  right: 0;
+  width: 200px;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  border: 1px solid #f0f0f0;
+  overflow: hidden;
+  z-index: 101;
+  animation: slideDown 0.2s ease-out;
+}
+
+.dropdown-list {
+  list-style: none;
+  padding: 5px 0;
+  margin: 0;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 20px;
+  color: #2c3e50;
+  text-decoration: none;
+  transition: all 0.2s;
+  font-size: 0.95rem;
+}
+
+.dropdown-item:hover {
+  background-color: #f8f9fa;
+  color: var(--primary);
+  padding-left: 25px; /* Subtle slide effect */
+}
+
+.item-icon {
+  margin-right: 12px;
+  width: 20px;
+  text-align: center;
+  font-size: 1.1rem;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background-color: #eee;
+  margin: 5px 0;
+}
+
+.logout-item {
+  color: #e74c3c;
+}
+
+.logout-item:hover {
   background-color: #fce4e4;
+  color: #c0392b;
 }
 
-.logout-btn svg {
-  width: 24px;
-  height: 24px;
+.logout-item .item-icon {
+  color: #e74c3c;
+}
+
+.dropdown-header-mobile {
+  display: none; /* Only for mobile if needed later */
+}
+
+/* Animations */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .user-details {
+    display: none;
+  }
+
+  .user-info {
+    padding: 0;
+  }
+
+  .user-info img {
+    margin-right: 5px;
+  }
 }
 </style>

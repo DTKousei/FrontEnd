@@ -121,21 +121,26 @@ router.beforeEach((to, _from, next) => {
           try {
              if (userStr) {
                 const user = JSON.parse(userStr);
-                userRole = user.rol?.nombre?.toUpperCase() || '';
+                // Handle both object (user.rol.nombre) and string (user.rol) formats
+                const rolVal = user.rol?.nombre || user.rol || '';
+                userRole = typeof rolVal === 'string' ? rolVal.toUpperCase().trim() : '';
              }
           } catch(e) {}
 
-          if ((to.meta.roles as string[]).includes(userRole)) {
+           if ((to.meta.roles as string[]).includes(userRole)) {
              next(); // Rol permitido
           } else {
              // Rol no permitido: Redirigir según rol
              if (userRole === 'EMPLEADO') {
-                 next({ name: 'MisAsistencias' });
+                 if (to.name !== 'MisAsistencias') next({ name: 'MisAsistencias' });
+                 else next(false);
              } else if (userRole === 'SUPERVISOR') {
-                 next({ name: 'SupervisorDashboard' });
+                 if (to.name !== 'SupervisorDashboard') next({ name: 'SupervisorDashboard' });
+                 else next(false);
              } else {
                  // Si es otro rol (ej. Admin), al Dashboard general
-                 next({ name: 'Dashboard' }); 
+                 if (to.name !== 'Dashboard') next({ name: 'Dashboard' });
+                 else next(); 
              }
           }
        } else {

@@ -26,8 +26,8 @@ const filters = ref({
 });
 
 const loadUserNames = async () => {
-  // Only load if we have permissions to look up
-  // Or load all users once to map names (more efficient for pages with many different users)
+  // Solo cargar si hay permisos para consultar
+  // O cargar todos los usuarios una vez para mapear nombres (más eficiente para páginas con muchos usuarios diferentes)
   try {
     loadingUsers.value = true;
     const response = await userService.getAll();
@@ -63,7 +63,7 @@ const displayData = computed(() => {
 
 const formatDate = (dateString: string | undefined) => {
   if (!dateString) return "-";
-  // Format: 10:30 AM
+  // Formato: 10:30 AM
   const date = new Date(dateString);
   return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 };
@@ -113,11 +113,12 @@ const isRejected = (status: any) => {
 };
 
 const isSignedByRRHH = (permiso: Permiso) => {
-  // If status is APROBADO or firma_rrhh is present
-  const name = permiso.estado?.nombre?.toUpperCase() || "";
-  // Check if status is Approved OR specifically signed by RRHH
-  // assuming 'APROBADO' implies fully signed including RRHH
-  if (name.includes("APROBADO")) return true;
+  // Si el estado es estrictamente APROBADO (final) o si existe firma de RRHH
+  const name = (permiso.estado?.nombre?.toUpperCase() || "").trim();
+
+  // Solo ocultar si es el estado final de aprobación o si ya está firmado por RRHH
+  // "APROBADO POR JEFE" NO debe ocultar este botón
+  if (name === "APROBADO") return true;
   if (permiso.firma_rrhh || permiso.firma_rrhh_digital) return true;
 
   return false;

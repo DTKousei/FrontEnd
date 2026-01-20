@@ -117,7 +117,15 @@ async function handleLogin() {
       });
 
       // Redirect based on role
-      const roleName = user?.rol?.nombre?.toUpperCase() || "";
+      const rol = user?.rol;
+      const roleName = (
+        rol?.nombre ||
+        (typeof rol === "string" ? rol : "") ||
+        ""
+      )
+        .toUpperCase()
+        .trim();
+
       if (roleName === "EMPLEADO") {
         window.location.href = "/mis-asistencias";
       } else if (roleName === "SUPERVISOR") {

@@ -1,4 +1,4 @@
-import { biometricApi as api } from '@/api/config';
+import { biometricApi as api, authApi } from '@/api/config';
 import type { 
   BiometricUser, 
   CreateUserData, 
@@ -44,8 +44,21 @@ export const userService = {
     return api.post<{ message: string }>(`/usuarios/${id}/sincronizar/`);
   },
 
-  // Sincronizar todos los usuarios desde un dispositivo (POST /api/usuarios/dispositivos/{id}/sincronizar)
   syncAllFromDevice(deviceId: number) {
     return api.post<SyncUsersResponse>(`/usuarios/dispositivos/${deviceId}/sincronizar`);
+  },
+
+  // Verificar estado de bloqueo (GET /api/users/{id}/lock-status)
+  getLockStatus(user_id: string | number) {
+    // Nota: El usuario solicitó explícitamente /api/users/..., distinto de /api/usuarios/
+    // Estructura de respuesta: { success: boolean, data: { isLocked: boolean, ... } }
+    // Se usa authApi porque la función de bloqueo está en el puerto 3001 (Auth Service)
+    return authApi.get<{ success: boolean; data: { isLocked: boolean; lock_reason?: string } }>(`/users/${user_id}/lock-status`);
+  },
+
+  // Desbloquear usuario (POST /api/users/{id}/unlock)
+  unlockUser(user_id: string | number) {
+     // Se usa authApi porque la función de bloqueo está en el puerto 3001 (Auth Service)
+    return authApi.post<{ success: boolean; message: string }>(`/users/${user_id}/unlock`);
   }
 };

@@ -10,8 +10,12 @@ import Swal from "sweetalert2";
 import { userService } from "@/api/services/user.service";
 import { permissionService } from "@/api/services/permission.service";
 import { DepartmentService } from "@/api/services/department.service"; // Import DepartmentService
+import { attendanceService } from "@/api/services/attendance.service";
 import type { BiometricUser } from "@/api/types/users.types";
-import type { CreatePermisoPersonalRequest } from "@/api/types/permissions.types";
+import type {
+  CreatePermisoPersonalRequest,
+  Permiso,
+} from "@/api/types/permissions.types";
 import type { Department } from "@/api/types/department.types"; // Import Department Type
 
 // Definición de Props (Propiedades recibidas del padre)
@@ -255,9 +259,74 @@ const handleSubmit = async () => {
     return;
   }
 
+  // --- VALIDACIONES ADICIONALES ---
+
   loadingSubmit.value = true;
 
   try {
+    // 1. Validar Asistencia del Día (Client-side filtering needed as date params might not be supported)
+    const todayStr = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+
+    // Fetch recent attendance for the user (assuming default sort is mostly useful or we fetch enough)
+    // We remove date params from the request if the backend doesn't support them
+    const attendanceResponse = await attendanceService.getAll({
+      user_id: String(employee.user_id),
+      limit: 20, // Fetch recent records
+    });
+
+    // @ts-ignore
+    const allAttendances =
+      attendanceResponse.data?.data || attendanceResponse.data || [];
+
+    // Filter locally for today
+    const attendanceList = allAttendances.filter((a: any) => {
+      if (!a.timestamp) return false;
+      return a.timestamp.startsWith(todayStr);
+    });
+
+    if (attendanceList.length === 0) {
+      Swal.fire({
+        icon: "error",
+        title: "Sin Asistencia",
+        text: "El empleado no registra asistencia el día de hoy. No se puede generar papeleta.",
+      });
+      loadingSubmit.value = false;
+      return;
+    }
+
+    // 2. Validar Papeletas Activas
+    // Buscamos permisos del empleado
+    const permisosResponse = await permissionService.getPermisos({
+      empleado_id: String(employee.user_id),
+      // Podríamos filtrar por estado si la API lo permite, pero mejor filtramos localmente para estar seguros
+    });
+    // @ts-ignore
+    const permisos = permisosResponse.data?.data || permisosResponse.data || [];
+
+    // Buscamos si hay alguna papeleta activa (sin fecha fin marcada)
+    // y que no esté rechazada o cancelada.
+    const activePermission = permisos.find((p: Permiso) => {
+      const isFinished = !!p.fecha_hora_fin;
+      // Normalizamos estado para comparar seguro
+      const statusName = p.estado?.nombre?.toUpperCase() || "";
+      const isInvalidStatus =
+        statusName.includes("RECHAZADO") || statusName.includes("CANCELADO");
+
+      return !isFinished && !isInvalidStatus;
+    });
+
+    if (activePermission) {
+      Swal.fire({
+        icon: "error",
+        title: "Papeleta en Curso",
+        text: "El empleado tiene una papeleta en curso sin hora de retorno marcada. No se puede generar otra.",
+      });
+      loadingSubmit.value = false;
+      return;
+    }
+
+    // --- FIN VALIDACIONES ---
+
     const fechaInicio = combineDateAndTime(
       form.value.fecha,
       form.value.hora_salida,

@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import Dialog from "primevue/dialog";
 import Button from "primevue/button";
 import Swal from "sweetalert2";
 import { authService } from "@/api/services/auth.service";
+import { userService } from "@/api/services/user.service";
 
 interface ExtendedUser {
   id: number;
@@ -33,6 +34,95 @@ const visibleModel = computed({
 });
 
 const loadingReset = ref(false);
+const loadingUnlock = ref(false);
+const isLocked = ref(false);
+const lockReason = ref("");
+
+// Observar cambios en la visibilidad o el usuario para obtener el estado de bloqueo
+watch(
+  () => [props.visible, props.user],
+  async ([newVisible, newUser]) => {
+    if (newVisible && newUser) {
+      await checkLockStatus();
+    }
+  },
+);
+
+const checkLockStatus = async () => {
+  if (!props.user) return;
+
+  // DEBUG LOGS
+  console.log("ModalDatos: Checking lock status for user:", props.user.user_id);
+
+  try {
+    const response = await userService.getLockStatus(props.user.user_id);
+    console.log("ModalDatos: Lock status response:", response);
+
+    // Verificar estructura de datos anidada si el acceso directo falla (manejar tanto { isLocked: true } como { data: { isLocked: true } })
+    // @ts-ignore
+    const data = response.data?.data || response.data;
+
+    if (data) {
+      console.log("ModalDatos: Datos de bloqueo extraídos:", data);
+      // Manejar tanto camelCase (API real) como potencialmente snake_case
+      // @ts-ignore
+      isLocked.value = !!data.isLocked;
+      lockReason.value = data.lock_reason || "";
+    } else {
+      console.warn("ModalDatos: No se encontraron datos en la respuesta");
+    }
+  } catch (error) {
+    console.warn("ModalDatos: No se pudo obtener el estado de bloqueo", error);
+    // Por defecto desbloqueado o mantener estado anterior si hay error, pero es más seguro asumir desbloqueado para no bloquear la UI a menos que estemos seguros
+    isLocked.value = false;
+  }
+};
+
+const handleUnlockUser = async () => {
+  if (!props.user) return;
+
+  const result = await Swal.fire({
+    title: "¿Desbloquear Usuario?",
+    text: `Se desbloqueará el acceso para el usuario ${props.user.nombre}.`,
+    icon: "question",
+    showCancelButton: true,
+    confirmButtonColor: "#27ae60",
+    cancelButtonColor: "#d33",
+    confirmButtonText: "Sí, desbloquear",
+    cancelButtonText: "Cancelar",
+  });
+
+  if (result.isConfirmed) {
+    loadingUnlock.value = true;
+    try {
+      const response = await userService.unlockUser(props.user.user_id);
+      console.log("ModalDatos: Respuesta de desbloqueo", response);
+
+      // @ts-ignore
+      const success = response.data?.success || response.data?.message;
+
+      if (success) {
+        await Swal.fire(
+          "¡Desbloqueado!",
+          "El usuario ha sido desbloqueado correctamente.",
+          "success",
+        );
+        isLocked.value = false; // Actualizar estado local inmediatamente
+      } else {
+        throw new Error(response.data?.message || "Error desconocido");
+      }
+    } catch (error: any) {
+      console.error("Error al desbloquear:", error);
+      Swal.fire(
+        "Error",
+        error.response?.data?.message || "No se pudo desbloquear al usuario.",
+        "error",
+      );
+    } finally {
+      loadingUnlock.value = false;
+    }
+  }
+};
 
 const handleResetPassword = async () => {
   if (!props.user) return;
@@ -50,17 +140,12 @@ const handleResetPassword = async () => {
   if (result.isConfirmed) {
     loadingReset.value = true;
     try {
-      // El endpoint espera usuario (DNI) y data (aunque sea vacía si el backend lo maneja auto, o la pass si se envía desde front)
-      // Según task anterior, se usa /api/auth/change-pass/:usuario
-      // Asumiremos que el backend genera la pass o la enviamos calculada.
-      // Re-leyendo historial: endpoint should automatically generate a new password following the pattern Ugel<DNI>@ if logic is in backend.
-      // Si el backend lo hace auto, enviamos {} vacio.
       await authService.changePasswordByDNI(props.user.user_id, {});
 
       Swal.fire(
         "¡Restablecido!",
         "La contraseña ha sido restablecida correctamente.",
-        "success"
+        "success",
       );
     } catch (error) {
       console.error(error);
@@ -138,16 +223,25 @@ const handleResetPassword = async () => {
           </div>
           <div class="col-12 md:col-6 mb-3">
             <label class="block text-500 font-medium mb-1">Estado</label>
-            <span
-              :class="{
-                'text-green-600': user.estado === 'Activo',
-                'text-red-500': user.estado !== 'Activo',
-                'text-orange-500': user.estado === 'Pendiente',
-              }"
-              class="font-bold"
-            >
-              {{ user.estado }}
-            </span>
+            <div class="flex align-items-center gap-2">
+              <span
+                :class="{
+                  'text-green-600': user.estado === 'Activo',
+                  'text-red-500': user.estado !== 'Activo',
+                  'text-orange-500': user.estado === 'Pendiente',
+                }"
+                class="font-bold"
+              >
+                {{ user.estado }}
+              </span>
+              <!-- Bloqueo Status Indicator -->
+              <span
+                v-if="isLocked"
+                class="inline-flex align-items-center px-2 py-1 border-round bg-red-100 text-red-700 text-xs font-bold"
+              >
+                <i class="pi pi-lock mr-1"></i> Bloqueado
+              </span>
+            </div>
           </div>
           <div class="col-12 md:col-6 mb-3">
             <label class="block text-500 font-medium mb-1">Rol de Acceso</label>
@@ -160,7 +254,7 @@ const handleResetPassword = async () => {
         >
           Acciones de Seguridad
         </h3>
-        <div class="flex gap-3">
+        <div class="flex flex-wrap gap-3">
           <Button
             label="Restablecer Contraseña"
             icon="pi pi-key"
@@ -168,6 +262,16 @@ const handleResetPassword = async () => {
             outlined
             @click="handleResetPassword"
             :loading="loadingReset"
+          />
+
+          <Button
+            v-if="isLocked"
+            label="Desbloquear Usuario"
+            icon="pi pi-unlock"
+            severity="success"
+            outlined
+            @click="handleUnlockUser"
+            :loading="loadingUnlock"
           />
         </div>
       </div>
