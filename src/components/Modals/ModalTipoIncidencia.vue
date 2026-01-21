@@ -4,13 +4,10 @@ import Dialog from "primevue/dialog";
 import InputText from "primevue/inputtext";
 import Button from "primevue/button";
 import Checkbox from "primevue/checkbox";
+import InputNumber from "primevue/inputnumber";
 import Swal from "sweetalert2";
 import { incidentService } from "@/api/services/incident.service";
-import type {
-  CreateTipoIncidenciaRequest,
-  TipoIncidencia,
-  UpdateTipoIncidenciaRequest,
-} from "@/api/types/incidents.types";
+import type { TipoIncidencia } from "@/api/types/incidents.types";
 
 const props = defineProps({
   visible: {
@@ -27,13 +24,16 @@ const emit = defineEmits(["update:visible", "save"]);
 
 const loadingSubmit = ref(false);
 
-const form = ref({
+const form = ref<any>({
   nombre: "",
   codigo: "",
   requiere_aprobacion: false,
   requiere_documento: false,
   descuenta_salario: false,
   esta_activo: true,
+  max_dias_anual: null,
+  max_solicitudes_anual: null,
+  toma_dias_calendario: false,
 });
 
 const visibleModel = computed({
@@ -53,12 +53,15 @@ watch(
           requiere_documento: props.typeToEdit.requiere_documento,
           descuenta_salario: props.typeToEdit.descuenta_salario,
           esta_activo: props.typeToEdit.esta_activo,
+          max_dias_anual: props.typeToEdit.max_dias_anual || null,
+          max_solicitudes_anual: props.typeToEdit.max_solicitudes_anual || null,
+          toma_dias_calendario: props.typeToEdit.toma_dias_calendario || false,
         };
       } else {
         resetForm();
       }
     }
-  }
+  },
 );
 
 const resetForm = () => {
@@ -69,6 +72,9 @@ const resetForm = () => {
     requiere_documento: false,
     descuenta_salario: false,
     esta_activo: true,
+    max_dias_anual: null,
+    max_solicitudes_anual: null,
+    toma_dias_calendario: false,
   };
 };
 
@@ -80,31 +86,50 @@ const handleSubmit = async () => {
 
   loadingSubmit.value = true;
   try {
+    const payload = { ...form.value };
+
+    // Sanitize payload: valid numbers or undefined, strict boolean for checkboxes
+    if (payload.max_dias_anual === null || payload.max_dias_anual === "") {
+      delete payload.max_dias_anual;
+    }
+    if (
+      payload.max_solicitudes_anual === null ||
+      payload.max_solicitudes_anual === ""
+    ) {
+      delete payload.max_solicitudes_anual;
+    }
+
+    // Ensure booleans are booleans
+    payload.requiere_aprobacion = !!payload.requiere_aprobacion;
+    payload.requiere_documento = !!payload.requiere_documento;
+    payload.descuenta_salario = !!payload.descuenta_salario;
+    payload.esta_activo = !!payload.esta_activo;
+    payload.toma_dias_calendario = !!payload.toma_dias_calendario;
+
     if (props.typeToEdit) {
-      const updateData: UpdateTipoIncidenciaRequest = { ...form.value };
-      await incidentService.updateTipoIncidencia(
-        props.typeToEdit.id,
-        updateData
-      );
+      await incidentService.updateTipoIncidencia(props.typeToEdit.id, payload);
       Swal.fire(
         "Actualizado",
         "Tipo de incidencia actualizado correctamente",
-        "success"
+        "success",
       );
     } else {
-      const createData: CreateTipoIncidenciaRequest = { ...form.value };
-      await incidentService.createTipoIncidencia(createData);
+      await incidentService.createTipoIncidencia(payload);
       Swal.fire(
         "Registrado",
         "Tipo de incidencia creado correctamente",
-        "success"
+        "success",
       );
     }
     emit("save");
     handleCancel();
   } catch (error: any) {
     console.error("Error saving incident type:", error);
-    Swal.fire("Error", "No se pudo guardar el tipo de incidencia", "error");
+    // Show more specific error details if available from Axios error response
+    const errorMessage =
+      error.response?.data?.message ||
+      "No se pudo guardar el tipo de incidencia";
+    Swal.fire("Error", errorMessage, "error");
   } finally {
     loadingSubmit.value = false;
   }
@@ -146,6 +171,19 @@ const handleCancel = () => {
         />
       </div>
 
+      <div class="field col-12 md:col-6">
+        <label class="font-bold">Máx. Días/Año</label>
+        <InputNumber v-model="form.max_dias_anual" placeholder="Opcional" />
+      </div>
+
+      <div class="field col-12 md:col-6">
+        <label class="font-bold">Máx. Solicitudes/Año</label>
+        <InputNumber
+          v-model="form.max_solicitudes_anual"
+          placeholder="Opcional"
+        />
+      </div>
+
       <div class="field col-12 flex flex-column gap-3 mt-3">
         <div class="flex align-items-center">
           <Checkbox v-model="form.requiere_aprobacion" binary inputId="aprob" />
@@ -154,6 +192,20 @@ const handleCancel = () => {
         <div class="flex align-items-center">
           <Checkbox v-model="form.requiere_documento" binary inputId="doc" />
           <label for="doc" class="ml-2">Requiere Documento</label>
+        </div>
+        <div class="flex align-items-center">
+          <Checkbox
+            v-model="form.toma_dias_calendario"
+            binary
+            inputId="calendario"
+          />
+          <label for="calendario" class="ml-2"
+            >Toma Días Calendario (Sab/Dom)</label
+          >
+        </div>
+        <div class="flex align-items-center">
+          <Checkbox v-model="form.descuenta_salario" binary inputId="desc" />
+          <label for="desc" class="ml-2">Descuenta Salario</label>
         </div>
         <div class="flex align-items-center">
           <Checkbox v-model="form.esta_activo" binary inputId="activo" />

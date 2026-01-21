@@ -1,56 +1,94 @@
 <template>
-  <div class="calendar-wrapper">
-    <!-- Cabecera del calendario con título y leyenda -->
-    <div
-      class="flex flex-wrap justify-content-between align-items-center mb-4 gap-3"
-    >
-      <div>
-        <h3 class="text-xl font-bold text-900 m-0">Calendario de Feriados</h3>
-        <p class="text-sm text-500 m-0 mt-1">
-          Gestiona los días festivos y no laborables
-        </p>
-      </div>
-
-      <!-- Acciones y Leyenda -->
-      <div class="flex flex-column sm:flex-row gap-3 align-items-center">
-        <!-- Botón Importar -->
-        <button
-          @click="importarFeriadosPeru"
-          class="px-3 py-2 bg-indigo-600 text-white border-round border-none cursor-pointer hover:bg-indigo-700 transition-colors font-medium text-sm flex align-items-center gap-2"
-        >
-          <i class="pi pi-cloud-download"></i>
-          Sincronizar Feriados Perú
-        </button>
-
-        <!-- Leyenda -->
-        <div class="flex gap-3">
+  <div class="flex flex-column gap-4">
+    <!-- Contenedor de Alertas (Separado) -->
+    <div class="card p-4 bg-white border-round shadow-1">
+      <div
+        class="flex flex-wrap align-items-center justify-content-between gap-3"
+      >
+        <div>
+          <h3 class="text-xl font-bold text-900 m-0 mb-2">
+            <i class="pi pi-bell mr-2 text-primary"></i>Configuración de Alertas
+          </h3>
+          <p class="text-500 m-0">
+            Gestiona las notificaciones automáticas del sistema
+          </p>
+        </div>
+        <div class="flex align-items-center gap-3">
           <div class="flex align-items-center gap-2">
-            <span class="w-1rem h-1rem border-circle bg-red-500 block"></span>
-            <span class="text-sm">Feriado</span>
-          </div>
-          <div class="flex align-items-center gap-2">
-            <span class="w-1rem h-1rem border-circle bg-blue-500 block"></span>
-            <span class="text-sm">Día No Laborable</span>
-          </div>
-          <div class="flex align-items-center gap-2">
-            <span
-              class="w-1rem h-1rem border-circle bg-yellow-400 block"
-            ></span>
-            <span class="text-sm">Cumpleaños</span>
+            <label class="switch">
+              <input
+                type="checkbox"
+                v-model="notifyMaxTime"
+                @change="updateNotifySettings"
+              />
+              <span class="slider round"></span>
+            </label>
+            <div class="flex flex-column">
+              <span class="font-bold text-900">Notificar Exceso de Tiempo</span>
+              <span class="text-sm text-500"
+                >Alertar si el empleado supera el tiempo máximo de retorno</span
+              >
+            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Contenedor del componente VCalendar -->
-    <div class="calendar-card">
-      <VCalendar
-        expanded
-        :attributes="attributes"
-        @dayclick="onDayClick"
-        transparent
-        borderless
-      />
+    <div class="calendar-wrapper">
+      <!-- Cabecera del calendario con título y leyenda -->
+      <div
+        class="flex flex-wrap justify-content-between align-items-center mb-4 gap-3"
+      >
+        <div>
+          <h3 class="text-xl font-bold text-900 m-0">Calendario de Feriados</h3>
+          <p class="text-sm text-500 m-0 mt-1">
+            Gestiona los días festivos y no laborables
+          </p>
+        </div>
+
+        <!-- Acciones y Leyenda -->
+        <div class="flex flex-column sm:flex-row gap-3 align-items-center">
+          <!-- Botón Importar -->
+          <button
+            @click="importarFeriadosPeru"
+            class="px-3 py-2 bg-indigo-600 text-white border-round border-none cursor-pointer hover:bg-indigo-700 transition-colors font-medium text-sm flex align-items-center gap-2"
+          >
+            <i class="pi pi-cloud-download"></i>
+            Sincronizar Feriados Perú
+          </button>
+
+          <!-- Leyenda -->
+          <div class="flex gap-3">
+            <div class="flex align-items-center gap-2">
+              <span class="w-1rem h-1rem border-circle bg-red-500 block"></span>
+              <span class="text-sm">Feriado</span>
+            </div>
+            <div class="flex align-items-center gap-2">
+              <span
+                class="w-1rem h-1rem border-circle bg-blue-500 block"
+              ></span>
+              <span class="text-sm">Día No Laborable</span>
+            </div>
+            <div class="flex align-items-center gap-2">
+              <span
+                class="w-1rem h-1rem border-circle bg-yellow-400 block"
+              ></span>
+              <span class="text-sm">Cumpleaños</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Contenedor del componente VCalendar -->
+      <div class="calendar-card">
+        <VCalendar
+          expanded
+          :attributes="attributes"
+          @dayclick="onDayClick"
+          transparent
+          borderless
+        />
+      </div>
     </div>
   </div>
 </template>
@@ -222,7 +260,7 @@ const importarFeriadosPeru = async () => {
     Swal.fire(
       "Sincronizado",
       `Se agregaron ${addedCount} feriados nuevos (2020-${endYear}).`,
-      "success"
+      "success",
     );
   } else {
     Swal.fire("Información", "Los feriados ya están actualizados.", "info");
@@ -357,7 +395,7 @@ const onDayClick = async (day: any) => {
         Swal.fire(
           "Eliminado",
           "El día ha sido eliminado correctamente",
-          "success"
+          "success",
         );
         loadHolidays(); // Recargar calendario
       } catch (e) {
@@ -451,6 +489,23 @@ const onDayClick = async (day: any) => {
   }
 };
 
+// Configuración de Alertas
+const notifyMaxTime = ref(
+  localStorage.getItem("notifyMaxTimeExceeded") === "true",
+);
+
+const updateNotifySettings = () => {
+  localStorage.setItem("notifyMaxTimeExceeded", String(notifyMaxTime.value));
+  Swal.fire({
+    toast: true,
+    position: "top-end",
+    icon: "success",
+    title: "Configuración actualizada",
+    showConfirmButton: false,
+    timer: 1500,
+  });
+};
+
 onMounted(() => {
   loadHolidays();
   loadEmployees();
@@ -462,7 +517,8 @@ onMounted(() => {
   background-color: #fff;
   border-radius: 12px;
   padding: 1.5rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
     0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
@@ -470,11 +526,58 @@ onMounted(() => {
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   overflow: hidden;
+  min-height: 500px;
 }
 
 /* Estilos personalizados para inputs dentro de SweetAlert */
 :deep(.swal2-select) {
   width: 100%;
   margin: 0;
+}
+
+/* Toggle Switch Styles if not using PrimeVue InputSwitch */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 20px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: 0.4s;
+  border-radius: 34px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  transition: 0.4s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: #2196f3;
+}
+
+input:checked + .slider:before {
+  transform: translateX(20px);
 }
 </style>

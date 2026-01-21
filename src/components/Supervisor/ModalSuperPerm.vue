@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from "vue";
+import { ref, onMounted, computed } from "vue";
 import Dialog from "primevue/dialog";
 import Select from "primevue/select";
 import DatePicker from "primevue/datepicker";
@@ -45,7 +45,11 @@ const form = ref({
   fecha: new Date(),
 });
 
-import { getSignatureConfig } from "@/helpers/permissions.utils";
+import {
+  getSignatureConfig,
+  hasPendingOrOpenPermission,
+  validateManualReturnTime,
+} from "@/helpers/permissions.utils";
 
 // Computado: Configuración de firmas dinámica
 const signatureConfig = computed(() => {
@@ -267,6 +271,7 @@ const loadTiposPapeleta = async () => {
   }
 };
 
+/*
 watch(
   [() => form.value.tipo_papeleta, () => form.value.hora_salida],
   ([newType, newTime]) => {
@@ -285,6 +290,7 @@ watch(
     }
   },
 );
+*/
 
 const visibleModel = computed({
   get: () => props.visible,
@@ -331,6 +337,57 @@ const handleSubmit = async () => {
   loadingSubmit.value = true;
 
   try {
+    const permisosResponse = await permissionService.getPermisos({
+      empleado_id: String(employee.user_id),
+    });
+    // @ts-ignore
+    const permisos = permisosResponse.data?.data || permisosResponse.data || [];
+
+    // --- NUEVA VALIDACIÓN DE PENDIENTES (hasPendingOrOpenPermission) ---
+    // Usamos el helper centralizado
+    if (hasPendingOrOpenPermission(String(employee.user_id), permisos)) {
+      Swal.fire({
+        icon: "error",
+        title: "Papeleta Pendiente",
+        text: "El empleado tiene una papeleta pendiente de aprobación o sin cierre (hora retorno). No puede generar una nueva.",
+      });
+      loadingSubmit.value = false;
+      return;
+    }
+
+    // --- VALIDACIÓN DE TIEMPO MÁXIMO ---
+    const selectedType = rawPapeletaTypes.value.find(
+      (t) => t.id === form.value.tipo_papeleta,
+    );
+    if (
+      selectedType &&
+      selectedType.tiempo_maximo_horas &&
+      form.value.hora_salida &&
+      form.value.hora_retorno
+    ) {
+      const errorMsg = validateManualReturnTime(
+        combineDateAndTime(form.value.fecha, form.value.hora_salida),
+        combineDateAndTime(form.value.fecha, form.value.hora_retorno),
+        selectedType.tiempo_maximo_horas,
+      );
+
+      if (errorMsg) {
+        const result = await Swal.fire({
+          title: "Tiempo Excedido",
+          text: errorMsg,
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonText: "Continuar de todos modos",
+          cancelButtonText: "Corregir",
+        });
+
+        if (!result.isConfirmed) {
+          loadingSubmit.value = false;
+          return;
+        }
+      }
+    }
+
     const fechaInicio = combineDateAndTime(
       form.value.fecha,
       form.value.hora_salida,

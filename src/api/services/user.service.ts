@@ -50,7 +50,6 @@ export const userService = {
 
   // Verificar estado de bloqueo (GET /api/users/{id}/lock-status)
   getLockStatus(user_id: string | number) {
-    // Nota: El usuario solicitó explícitamente /api/users/..., distinto de /api/usuarios/
     // Estructura de respuesta: { success: boolean, data: { isLocked: boolean, ... } }
     // Se usa authApi porque la función de bloqueo está en el puerto 3001 (Auth Service)
     return authApi.get<{ success: boolean; data: { isLocked: boolean; lock_reason?: string } }>(`/users/${user_id}/lock-status`);

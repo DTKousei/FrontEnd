@@ -6,6 +6,7 @@ import 'primeicons/primeicons.css';
 import 'primeflex/primeflex.css';
 import PrimeVue from 'primevue/config';
 import Aura from '@primevue/themes/aura';
+import ToastService from 'primevue/toastservice';
 import VueApexCharts from "vue3-apexcharts";
 import VCalendar from 'v-calendar';
 import 'v-calendar/style.css';
@@ -24,5 +25,6 @@ app.use(PrimeVue, {
         }
     }
 });
+app.use(ToastService);
 
 app.mount('#app')

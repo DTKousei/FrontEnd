@@ -109,6 +109,7 @@ import { permissionService } from "@/api/services/permission.service";
 import type { Permiso } from "@/api/types/permissions.types";
 import Swal from "sweetalert2";
 import { userService } from "@/api/services/user.service";
+import { DepartmentService } from "@/api/services/department.service";
 
 const showModal = ref(false);
 const showFirmaModal = ref(false);
@@ -169,18 +170,6 @@ const loadPermissions = async () => {
   const user = getCurrentUser();
   if (!user || !user.usuario) return;
 
-  // Logic: Load permissions for the supervisor's department
-  // We need to fetch ALL permissions and filter, or use a specific backend endpoint if available.
-  // Assuming current backend doesn't have a specific "get permissions for my area" endpoint yet,
-  // we might need to filter client-side or use existing filters.
-  // Ideally: permissionService.getPermisos({ area_id: ... })
-
-  // For now, let's try to get all and filter by user's department client-side if the API returns user info,
-  // OR fetch users of the department first.
-
-  // STRATEGY: Fetch all permissions (as Admin/Supervisor often can) and filter by Supervisor's Department ID.
-  // First, get Supervisor's Dept ID.
-
   try {
     loading.value = true;
     const allUsersResponse = await userService.getAll();
@@ -199,24 +188,69 @@ const loadPermissions = async () => {
     }
 
     const deptId = supervisor.departamento_id;
+    let isDirector = false;
 
-    // Get all permissions. WARNING: This might be heavy if there are many.
-    // A better API endpoint would be /permisos?departamento_id=...
+    // Check if Department is 'DIRECCION'
+    try {
+      const deptsResponse = await DepartmentService.getAll();
+      // @ts-ignore
+      const depts = deptsResponse.data || [];
+      const myDept = depts.find((d: any) => d.id === deptId);
+      // Flexible check for 'DIRECCI' (Dirección, Direccion, DIRECCION REGIONAL, etc.)
+      if (
+        myDept &&
+        myDept.nombre &&
+        myDept.nombre.toUpperCase().includes("DIRECCI")
+      ) {
+        isDirector = true;
+        console.log(
+          "Modo Director Activado: Puede ver solicitudes de otros Jefes.",
+        );
+      }
+    } catch (e) {
+      console.error("Error checking director role", e);
+    }
+
+    // Get all permissions
     const response = await permissionService.getPermisos({});
     // @ts-ignore
     const allPermisos = response.data?.data || response.data || [];
 
-    // Filter permissions where the employee belongs to the same department
-    // We need to know the department of the employee in the permission.
-    // If permission object has employee data with department, great.
-    // If not, we map using allUsers.
-
+    // 1. Employees in my department
     const deptEmployeesIds = allUsers
       .filter((u: any) => u.departamento_id === deptId)
-      .map((u: any) => String(u.user_id)); // DNI is usually the ID in permissions
+      .map((u: any) => String(u.user_id));
+
+    // 2. Supervisors/Jefes from ANY department (Only if Director)
+    let otherJefesIds: string[] = [];
+    if (isDirector) {
+      otherJefesIds = allUsers
+        .filter((u: any) => {
+          const cargo = (u.cargo || "").toLowerCase();
+          const esJefe =
+            u.es_jefe === true || u.es_jefe === 1 || u.es_jefe === "1";
+          const esSupervisorCargo =
+            cargo.includes("jefe") ||
+            cargo.includes("supervisor") ||
+            cargo.includes("director") ||
+            cargo.includes("gerente");
+
+          // Exclude myself (already in dept list logically, but safe to include)
+          return esJefe || esSupervisorCargo;
+        })
+        .map((u: any) => String(u.user_id));
+    }
 
     permissions.value = allPermisos.filter((p: Permiso) => {
-      return deptEmployeesIds.includes(String(p.empleado_id));
+      const empId = String(p.empleado_id);
+
+      // Criterion A: Employee belongs to my department (Standard Supervisor logic)
+      if (deptEmployeesIds.includes(empId)) return true;
+
+      // Criterion B: I am Director AND Employee is a Boss/Supervisor (Cross-department approval)
+      if (isDirector && otherJefesIds.includes(empId)) return true;
+
+      return false;
     });
   } catch (error) {
     console.error("Error loading permissions:", error);

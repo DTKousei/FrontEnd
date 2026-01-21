@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from "vue";
+import { ref, onMounted, computed } from "vue";
 import Dialog from "primevue/dialog";
 import Select from "primevue/select";
 import DatePicker from "primevue/datepicker";
@@ -12,10 +12,7 @@ import { permissionService } from "@/api/services/permission.service";
 import { DepartmentService } from "@/api/services/department.service"; // Import DepartmentService
 import { attendanceService } from "@/api/services/attendance.service";
 import type { BiometricUser } from "@/api/types/users.types";
-import type {
-  CreatePermisoPersonalRequest,
-  Permiso,
-} from "@/api/types/permissions.types";
+import type { CreatePermisoPersonalRequest } from "@/api/types/permissions.types";
 import type { Department } from "@/api/types/department.types"; // Import Department Type
 
 // Definición de Props (Propiedades recibidas del padre)
@@ -57,7 +54,11 @@ const form = ref({
   fecha: new Date(), // Fecha actual por defecto
 });
 
-import { getSignatureConfig } from "@/helpers/permissions.utils";
+import {
+  getSignatureConfig,
+  hasPendingOrOpenPermission,
+  validateManualReturnTime,
+} from "@/helpers/permissions.utils";
 
 // ... (props definition remains)
 
@@ -69,7 +70,7 @@ const signatureConfig = computed(() => {
   return getSignatureConfig({}, employee || {});
 });
 
-// Helper para buscar jefe de un departamento específico
+// Helper para buscar al jefe de un departamento específico
 const findChiefOfDept = (deptNamePartial: string) => {
   const dept = departments.value.find((d) =>
     d.nombre.toLowerCase().includes(deptNamePartial.toLowerCase()),
@@ -185,7 +186,7 @@ const loadEmployees = async () => {
       employees.value = users;
     }
   } catch (error) {
-    console.error("Error loading employees:", error);
+    console.error("Error cargando empleados:", error);
   } finally {
     loadingEmployees.value = false;
   }
@@ -200,7 +201,7 @@ const loadDepartments = async () => {
     // @ts-ignore
     departments.value = response.data || [];
   } catch (error) {
-    console.error("Error loading departments:", error);
+    console.error("Error cargando departamentos:", error);
   }
 };
 
@@ -227,7 +228,9 @@ const loadTiposPapeleta = async () => {
 
 /**
  * Watcher: Auto-calculate return time based on selected type and start time.
+ * DISABLED: User request to manually enter return time and validate instead.
  */
+/*
 watch(
   [() => form.value.tipo_papeleta, () => form.value.hora_salida],
   ([newType, newTime]) => {
@@ -248,6 +251,7 @@ watch(
     }
   },
 );
+*/
 
 // Modelo computado para manejar la visibilidad del modal (v-model)
 const visibleModel = computed({
@@ -342,33 +346,69 @@ const handleSubmit = async () => {
     // Buscamos permisos del empleado
     const permisosResponse = await permissionService.getPermisos({
       empleado_id: String(employee.user_id),
-      // Podríamos filtrar por estado si la API lo permite, pero mejor filtramos localmente para estar seguros
     });
     // @ts-ignore
     const permisos = permisosResponse.data?.data || permisosResponse.data || [];
 
-    // Buscamos si hay alguna papeleta activa (sin fecha fin marcada)
-    // y que no esté rechazada o cancelada.
-    const activePermission = permisos.find((p: Permiso) => {
-      const isFinished = !!p.fecha_hora_fin;
-      // Normalizamos estado para comparar seguro
-      const statusName = p.estado?.nombre?.toUpperCase() || "";
-      const isInvalidStatus =
-        statusName.includes("RECHAZADO") || statusName.includes("CANCELADO");
-
-      return !isFinished && !isInvalidStatus;
-    });
-
-    if (activePermission) {
+    // --- NUEVA VALIDACIÓN DE PENDIENTES (hasPendingOrOpenPermission) ---
+    // Usamos el helper centralizado
+    if (hasPendingOrOpenPermission(String(employee.user_id), permisos)) {
       Swal.fire({
         icon: "error",
-        title: "Papeleta en Curso",
-        text: "El empleado tiene una papeleta en curso sin hora de retorno marcada. No se puede generar otra.",
+        title: "Papeleta Pendiente",
+        text: "Usted tiene una papeleta pendiente de aprobación o sin cierre (hora retorno). No puede generar una nueva.",
       });
       loadingSubmit.value = false;
       return;
     }
 
+    // --- VALIDACIÓN DE TIEMPO MÁXIMO ---
+    const selectedType = rawPapeletaTypes.value.find(
+      (t) => t.id === form.value.tipo_papeleta,
+    );
+    if (
+      selectedType &&
+      selectedType.tiempo_maximo_horas &&
+      form.value.hora_salida &&
+      form.value.hora_retorno
+    ) {
+      const errorMsg = validateManualReturnTime(
+        combineDateAndTime(form.value.fecha, form.value.hora_salida),
+        combineDateAndTime(form.value.fecha, form.value.hora_retorno),
+        selectedType.tiempo_maximo_horas,
+      );
+
+      if (errorMsg) {
+        // Si es advertencia o error, mostramos Swal
+        // Si el mensaje empieza con ADVERTENCIA, podríamos dejar pasar o no.
+        // El usuario pidió: "notificar si paso el tiempo".
+        // Vamos a mostrar warning y permitir continuar o bloquear?
+        // "sino has una diferencia si cumple con la hora de retorno que sera registrado manualmente"
+        // Asumimos bloqueo si excede demasiado, o warning.
+        // Dado el prompt, parece más informativo. Pero si es una restricción lógica...
+        // Vamos a mostrar un Swal de confirmación si es solo advertencia.
+
+        /* 
+                NOTA: Si validateManualReturnTime retorna string, es que se excedió.
+                Si "notifyMaxTimeExceeded" es true, retorna mensaje de notificación.
+                Si es false, retorna mensaje de advertencia.
+             */
+
+        const result = await Swal.fire({
+          title: "Tiempo Excedido",
+          text: errorMsg,
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonText: "Continuar de todos modos",
+          cancelButtonText: "Corregir",
+        });
+
+        if (!result.isConfirmed) {
+          loadingSubmit.value = false;
+          return;
+        }
+      }
+    }
     // --- FIN VALIDACIONES ---
 
     const fechaInicio = combineDateAndTime(

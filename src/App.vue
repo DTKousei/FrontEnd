@@ -1,5 +1,6 @@
 <template>
   <div class="app-container">
+    <Toast />
     <!-- 
       Ideally, we would have a layout component here that includes the sidebar 
       if the user is authenticated. For now, we just render the route.
@@ -12,6 +13,10 @@
 import { onMounted, onUnmounted } from "vue";
 import { deviceService } from "@/api/services/device.service";
 import { attendanceService } from "@/api/services/attendance.service";
+import Toast from "primevue/toast";
+import { useToast } from "primevue/usetoast";
+
+const toast = useToast();
 
 // Global app logic
 
@@ -30,19 +35,25 @@ const runAutoSync = async () => {
       for (const device of devices) {
         try {
           // Solo si tiene IP configurada
-          if (device.ip) {
+          if (device.ip_address) {
             const connResponse = await deviceService.testConnection(device.id);
             if (connResponse.data.success) {
               console.log(
-                `Dispositivo ${device.nombre} conectado. Sincronizando hoy...`
+                `Dispositivo ${device.nombre} conectado. Sincronizando hoy...`,
               );
               await attendanceService.syncToday(device.id);
               console.log(
-                `Sincronización automática exitosa para ${device.nombre}`
+                `Sincronización automática exitosa para ${device.nombre}`,
               );
+              toast.add({
+                severity: "success",
+                summary: "Sincronización Exitosa",
+                detail: `Dispositivo ${device.nombre} sincronizado.`,
+                life: 3000,
+              });
             } else {
               console.log(
-                `Dispositivo ${device.nombre} no accesible para auto-sync.`
+                `Dispositivo ${device.nombre} no accesible para auto-sync.`,
               );
             }
           }
@@ -51,7 +62,7 @@ const runAutoSync = async () => {
             `Error procesando auto-sync para dispositivo ${
               device.nombre || device.id
             }:`,
-            devError
+            devError,
           );
         }
       }
@@ -78,12 +89,18 @@ onUnmounted(() => {
 /* Reset and Base Styles */
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
-    Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
+    Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
   background-color: #f4f6f8;
 }
 
 .app-container {
   min-height: 100vh;
+}
+
+/* Ensure SweetAlert2 is always on top of PrimeVue Modals */
+.swal2-container {
+  z-index: 10000 !important;
 }
 </style>

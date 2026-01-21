@@ -17,6 +17,10 @@ export interface TipoIncidencia {
   requiere_documento: boolean;
   descuenta_salario: boolean;
   esta_activo: boolean;
+  // New fields
+  max_dias_anual?: number;
+  max_solicitudes_anual?: number;
+  toma_dias_calendario?: boolean;
   creado_en: string;
   incidencias?: Incidencia[];
 }
@@ -42,6 +46,9 @@ export interface Incidencia {
     requiere_documento?: boolean;
     descuenta_salario?: boolean;
     esta_activo?: boolean;
+    max_dias_anual?: number;
+    max_solicitudes_anual?: number;
+    toma_dias_calendario?: boolean;
     creado_en?: string;
   };
   estado?: {
@@ -84,6 +91,9 @@ export interface CreateTipoIncidenciaRequest {
   requiere_documento: boolean;
   descuenta_salario: boolean;
   esta_activo: boolean;
+  max_dias_anual?: number;
+  max_solicitudes_anual?: number;
+  toma_dias_calendario?: boolean;
 }
 
 export interface UpdateTipoIncidenciaRequest {
@@ -93,6 +103,9 @@ export interface UpdateTipoIncidenciaRequest {
   requiere_documento?: boolean;
   descuenta_salario?: boolean;
   esta_activo?: boolean;
+  max_dias_anual?: number;
+  max_solicitudes_anual?: number;
+  toma_dias_calendario?: boolean;
 }
 
 export interface CreateIncidenciaRequest {
