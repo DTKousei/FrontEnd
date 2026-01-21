@@ -186,10 +186,6 @@ const handleCancel = () => {
 
       <div class="field col-12 flex flex-column gap-3 mt-3">
         <div class="flex align-items-center">
-          <Checkbox v-model="form.requiere_aprobacion" binary inputId="aprob" />
-          <label for="aprob" class="ml-2">Requiere Aprobación</label>
-        </div>
-        <div class="flex align-items-center">
           <Checkbox v-model="form.requiere_documento" binary inputId="doc" />
           <label for="doc" class="ml-2">Requiere Documento</label>
         </div>
@@ -202,10 +198,6 @@ const handleCancel = () => {
           <label for="calendario" class="ml-2"
             >Toma Días Calendario (Sab/Dom)</label
           >
-        </div>
-        <div class="flex align-items-center">
-          <Checkbox v-model="form.descuenta_salario" binary inputId="desc" />
-          <label for="desc" class="ml-2">Descuenta Salario</label>
         </div>
         <div class="flex align-items-center">
           <Checkbox v-model="form.esta_activo" binary inputId="activo" />

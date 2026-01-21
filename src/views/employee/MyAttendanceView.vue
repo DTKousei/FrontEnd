@@ -15,43 +15,75 @@
             <GrafiLineas :attendances="attendances" />
           </div>
 
-          <!-- Quadrant 2: Recent Incidents -->
+          <!-- Quadrant 2: Incident Balances (Saldos) -->
           <div class="dashboard-card">
             <div class="flex justify-content-between align-items-center mb-3">
-              <h3 class="text-xl font-semibold m-0">
-                Mis Incidencias Recientes
-              </h3>
+              <h3 class="text-xl font-semibold m-0">Detalle de Incidencias</h3>
             </div>
             <DataTable
-              :value="incidents"
-              :loading="loadingIncidents"
-              paginator
-              :rows="5"
+              :value="saldos"
+              :loading="loadingSaldos"
               responsiveLayout="scroll"
               class="p-datatable-sm"
               stripedRows
             >
-              <template #empty>No hay incidencias recientes.</template>
-              <Column field="fecha_inicio" header="Fecha">
+              <template #empty>No hay datos de saldos disponibles.</template>
+              <Column field="tipo_nombre" header="Tipo"></Column>
+              <Column header="Límite Anual">
                 <template #body="slotProps">
-                  {{ formatDate(slotProps.data.fecha_inicio) }}
+                  {{
+                    slotProps.data.limites.dias !== null
+                      ? slotProps.data.limites.dias + " días"
+                      : slotProps.data.limites.solicitudes !== null
+                        ? slotProps.data.limites.solicitudes + " solicitudes"
+                        : "Ilimitado"
+                  }}
                 </template>
               </Column>
-              <Column field="tipo_incidencia.nombre" header="Tipo">
+              <Column header="Consumido">
                 <template #body="slotProps">
-                  <Tag
-                    :value="slotProps.data.tipo_incidencia?.nombre || 'General'"
-                    severity="warning"
-                  />
+                  <span class="text-yellow-600 font-bold">
+                    {{
+                      slotProps.data.consumido.dias > 0
+                        ? slotProps.data.consumido.dias + " días"
+                        : slotProps.data.consumido.solicitudes > 0
+                          ? slotProps.data.consumido.solicitudes + " sol."
+                          : "-"
+                    }}
+                  </span>
                 </template>
               </Column>
-              <Column field="descripcion" header="Observación">
+              <Column header="Restante">
                 <template #body="slotProps">
                   <span
-                    class="text-sm text-gray-600 truncate-text"
-                    :title="slotProps.data.descripcion"
-                    >{{ slotProps.data.descripcion }}</span
+                    :class="{
+                      'text-green-600 font-bold':
+                        (slotProps.data.restante.dias ?? 1) > 0,
+                      'text-red-600': (slotProps.data.restante.dias ?? 1) <= 0,
+                    }"
                   >
+                    {{
+                      slotProps.data.restante.dias !== null
+                        ? slotProps.data.restante.dias + " días"
+                        : slotProps.data.restante.solicitudes !== null
+                          ? slotProps.data.restante.solicitudes + " sol."
+                          : "∞"
+                    }}
+                  </span>
+                </template>
+              </Column>
+              <Column
+                header="Acciones"
+                :exportable="false"
+                style="min-width: 8rem"
+              >
+                <template #body="slotProps">
+                  <Button
+                    icon="pi pi-eye"
+                    class="p-button-rounded p-button-info p-button-text"
+                    @click="openDetailModal(slotProps.data)"
+                    v-tooltip.top="'Ver Detalle'"
+                  />
                 </template>
               </Column>
             </DataTable>
@@ -76,9 +108,9 @@
                   icon="pi pi-refresh"
                   rounded
                   text
-                  @click="loadData"
+                  @click="loadData(true)"
                   :loading="loading"
-                  tooltip="Recargar"
+                  v-tooltip="'Recargar'"
                 />
               </div>
             </div>
@@ -91,6 +123,11 @@
               class="p-datatable-sm"
               stripedRows
             >
+              <Column header="Día">
+                <template #body="slotProps">
+                  {{ getDayName(slotProps.data.fecha) }}
+                </template>
+              </Column>
               <Column field="fecha" header="Fecha">
                 <template #body="slotProps">
                   {{ formatDate(slotProps.data.fecha) }}
@@ -129,6 +166,61 @@
             </div>
           </div>
         </div>
+
+        <!-- Detail Modal -->
+        <Dialog
+          v-model:visible="displayDetailModal"
+          :header="
+            selectedSaldo?.tipo_nombre
+              ? `Detalle: ${selectedSaldo.tipo_nombre}`
+              : 'Detalle de Solicitudes'
+          "
+          :modal="true"
+          :style="{ width: '50vw' }"
+        >
+          <div
+            v-if="
+              selectedSaldo &&
+              selectedSaldo.detalle &&
+              selectedSaldo.detalle.length > 0
+            "
+          >
+            <DataTable
+              :value="selectedSaldo.detalle"
+              responsiveLayout="scroll"
+              class="p-datatable-sm"
+              stripedRows
+            >
+              <Column field="fecha_inicio" header="Inicio">
+                <template #body="slotProps">
+                  {{ formatDate(slotProps.data.fecha_inicio) }}
+                </template>
+              </Column>
+              <Column field="fecha_fin" header="Fin">
+                <template #body="slotProps">
+                  {{ formatDate(slotProps.data.fecha_fin) }}
+                </template>
+              </Column>
+              <Column field="dias" header="Días/Cant."></Column>
+              <Column field="estado_id" header="Estado">
+                <template #body>
+                  <Tag value="Registrado" severity="info" />
+                </template>
+              </Column>
+            </DataTable>
+          </div>
+          <div v-else class="p-3 text-center text-gray-500">
+            No hay solicitudes registradas para este tipo.
+          </div>
+          <template #footer>
+            <Button
+              label="Cerrar"
+              icon="pi pi-times"
+              @click="displayDetailModal = false"
+              text
+            />
+          </template>
+        </Dialog>
       </div>
     </div>
   </div>
@@ -136,25 +228,40 @@
 
 <script setup lang="ts">
 import { ref, onMounted, watch } from "vue";
+// @ts-ignore
+const vTooltip = Tooltip;
 import AdminNavbar from "@/components/Admin/NavbarView.vue";
 import HeaderView from "@/components/header/HeaderView.vue";
 import DataTable from "primevue/datatable";
 import Column from "primevue/column";
 import Button from "primevue/button";
 import Tag from "primevue/tag";
+import Tooltip from "primevue/tooltip";
+
 import Calendar from "primevue/calendar"; // Import Calendar
+import Dialog from "primevue/dialog"; // Import Dialog
 import GrafiLineas from "@/components/Employed/GrafiLineas.vue";
 import DistAsisView from "@/components/Graficas/DistAsisView.vue"; // Reusing Pie Chart
 import { attendanceService } from "@/api/services/attendance.service";
 import { incidentService } from "@/api/services/incident.service"; // Import Incident Service
 import type { Attendance } from "@/api/types/attendance.types";
-import type { Incidencia } from "@/api/types/incidents.types";
+import type { Incidencia, SaldoItem } from "@/api/types/incidents.types";
 
 const attendances = ref<Attendance[]>([]);
 const incidents = ref<Incidencia[]>([]); // Estado para incidencias
+const saldos = ref<SaldoItem[]>([]); // Estado para saldos
 const loading = ref(false);
 const loadingIncidents = ref(false);
+const loadingSaldos = ref(false);
+
 const maxDate = ref(new Date()); // Allow selection up to today
+const displayDetailModal = ref(false);
+const selectedSaldo = ref<SaldoItem | null>(null);
+
+const openDetailModal = (saldo: SaldoItem) => {
+  selectedSaldo.value = saldo;
+  displayDetailModal.value = true;
+};
 
 const getCurrentUserDNI = () => {
   try {
@@ -181,10 +288,10 @@ const metrics = ref({
 });
 
 watch(selectedDate, () => {
-  loadData();
+  loadData(false);
 });
 
-const loadData = async () => {
+const loadData = async (forceRecalculate = false) => {
   const dni = getCurrentUserDNI();
   if (!dni) return;
 
@@ -217,6 +324,19 @@ const loadData = async () => {
     }
 
     const formatYMD = (d: Date) => d.toISOString().split("T")[0];
+
+    // FIX: Calcular asistencia automÃ¡ticamente SOLO si se solicita (botÃ³n refrescar)
+    // Esto evita la latencia en la carga inicial, pero permite al usuario corregir estados.
+    if (forceRecalculate) {
+      try {
+        await attendanceService.calculateAttendance({
+          fecha_inicio: formatYMD(firstDay),
+          fecha_fin: formatYMD(endDate),
+        });
+      } catch (calcError) {
+        console.warn("Error recalculando asistencia:", calcError);
+      }
+    }
 
     const reportResponse = await attendanceService.getUserDailyReport(dni, {
       fecha_inicio: formatYMD(firstDay),
@@ -275,6 +395,31 @@ const loadData = async () => {
         const db = new Date(b.fecha_inicio);
         return db.getTime() - da.getTime(); // Descendente
       });
+
+    // 3. Obtener Saldos de Incidencias (Nuevo Endpoint)
+    loadingSaldos.value = true;
+    try {
+      const saldosResponse = await incidentService.getSaldos(
+        dni,
+        sel.getFullYear(),
+      );
+      // Extraemos saldos del respuesta. La respuesta es { anio: ..., data: [{ empleado_id, saldos: [...] }] }
+      // Como pedimos por DNI especifico, deberíamos tomar el primer elemento de data
+      if (
+        saldosResponse.data &&
+        saldosResponse.data.data &&
+        saldosResponse.data.data.length > 0
+      ) {
+        saldos.value = saldosResponse.data.data[0].saldos;
+      } else {
+        saldos.value = [];
+      }
+    } catch (e) {
+      console.error("Error cargando saldos", e);
+      saldos.value = [];
+    } finally {
+      loadingSaldos.value = false;
+    }
   } catch (error) {
     console.error("Error cargando datos del dashboard", error);
   } finally {
@@ -285,8 +430,26 @@ const loadData = async () => {
 
 const formatDate = (isoString: string) => {
   if (!isoString) return "-";
-  // Check if it's already a date string YYYY-MM-DD or ISO
+  // Fix: Si la fecha viene como YYYY-MM-DD, agregar una hora segura para evitar desfases de zona horaria al convertirse a Date
+  // O simplemente usar UTC.
+  // Una estrategia comun es agregar T00:00:00 y usar getUTC* methods, o agregar T12:00:00 (medio dia) para que caiga el mismo dia.
+  if (isoString.length === 10 && isoString.includes("-")) {
+    // Forzar interpretación local o añadir hora para evitar "día anterior" por UTC-5
+    return new Date(isoString + "T12:00:00").toLocaleDateString("es-PE");
+  }
   return new Date(isoString).toLocaleDateString("es-PE");
+};
+
+const getDayName = (isoString: string) => {
+  if (!isoString) return "-";
+  let date;
+  if (isoString.length === 10 && isoString.includes("-")) {
+    date = new Date(isoString + "T12:00:00");
+  } else {
+    date = new Date(isoString);
+  }
+  const dayName = date.toLocaleDateString("es-PE", { weekday: "long" });
+  return dayName.charAt(0).toUpperCase() + dayName.slice(1);
 };
 
 const getSeverity = (status: string) => {

@@ -188,3 +188,44 @@ export interface ListIncidenciasParams {
 export interface ListTiposIncidenciaParams {
   esta_activo?: boolean;
 }
+
+// ==============================
+// SALDOS Y CONSUMOS
+// ==============================
+
+export interface SaldoDetalle {
+  id: string;
+  fecha_inicio: string;
+  fecha_fin: string;
+  dias: number;
+  estado_id: string;
+}
+
+export interface SaldoItem {
+  tipo_id: string;
+  tipo_nombre: string;
+  tipo_codigo: string;
+  limites: {
+    dias: number | null;
+    solicitudes: number | null;
+  };
+  consumido: {
+    dias: number;
+    solicitudes: number;
+  };
+  restante: {
+    dias: number | null;
+    solicitudes: number | null;
+  };
+  detalle: SaldoDetalle[];
+}
+
+export interface SaldoEmpleado {
+  empleado_id: string;
+  saldos: SaldoItem[];
+}
+
+export interface SaldoRespuesta {
+  anio: number;
+  data: SaldoEmpleado[];
+}

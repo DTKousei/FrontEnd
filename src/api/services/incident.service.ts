@@ -26,6 +26,8 @@ import type {
   // Acciones
   AprobarIncidenciaRequest,
   RechazarIncidenciaRequest,
+  // Saldos
+  SaldoRespuesta,
 } from '@/api/types/incidents.types';
 
 export const incidentService = {
@@ -215,6 +217,19 @@ export const incidentService = {
   rechazarIncidencia(id: string, data: RechazarIncidenciaRequest) {
     return api.patch<IncidenciaResponse>(`/incidencias/${id}/rechazar`, data);
   },
+
+  // ==============================
+  // SALDOS
+  // ==============================
+
+  /**
+   * Obtener saldos de incidencias
+   */
+  getSaldos(empleado_id?: string, anio?: number) {
+    return api.get<SaldoRespuesta>('/incidencias/saldos', {
+      params: { empleado_id, anio }
+    });
+  },
 };
 
 // Opcional: Interfaz para el servicio completo
@@ -243,4 +258,7 @@ export interface IncidentService {
   // Acciones
   aprobarIncidencia(id: string, data: AprobarIncidenciaRequest): Promise<{ data: IncidenciaResponse }>;
   rechazarIncidencia(id: string, data: RechazarIncidenciaRequest): Promise<{ data: IncidenciaResponse }>;
+  
+  // Saldos
+  getSaldos(empleado_id?: string, anio?: number): Promise<{ data: SaldoRespuesta }>;
 }

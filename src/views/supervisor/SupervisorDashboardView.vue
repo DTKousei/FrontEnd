@@ -15,43 +15,61 @@
             <GraLinea :attendances="attendances" />
           </div>
 
-          <!-- Quadrant 2: Recent Incidents -->
+          <!-- Quadrant 2: Incident Balances (Saldos) -->
           <div class="dashboard-card">
             <div class="flex justify-content-between align-items-center mb-3">
-              <h3 class="text-xl font-semibold m-0">
-                Mis Incidencias Recientes
-              </h3>
+              <h3 class="text-xl font-semibold m-0">Detalle de Incidencias</h3>
             </div>
             <DataTable
-              :value="incidents"
-              :loading="loadingIncidents"
-              paginator
-              :rows="5"
+              :value="saldos"
+              :loading="loadingSaldos"
               responsiveLayout="scroll"
               class="p-datatable-sm"
               stripedRows
             >
-              <template #empty>No hay incidencias recientes.</template>
-              <Column field="fecha_inicio" header="Fecha">
+              <template #empty>No hay datos de saldos disponibles.</template>
+              <Column field="tipo_nombre" header="Tipo"></Column>
+              <Column header="Límite Anual">
                 <template #body="slotProps">
-                  {{ formatDate(slotProps.data.fecha_inicio) }}
+                  {{
+                    slotProps.data.limites.dias !== null
+                      ? slotProps.data.limites.dias + " días"
+                      : slotProps.data.limites.solicitudes !== null
+                        ? slotProps.data.limites.solicitudes + " solicitudes"
+                        : "Ilimitado"
+                  }}
                 </template>
               </Column>
-              <Column field="tipo_incidencia.nombre" header="Tipo">
+              <Column header="Consumido">
                 <template #body="slotProps">
-                  <Tag
-                    :value="slotProps.data.tipo_incidencia?.nombre || 'General'"
-                    severity="warning"
-                  />
+                  <span class="text-yellow-600 font-bold">
+                    {{
+                      slotProps.data.consumido.dias > 0
+                        ? slotProps.data.consumido.dias + " días"
+                        : slotProps.data.consumido.solicitudes > 0
+                          ? slotProps.data.consumido.solicitudes + " sol."
+                          : "-"
+                    }}
+                  </span>
                 </template>
               </Column>
-              <Column field="descripcion" header="Observación">
+              <Column header="Restante">
                 <template #body="slotProps">
                   <span
-                    class="text-sm text-gray-600 truncate-text"
-                    :title="slotProps.data.descripcion"
-                    >{{ slotProps.data.descripcion }}</span
+                    :class="{
+                      'text-green-600 font-bold':
+                        (slotProps.data.restante.dias ?? 1) > 0,
+                      'text-red-600': (slotProps.data.restante.dias ?? 1) <= 0,
+                    }"
                   >
+                    {{
+                      slotProps.data.restante.dias !== null
+                        ? slotProps.data.restante.dias + " días"
+                        : slotProps.data.restante.solicitudes !== null
+                          ? slotProps.data.restante.solicitudes + " sol."
+                          : "∞"
+                    }}
+                  </span>
                 </template>
               </Column>
             </DataTable>
@@ -76,7 +94,7 @@
                   icon="pi pi-refresh"
                   rounded
                   text
-                  @click="loadData"
+                  @click="loadData(true)"
                   :loading="loading"
                   tooltip="Recargar"
                 />
@@ -148,12 +166,15 @@ import GraCir from "@/components/Supervisor/GraCir.vue";
 import { attendanceService } from "@/api/services/attendance.service";
 import { incidentService } from "@/api/services/incident.service";
 import type { Attendance } from "@/api/types/attendance.types";
-import type { Incidencia } from "@/api/types/incidents.types";
+
+import type { Incidencia, SaldoItem } from "@/api/types/incidents.types";
 
 const attendances = ref<Attendance[]>([]);
 const incidents = ref<Incidencia[]>([]);
+const saldos = ref<SaldoItem[]>([]);
 const loading = ref(false);
 const loadingIncidents = ref(false);
+const loadingSaldos = ref(false);
 const maxDate = ref(new Date());
 
 const getCurrentUserDNI = () => {
@@ -179,10 +200,10 @@ const metrics = ref({
 });
 
 watch(selectedDate, () => {
-  loadData();
+  loadData(false);
 });
 
-const loadData = async () => {
+const loadData = async (forceRecalculate = false) => {
   const dni = getCurrentUserDNI();
   if (!dni) return;
 
@@ -202,6 +223,18 @@ const loadData = async () => {
     }
 
     const formatYMD = (d: Date) => d.toISOString().split("T")[0];
+
+    // FIX: Calcular asistencia automáticamente SOLO si se solicita (botón refrescar)
+    if (forceRecalculate) {
+      try {
+        await attendanceService.calculateAttendance({
+          fecha_inicio: formatYMD(firstDay),
+          fecha_fin: formatYMD(endDate),
+        });
+      } catch (calcError) {
+        console.warn("Error recalculando asistencia:", calcError);
+      }
+    }
 
     const reportResponse = await attendanceService.getUserDailyReport(dni, {
       fecha_inicio: formatYMD(firstDay),
@@ -247,6 +280,31 @@ const loadData = async () => {
         const db = new Date(b.fecha_inicio);
         return db.getTime() - da.getTime();
       });
+
+    // 3. Obtener Saldos de Incidencias (Nuevo Endpoint)
+    loadingSaldos.value = true;
+    try {
+      const saldosResponse = await incidentService.getSaldos(
+        dni,
+        sel.getFullYear(),
+      );
+      // Extraemos saldos del respuesta. La respuesta es { anio: ..., data: [{ empleado_id, saldos: [...] }] }
+      // Como pedimos por DNI especifico, deberíamos tomar el primer elemento de data
+      if (
+        saldosResponse.data &&
+        saldosResponse.data.data &&
+        saldosResponse.data.data.length > 0
+      ) {
+        saldos.value = saldosResponse.data.data[0].saldos;
+      } else {
+        saldos.value = [];
+      }
+    } catch (e) {
+      console.error("Error cargando saldos", e);
+      saldos.value = [];
+    } finally {
+      loadingSaldos.value = false;
+    }
   } catch (error) {
     console.error("Error cargando datos del dashboard", error);
   } finally {
@@ -279,7 +337,7 @@ const getSeverity = (status: string) => {
 };
 
 onMounted(() => {
-  loadData();
+  loadData(false);
 });
 </script>
 
