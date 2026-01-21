@@ -11,11 +11,13 @@ import { userService } from "@/api/services/user.service";
 import { authService } from "@/api/services/auth.service";
 import { scheduleService } from "@/api/services/schedule.service";
 import { DepartmentService } from "@/api/services/department.service";
+import { deviceService } from "@/api/services/device.service";
 import Swal from "sweetalert2";
 import type { CreateUserData, BiometricUser } from "@/api/types/users.types";
 import type { Department } from "@/api/types/department.types";
 import type { RegisterData, Role } from "@/api/types/auth.types";
 import type { Schedule } from "@/api/types/schedules.types";
+import type { Device } from "@/api/types/devices.types";
 
 const emit = defineEmits(["saved", "close"]);
 const props = defineProps({
@@ -50,6 +52,7 @@ const loading = ref(false);
 const roles = ref<Role[]>([]);
 const schedules = ref<Schedule[]>([]); // Lista de horarios
 const departments = ref<Department[]>([]); // Lista de departamentos
+const activeDevices = ref<Device[]>([]); // Dispositivos activos
 
 const form = ref({
   nombres: "",
@@ -225,7 +228,6 @@ const populateForm = async (
 };
 
 // Cargar roles y horarios al montar
-// Cargar roles y horarios al montar
 onMounted(async () => {
   console.log("Modal Mounted. UserToEdit:", props.userToEdit);
   try {
@@ -234,14 +236,12 @@ onMounted(async () => {
       scheduleService.getAll(),
     ]);
 
-    // Load Departments separately or in parallel
-    // "uses the same logic as schedule" -> Expecting AxiosResponse
-    // Load Departments separately or in parallel
-    // "uses the same logic as schedule" -> Expecting AxiosResponse
+    // Cargar Departamentos por separado o en paralelo
+    // "usa la misma lógica que schedule" -> Esperando AxiosResponse
     try {
       const deptResponse = await DepartmentService.getAll();
-      const dData = deptResponse.data as any; // Cast for safety against wrapper types
-      // Handle array or wrapped array
+      const dData = deptResponse.data as any; // Cast por seguridad contra tipos envoltorios
+      // Manejar array o array envuelto
       if (Array.isArray(dData)) {
         departments.value = dData;
       } else if (dData && Array.isArray(dData.data)) {
@@ -260,12 +260,30 @@ onMounted(async () => {
       console.error("Error fetching roles:", rolesResponse.data.message);
     }
 
-    // Schedules response might be direct array or wrapped
+    // La respuesta de horarios puede ser un array directo o envuelto
     if (schedulesResponse.data) {
       // @ts-ignore
       schedules.value = Array.isArray(schedulesResponse.data)
         ? schedulesResponse.data
         : schedulesResponse.data.data || [];
+    }
+    // Listar dispositivos
+    try {
+      const devicesResponse = await deviceService.getAll();
+      // Manejo de tipos seguro similar a patrones existentes
+      const allDevices: Device[] = Array.isArray(devicesResponse.data)
+        ? // @ts-ignore
+          devicesResponse.data
+        : // @ts-ignore
+          (devicesResponse.data?.data as Device[]) || [];
+
+      activeDevices.value = allDevices.filter((d) => d.activo);
+      console.log(
+        "Dispositivos activos encontrados:",
+        activeDevices.value.length,
+      );
+    } catch (devError) {
+      console.error("Error loading devices:", devError);
     }
   } catch (error) {
     console.error("Error loading initial data:", error);
@@ -339,13 +357,59 @@ const handleSubmit = async () => {
     // Combinar nombres para el campo 'nombre' del biométrico
     const fullName = `${form.value.nombres} ${form.value.apellidos}`.trim();
 
+    // Determinar ID del Dispositivo
+    let finalDeviceId = 1; // Valor por defecto
+
+    if (isEdit && props.userToEdit?.dispositivo_id) {
+      finalDeviceId = props.userToEdit.dispositivo_id;
+    } else {
+      // Lógica de Selección de Dispositivo Activo
+      if (activeDevices.value.length === 0) {
+        await Swal.fire({
+          icon: "error",
+          title: "Sin Biométricos Activos",
+          text: "No hay dispositivos biométricos activos en el sistema. Debe activar uno para registrar personal.",
+        });
+        loading.value = false;
+        return;
+      } else if (activeDevices.value.length === 1) {
+        finalDeviceId = activeDevices.value[0].id;
+      } else {
+        // Múltiples dispositivos: Preguntar al usuario
+        const options: Record<string, string> = {};
+        activeDevices.value.forEach((d) => {
+          options[d.id] = d.nombre + (d.ubicacion ? ` (${d.ubicacion})` : "");
+        });
+
+        const { value: selectedId } = await Swal.fire({
+          title: "Seleccione Biométrico",
+          text: "Hay múltiples dispositivos activos. ¿En cuál se debe registrar este usuario?",
+          input: "select",
+          inputOptions: options,
+          inputPlaceholder: "Seleccione un dispositivo",
+          showCancelButton: true,
+          inputValidator: (value) => {
+            if (!value) {
+              return "Debe seleccionar un dispositivo";
+            }
+          },
+        });
+
+        if (!selectedId) {
+          loading.value = false; // Cancelado por usuario
+          return;
+        }
+        finalDeviceId = parseInt(selectedId);
+      }
+    }
+
     const biometricData: CreateUserData = {
       user_id: form.value.dni, // DNI se relaciona con ID Biométrico
       nombre: fullName,
       privilegio: 0, // Default
-      dispositivo_id: 1, // Default
+      dispositivo_id: finalDeviceId, // ID Dinámico
       cargo: form.value.cargo,
-      departamento_id: form.value.departamento_id || undefined, // Send ID
+      departamento_id: form.value.departamento_id || undefined, // Enviar ID
       telefono: form.value.telefono || undefined,
       email: form.value.email || undefined,
       fecha_nacimiento: form.value.fecha_nacimiento
@@ -378,7 +442,7 @@ const handleSubmit = async () => {
       throw bioError;
     }
 
-    // Validar DNI Actual (Source of Truth)
+    // Validar DNI Actual (Fuente de Verdad)
     // Usamos el DNI retornado por el backend para asegurar consistencia
     // A veces la respuesta puede venir anidada en 'data'
     const actualDni =
@@ -423,16 +487,16 @@ const handleSubmit = async () => {
       }
 
       console.log(
-        "Carga útil Actualización Auth (lookup by original DNI):",
+        "Carga útil Actualización Auth (búsqueda por DNI original):",
         authData,
       );
 
-      // Try update, if fails with 404 then Create
+      // Intentar actualizar, si falla con 404 entonces Crear
       try {
         await authService.updateUserByDNI(originalDni, authData);
       } catch (authError: any) {
         console.warn("Error updating auth user:", authError);
-        // Check if error is 404 (Not Found) or 400 (Prisma "No record found")
+        // Verificar si el error es 404 (No Encontrado) o 400 (Prisma "No se encontró registro")
         const isNotFound =
           (authError.response && authError.response.status === 404) ||
           (authError.response &&
@@ -441,7 +505,9 @@ const handleSubmit = async () => {
             authError.response.data.message.includes("No record was found"));
 
         if (isNotFound) {
-          console.log("User not found in Auth system. Creating new...");
+          console.log(
+            "Usuario no encontrado en sistema Auth. Creando nuevo...",
+          );
           generatedPassword = generatePassword(actualDni, form.value.nombres);
           const regData: RegisterData = {
             usuario: actualDni,
@@ -451,14 +517,14 @@ const handleSubmit = async () => {
           };
           await authService.register(regData);
 
-          // Notify user that account was created
+          // Notificar al usuario que la cuenta fue creada
           Swal.fire({
             icon: "info",
             title: "Cuenta de Sistema Creada",
             text: `El usuario no existía en el sistema de autenticación, así que se ha creado. Contraseña: ${generatedPassword}`,
           });
         } else {
-          // Re-throw if it's another error
+          // Relanzar si es otro error
           throw authError;
         }
       }
@@ -526,7 +592,7 @@ const handleSubmit = async () => {
       console.error("Response Data:", error.response.data);
       console.error("Response Status:", error.response.status);
     }
-    // Extract error message if possible
+    // Extraer mensaje de error si es posible
     const msg =
       error.response?.data?.message ||
       error.message ||

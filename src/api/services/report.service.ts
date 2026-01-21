@@ -22,6 +22,12 @@ export const reportService = {
     });
   },
 
+  exportSaldosPdf(data: { anio: number; empleado_id?: string }) {
+    return pythonReportApi.post('/reports/export/saldos-pdf', data, {
+      responseType: 'blob'
+    });
+  },
+
   // --- Generated Reports Management ---
   listGenerated() {
     return pythonReportApi.get('/reports/generated/');
@@ -39,19 +45,20 @@ export const reportService = {
   },
 
   // --- Report Types Management ---
-  getTypes() {
+  // --- Report Types Management ---
+  getReportTypes() {
     return pythonReportApi.get('/report-types');
   },
 
-  createType(data: { nombre: string; descripcion: string; activo: boolean }) {
+  createReportType(data: { nombre: string; descripcion: string; activo: boolean }) {
     return pythonReportApi.post('/report-types', data);
   },
 
-  updateType(id: number, data: { nombre: string; descripcion: string; activo: boolean }) {
+  updateReportType(id: number, data: { nombre: string; descripcion: string; activo: boolean }) {
     return pythonReportApi.put(`/report-types/${id}`, data);
   },
 
-  deleteType(id: number) {
+  deleteReportType(id: number) {
     return pythonReportApi.delete(`/report-types/${id}`);
   }
 };

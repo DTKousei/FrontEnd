@@ -212,8 +212,11 @@
             </div>
             <div class="report-meta">
               <span>Actualizado: Ayer</span>
-              <button class="btn btn-outline btn-sm">
-                <i class="fas fa-download"></i> Descargar
+              <button
+                class="btn btn-outline btn-sm"
+                @click="handleSaldosReport"
+              >
+                <i class="fas fa-download"></i> Descargar Saldos
               </button>
             </div>
           </div>
@@ -243,12 +246,18 @@
       </div>
     </div>
   </div>
+  <ModalDetall
+    v-model:visible="showSaldosModal"
+    :users="allUsers"
+    @generate-report="onSaldosGenerate"
+  />
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from "vue";
 import Swal from "sweetalert2";
 
+import ModalDetall from "@/components/Modals/ModalDetall.vue";
 import ReportPerView from "@/components/tables/ReportPerView.vue";
 import ReportRegisView from "@/components/tables/ReportRegisView.vue";
 import DistAsisView from "@/components/Graficas/DistAsisView.vue";
@@ -263,6 +272,7 @@ import { storeToRefs } from "pinia";
 
 // Referencias
 const reportRegisRef = ref();
+const showSaldosModal = ref(false);
 
 // Estado para Datos
 // Estado para Datos
@@ -508,6 +518,42 @@ const handleGenerateReport = async () => {
   } catch (error) {
     console.error("Error generating report:", error);
     Swal.fire("Error", "Hubo un problema al generar el reporte.", "error");
+  }
+};
+
+const handleSaldosReport = () => {
+  showSaldosModal.value = true;
+};
+
+const onSaldosGenerate = async (data: {
+  anio: number;
+  empleado_id?: string;
+}) => {
+  try {
+    Swal.fire({
+      title: "Generando PDF",
+      text: "Por favor espere...",
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading(),
+    });
+
+    const response = await reportService.exportSaldosPdf(data);
+
+    // Descargar Blob
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `saldos_incidencias_${data.anio}.pdf`);
+    document.body.appendChild(link);
+    link.click();
+    link.parentNode?.removeChild(link);
+
+    // Swal.close(); // Don't close immediately if we want to show success
+    Swal.close();
+    Swal.fire("Éxito", "Reporte descargado correctamente", "success");
+  } catch (error) {
+    console.error("Error exporting saldos:", error);
+    Swal.fire("Error", "Error al generar el reporte", "error");
   }
 };
 

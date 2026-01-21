@@ -480,6 +480,20 @@
             </div>
 
             <div class="form-group">
+              <label>Gestión de Tipos de Reportes</label>
+              <button
+                class="btn btn-secondary"
+                style="width: 100%"
+                @click="modalTipoReporVisible = true"
+              >
+                <i class="fas fa-file-invoice"></i> Gestionar Tipos de Reportes
+              </button>
+              <div class="label-hint">
+                Configurar el catálogo de reportes disponibles
+              </div>
+            </div>
+
+            <div class="form-group">
               <label>Gestión de Tipos de Incidencias</label>
               <button
                 class="btn btn-secondary"
@@ -515,6 +529,7 @@
     <!-- Modals -->
     <ModalArea v-model:visible="modalAreaVisible" />
     <ModalTipoPer v-model:visible="modalTipoPerVisible" />
+    <ModalTipoRepor v-model:visible="modalTipoReporVisible" />
     <ModalTipoInci v-model:visible="modalTipoInciVisible" />
     <ModalHorario
       v-model:visible="modalHorarioVisible"
@@ -530,6 +545,7 @@ import Swal from "sweetalert2";
 import "@fortawesome/fontawesome-free/css/all.min.css";
 import ModalArea from "@/components/Modals/ModalArea.vue";
 import ModalTipoPer from "@/components/Modals/ModalTipoPer.vue";
+import ModalTipoRepor from "@/components/Modals/ModalTipoRepor.vue";
 import ModalTipoInci from "@/components/Modals/ModalTipoInci.vue";
 import ModalHorario from "@/components/Modals/ModalHorario.vue";
 import CalenFerView from "@/components/Calendario/CalenFerView.vue";
@@ -545,6 +561,7 @@ import type { Schedule } from "@/api/types/schedules.types";
 const activeTab = ref("general");
 const modalAreaVisible = ref(false);
 const modalTipoPerVisible = ref(false);
+const modalTipoReporVisible = ref(false);
 const modalTipoInciVisible = ref(false);
 
 // Horarios State
@@ -600,7 +617,7 @@ const deleteSchedule = async (schedule: Schedule) => {
       Swal.fire(
         "Error",
         "No se pudo eliminar el horario. Es posible que tenga usuarios asignados o segmentos activos.",
-        "error"
+        "error",
       );
     } finally {
       loadingSchedules.value = false;

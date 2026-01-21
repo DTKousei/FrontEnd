@@ -70,7 +70,7 @@ const loadReports = async () => {
 
 const viewReport = async (
   report: GeneratedReport,
-  requestFormat: "PDF" | "EXCEL"
+  requestFormat: "PDF" | "EXCEL",
 ) => {
   try {
     Swal.fire({
@@ -81,7 +81,7 @@ const viewReport = async (
 
     const response = await reportService.downloadGenerated(
       report.id,
-      requestFormat
+      requestFormat,
     );
 
     // Crear Blob
@@ -109,7 +109,7 @@ const viewReport = async (
 
 const generateMissingFormat = async (
   report: GeneratedReport,
-  targetFormat: "PDF" | "EXCEL"
+  targetFormat: "PDF" | "EXCEL",
 ) => {
   // Extract params from original report filters
   const data = report.parametros || report.filtros || {};
@@ -119,7 +119,7 @@ const generateMissingFormat = async (
     Swal.fire(
       "Error",
       "No se pueden recuperar los filtros originales para generar este formato.",
-      "error"
+      "error",
     );
     return;
   }
@@ -212,7 +212,7 @@ defineExpose({
       <Column header="Tipo de Reporte" sortable field="report_type_name">
         <template #body="{ data }">
           <span class="font-semibold">{{
-            data.report_type_name || "Asistencia General"
+            data.report_type_name || data.tipo_reporte || "Asistencia General"
           }}</span>
         </template>
       </Column>

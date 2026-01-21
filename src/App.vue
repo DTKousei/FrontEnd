@@ -34,8 +34,8 @@ const runAutoSync = async () => {
     if (Array.isArray(devices)) {
       for (const device of devices) {
         try {
-          // Solo si tiene IP configurada
-          if (device.ip_address) {
+          // Solo si tiene IP configurada y está ACTIVO
+          if (device.ip_address && device.activo) {
             const connResponse = await deviceService.testConnection(device.id);
             if (connResponse.data.success) {
               console.log(

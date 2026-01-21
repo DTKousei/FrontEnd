@@ -28,6 +28,7 @@ export interface GeneratedReport {
   id: number;
   report_type_id?: number; // Optional if not linked
   report_type_name?: string; // Backend likely returns the name too
+  tipo_reporte?: string; // Raw backend field
   usuario_id: number;
   fecha_generacion: string;
   filtros: any;
