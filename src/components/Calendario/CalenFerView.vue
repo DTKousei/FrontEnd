@@ -111,8 +111,10 @@ const users = ref<BiometricUser[]>([]);
 const loadHolidays = async () => {
   try {
     const response = await scheduleService.getHolidays();
+    console.log("Feriados Raw Response:", response);
     // @ts-ignore
     holidays.value = response.data || [];
+    console.log("Feriados Cargados:", holidays.value);
   } catch (error) {
     console.error("Error cargando feriados", error);
   }

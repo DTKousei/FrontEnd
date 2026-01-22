@@ -29,37 +29,106 @@
 
         <!-- Tab Content: Datos -->
         <div v-if="activeTab === 'datos'" class="tab-pane">
-          <div class="profile-card">
-            <div class="profile-avatar">
-              <img
-                :src="`https://ui-avatars.com/api/?name=${authStore.user?.nombre || 'Usuario'}&background=2c5aa0&color=fff&size=128`"
-                alt="Avatar"
-              />
-            </div>
-            <div class="profile-info">
-              <div class="info-group">
-                <label>Nombre Completo</label>
-                <div class="info-value">
-                  {{ authStore.user?.nombre || "-" }}
-                </div>
+          <div v-if="loadingData" class="text-center p-5">
+            <i class="fas fa-spinner fa-spin fa-2x"></i>
+            <p>Cargando información...</p>
+          </div>
+          <div v-else class="profile-card">
+            <!-- Header with Avatar -->
+            <div class="profile-header flex align-items-center mb-4 gap-4">
+              <div class="profile-avatar shrink-0">
+                <img
+                  :src="`https://ui-avatars.com/api/?name=${profileForm.nombre}&background=2c5aa0&color=fff&size=128`"
+                  alt="Avatar"
+                />
               </div>
-              <div class="info-group">
-                <label>DNI / Usuario</label>
-                <div class="info-value">{{ authStore.user?.dni || "-" }}</div>
-              </div>
-              <div class="info-group">
-                <label>Correo Electrónico</label>
-                <div class="info-value">
-                  {{ authStore.user?.correo || "No registrado" }}
-                </div>
-              </div>
-              <div class="info-group">
-                <label>Rol</label>
-                <div class="info-value role-badge">
-                  {{ authStore.user?.rol || "-" }}
-                </div>
+              <div class="text-left">
+                <h2 class="text-xl font-bold text-gray-800 m-0">
+                  {{ profileForm.nombre }}
+                </h2>
+                <span class="role-badge mt-2">{{ profileForm.rol }}</span>
               </div>
             </div>
+
+            <form
+              @submit.prevent="handleUpdateProfile"
+              class="profile-form text-left"
+            >
+              <!-- Two Column Grid -->
+              <div class="grid-form">
+                <!-- DNI -->
+                <div class="form-group">
+                  <label>DNI / Usuario</label>
+                  <div class="input-readonly">{{ profileForm.dni }}</div>
+                </div>
+
+                <!-- Telefono -->
+                <div class="form-group">
+                  <label>Teléfono</label>
+                  <div class="input-wrapper">
+                    <i class="fas fa-phone"></i>
+                    <input
+                      type="text"
+                      v-model="profileForm.telefono"
+                      placeholder="Ingrese teléfono"
+                    />
+                  </div>
+                </div>
+
+                <!-- Correo -->
+                <div class="form-group full-width">
+                  <label>Correo Electrónico</label>
+                  <div class="input-wrapper">
+                    <i class="fas fa-envelope"></i>
+                    <input
+                      type="email"
+                      v-model="profileForm.email"
+                      placeholder="Ingrese correo"
+                    />
+                  </div>
+                </div>
+
+                <!-- Departamento -->
+                <div class="form-group">
+                  <label>Departamento / Área</label>
+                  <div class="input-readonly">
+                    {{ profileForm.departamento }}
+                  </div>
+                </div>
+
+                <!-- Cargo -->
+                <div class="form-group">
+                  <label>Cargo</label>
+                  <div class="input-readonly">{{ profileForm.cargo }}</div>
+                </div>
+
+                <!-- Estado -->
+                <div class="form-group">
+                  <label>Estado</label>
+                  <div class="status-active">{{ profileForm.estado }}</div>
+                </div>
+
+                <!-- Rol -->
+                <div class="form-group">
+                  <label>Rol de Acceso</label>
+                  <div class="input-readonly">{{ profileForm.rol }}</div>
+                </div>
+              </div>
+
+              <div class="form-actions mt-4">
+                <button
+                  type="submit"
+                  class="btn-save"
+                  :disabled="savingProfile"
+                >
+                  <i
+                    class="fas"
+                    :class="savingProfile ? 'fa-spinner fa-spin' : 'fa-save'"
+                  ></i>
+                  {{ savingProfile ? "Guardando..." : "Guardar Cambios" }}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
 
@@ -123,9 +192,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from "vue";
+import { ref, reactive, watch } from "vue";
 import { useAuthStore } from "@/stores/authStore";
 import { authService } from "@/api/services/auth.service";
+import { userService } from "@/api/services/user.service";
 import Swal from "sweetalert2";
 
 const props = defineProps<{
@@ -143,6 +213,94 @@ const passwordForm = reactive({
   new: "",
   confirm: "",
 });
+
+const profileForm = reactive({
+  id: 0,
+  nombre: "",
+  dni: "",
+  email: "",
+  telefono: "",
+  departamento: "",
+  cargo: "",
+  estado: "Activo",
+  rol: "",
+});
+
+const loadingData = ref(false);
+const savingProfile = ref(false);
+
+watch(
+  () => props.visible,
+  (newVal) => {
+    if (newVal) {
+      loadUserProfile();
+    }
+  },
+);
+
+const loadUserProfile = async () => {
+  if (!authStore.user?.dni) return;
+
+  loadingData.value = true;
+  try {
+    const response = await userService.getByUserId(authStore.user.dni);
+    // @ts-ignore
+    const userData = response.data?.data || response.data;
+
+    if (userData) {
+      profileForm.id = userData.id;
+      profileForm.nombre = userData.nombre;
+      profileForm.dni = userData.user_id; // DNI
+      profileForm.email = userData.email || "";
+      profileForm.telefono = userData.telefono || "";
+      // Handle department object or string
+      profileForm.departamento =
+        typeof userData.departamento === "object"
+          ? userData.departamento?.nombre
+          : userData.departamento || "-";
+      profileForm.cargo = userData.cargo || "-";
+      // Logic for state if available, default to Activo for now or check 'activo' flag
+      profileForm.estado = "Activo";
+      profileForm.rol = authStore.user.rol;
+    }
+  } catch (e) {
+    console.error("Error loading profile", e);
+    // Fallback to store data if fetch fails
+    profileForm.nombre = authStore.user.nombre;
+    profileForm.dni = authStore.user.dni;
+    profileForm.email = authStore.user.correo;
+    profileForm.rol = authStore.user.rol;
+  } finally {
+    loadingData.value = false;
+  }
+};
+
+const handleUpdateProfile = async () => {
+  if (!profileForm.id) return;
+
+  savingProfile.value = true;
+  try {
+    await userService.update(profileForm.id, {
+      email: profileForm.email,
+      telefono: profileForm.telefono,
+    });
+
+    Swal.fire({
+      icon: "success",
+      title: "Perfil Actualizado",
+      text: "Sus datos han sido guardados correctamente",
+      timer: 2000,
+    });
+
+    // Refresh global store
+    await authStore.fetchProfile();
+  } catch (error: any) {
+    console.error("Error updating profile", error);
+    Swal.fire("Error", "No se pudieron guardar los cambios.", "error");
+  } finally {
+    savingProfile.value = false;
+  }
+};
 
 const close = () => {
   emit("update:visible", false);
@@ -428,5 +586,44 @@ const handleChangePassword = async () => {
   --primary: #2c5aa0;
   --secondary: #3498db;
   --success: #27ae60;
+}
+
+.profile-header {
+  display: flex;
+  align-items: center;
+}
+
+.grid-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.grid-form .full-width {
+  grid-column: span 2;
+}
+
+.input-readonly {
+  background: #f8f9fa;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: #2c3e50;
+  font-weight: 500;
+  border: 1px solid #e9ecef;
+}
+
+.status-active {
+  color: var(--success);
+  font-weight: 700;
+}
+
+@media (max-width: 600px) {
+  .grid-form {
+    grid-template-columns: 1fr;
+  }
+  .grid-form .full-width {
+    grid-column: span 1;
+  }
 }
 </style>

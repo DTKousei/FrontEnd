@@ -5,6 +5,9 @@ import Button from "primevue/button";
 import Swal from "sweetalert2";
 import { authService } from "@/api/services/auth.service";
 import { userService } from "@/api/services/user.service";
+import RadarPersView from "@/components/Graficas/RadarPersView.vue";
+import { attendanceService } from "@/api/services/attendance.service";
+import { incidentService } from "@/api/services/incident.service";
 
 interface ExtendedUser {
   id: number;
@@ -38,15 +41,83 @@ const loadingUnlock = ref(false);
 const isLocked = ref(false);
 const lockReason = ref("");
 
-// Observar cambios en la visibilidad o el usuario para obtener el estado de bloqueo
+// Metrics state for Radar Chart
+const metrics = ref({
+  puntualidad: 0,
+  asistencia: 0,
+  tardanzas: 0,
+  horas_extras: 0,
+  uso_beneficios: 0,
+});
+const loadingMetrics = ref(false);
+
+// Observar cambios en la visibilidad o el usuario para obtener el estado de bloqueo y métricas
 watch(
   () => [props.visible, props.user],
   async ([newVisible, newUser]) => {
     if (newVisible && newUser) {
-      await checkLockStatus();
+      await Promise.all([checkLockStatus(), fetchMetrics()]);
     }
   },
 );
+
+const fetchMetrics = async () => {
+  if (!props.user) return;
+  loadingMetrics.value = true;
+  try {
+    const now = new Date();
+    // Default to current month or year range
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+    const formatYMD = (d: Date) => d.toISOString().split("T")[0];
+
+    // 1. Fetch Attendance Report for current month
+    const reportRes = await attendanceService.getUserDailyReport(
+      props.user.user_id,
+      {
+        fecha_inicio: formatYMD(firstDay),
+        fecha_fin: formatYMD(lastDay),
+      },
+    );
+
+    // 2. Fetch Incidents Balances (Saldos) for current year
+    const saldosRes = await incidentService.getSaldos(
+      props.user.user_id,
+      now.getFullYear(),
+    );
+
+    // Process Data
+    const reportData = reportRes.data;
+    const saldosData = saldosRes.data;
+
+    const diasTrabajados = reportData.resumen?.dias_trabajados || 0;
+    const diasFalta = reportData.resumen?.dias_falta || 0;
+    const diasTarde = reportData.resumen?.dias_tarde || 0;
+    const horasExtras = Math.round(reportData.resumen?.total_horas_extras || 0);
+
+    // Calculate total benefits consumed
+    let totalBeneficios = 0;
+    if (saldosData && saldosData.data && saldosData.data.length > 0) {
+      // @ts-ignore
+      saldosData.data[0].saldos.forEach((s: any) => {
+        totalBeneficios += s.consumido?.dias || 0;
+      });
+    }
+
+    metrics.value = {
+      puntualidad: diasTrabajados,
+      asistencia: diasFalta, // Invert logic visually if needed, but raw data here
+      tardanzas: diasTarde,
+      horas_extras: horasExtras,
+      uso_beneficios: totalBeneficios,
+    };
+  } catch (e) {
+    console.error("Error fetching metrics", e);
+  } finally {
+    loadingMetrics.value = false;
+  }
+};
 
 const checkLockStatus = async () => {
   if (!props.user) return;
@@ -172,12 +243,13 @@ const handleResetPassword = async () => {
         class="col-12 md:col-5 flex flex-column align-items-center justify-content-center border-right-1 surface-border p-4"
       >
         <div
-          class="w-full h-20rem bg-gray-50 border-round flex align-items-center justify-content-center text-gray-500"
+          class="w-full h-auto bg-white border-round flex align-items-center justify-content-center text-gray-500 overflow-hidden"
         >
           <!-- Espacio reservado para gráfico de radar -->
-          <div class="text-center">
-            <i class="pi pi-chart-pie text-5xl mb-3"></i>
-            <p>Gráfico de Desempeño (Próximamente)</p>
+          <RadarPersView v-if="!loadingMetrics" :metrics="metrics" />
+          <div v-else class="text-center p-4">
+            <i class="pi pi-spin pi-spinner text-2xl"></i>
+            <p>Cargando estadísticas...</p>
           </div>
         </div>
       </div>
