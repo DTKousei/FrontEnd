@@ -4,6 +4,8 @@ import VueDevTools from 'vite-plugin-vue-devtools'
 import { fileURLToPath, URL } from 'node:url'
 
 // https://vitejs.dev/config/
+const BACKEND_HOST = '192.168.5.173'; // IP LAN para permitir acceso remoto (Redirecciones del Backend)
+
 export default defineConfig({
   plugins: [
     vue(),
@@ -18,27 +20,27 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api-biometrico': {
-        target: 'http://localhost:8000',
+        target: `http://${BACKEND_HOST}:8000`,
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api-biometrico/, '/api')
       },
       '/api-reportes': {
-        target: 'http://localhost:8001',
+        target: `http://${BACKEND_HOST}:8001`,
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api-reportes/, '/api')
       },
       '/api-auth': {
-        target: 'http://localhost:3001',
+        target: `http://${BACKEND_HOST}:3001`,
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api-auth/, '/api')
       },
       '/api-papeletas': {
-        target: 'http://localhost:3002',
+        target: `http://${BACKEND_HOST}:3002`,
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api-papeletas/, '/api')
       },
       '/api-incidencias': {
-        target: 'http://localhost:3003',
+        target: `http://${BACKEND_HOST}:3003`,
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api-incidencias/, '/api')
       }

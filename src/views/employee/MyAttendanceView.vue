@@ -8,6 +8,60 @@
           Dashboard de Asistencia
         </h1>
 
+        <div class="dashboard-grid mb-4">
+          <!-- Stats Cards Row (Full Width effectively in 2-col visual but logically separate) -->
+          <!-- We want a row of 4 cards above everything. Let's make a container for them -->
+        </div>
+
+        <!-- Tarjetas de Resumen (Cards) -->
+        <div class="cards mb-4">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Días Presente</div>
+              <div class="card-icon present">
+                <i class="fas fa-user-check"></i>
+              </div>
+            </div>
+            <div class="card-value">
+              {{ metrics.puntual + metrics.tardanzas }}
+            </div>
+            <div class="card-footer">Este mes</div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Ausencias</div>
+              <div class="card-icon absent">
+                <i class="fas fa-user-times"></i>
+              </div>
+            </div>
+            <div class="card-value">{{ metrics.faltas }}</div>
+            <div class="card-footer">Este mes</div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Tardanzas</div>
+              <div class="card-icon late">
+                <i class="fas fa-clock"></i>
+              </div>
+            </div>
+            <div class="card-value">{{ metrics.tardanzas }}</div>
+            <div class="card-footer">Este mes</div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Horas Extras</div>
+              <div class="card-icon total">
+                <i class="fas fa-calendar-plus"></i>
+              </div>
+            </div>
+            <div class="card-value">{{ metrics.horas_extras_formato }}</div>
+            <div class="card-footer">Este mes</div>
+          </div>
+        </div>
+
         <div class="dashboard-grid">
           <!-- Quadrant 1: Line Chart -->
           <div class="dashboard-card">
@@ -285,6 +339,7 @@ const metrics = ref({
   tardanzas: 0,
   faltas: 0,
   horas_extras: 0,
+  horas_extras_formato: "00:00",
 });
 
 watch(selectedDate, () => {
@@ -372,6 +427,9 @@ const loadData = async (forceRecalculate = false) => {
         tardanzas: reportData.resumen.dias_tarde || 0,
         faltas: reportData.resumen.dias_falta || 0,
         horas_extras: Math.round(reportData.resumen.total_horas_extras || 0),
+        // @ts-ignore
+        horas_extras_formato:
+          reportData.resumen.total_horas_extras_formato || "00:00",
       };
     }
 
@@ -486,12 +544,12 @@ onMounted(() => {
   --dark: #34495e;
 }
 
-* {
+/* * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-}
+} */
 
 body {
   background-color: #f5f7fa;
@@ -621,5 +679,78 @@ body {
   text-overflow: ellipsis;
   max-width: 150px;
   display: inline-block;
+}
+
+/* Cards Styles copied from Dashboard */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 20px;
+}
+
+.card {
+  background-color: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 15px;
+}
+
+.card-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.card-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.card-icon.present {
+  background-color: var(--success);
+}
+
+.card-icon.absent {
+  background-color: var(--danger);
+}
+
+.card-icon.late {
+  background-color: var(--warning);
+}
+
+.card-icon.total {
+  background-color: var(--secondary);
+}
+
+.card-value {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 5px;
+  line-height: 1;
+}
+
+.card-footer {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  font-weight: 500;
 }
 </style>

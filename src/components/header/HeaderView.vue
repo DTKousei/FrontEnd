@@ -43,9 +43,10 @@ const logout = async () => {
   if (result.isConfirmed) {
     try {
       authStore.logout();
-      await authService.logout();
+      // Intentar avisar el backend, pero no bloquear si falla (ej. token ya expirado)
+      await authService.logout().catch(() => {});
     } catch (error) {
-      console.error("Error al cerrar sesión:", error);
+      // Ignorar errores de red o autenticación al salir
     } finally {
       localStorage.removeItem("token");
       localStorage.removeItem("user");

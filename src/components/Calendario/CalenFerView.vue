@@ -275,20 +275,28 @@ const importarFeriadosPeru = async () => {
  */
 const attributes = computed(() => {
   // 1. Mapear Feriados (Highlights)
-  const holidayAttrs = holidays.value.map((h) => ({
-    key: h.id,
-    highlight: {
-      color: h.tipo?.toUpperCase() === "FERIADO" ? "red" : "blue",
-      fillMode: "solid",
-    },
-    // Ajustar zona horaria añadiendo T00:00:00 para asegurar que la fecha sea correcta localmente
-    dates: new Date(h.fecha + "T00:00:00"),
-    popover: {
-      label: h.nombre,
-      visibility: "hover",
-    },
-    customData: h,
-  }));
+  // 1. Mapear Feriados (Highlights)
+  const holidayAttrs = holidays.value.map((h) => {
+    // Parse manual para evitar problemas de zona horaria (YYYY-MM-DD)
+    // Aseguramos que solo tomamos la parte de la fecha (primeros 10 caracteres) por si viene con hora
+    const [year, month, day] = h.fecha.substring(0, 10).split("-").map(Number);
+    // Nota: Month en Date es 0-indexed (0=Enero)
+    const localDate = new Date(year, month - 1, day);
+
+    return {
+      key: h.id,
+      highlight: {
+        color: h.tipo?.toUpperCase() === "FERIADO" ? "red" : "blue",
+        fillMode: "solid",
+      },
+      dates: localDate,
+      popover: {
+        label: h.nombre,
+        visibility: "hover",
+      },
+      customData: h,
+    };
+  });
 
   // 2. Mapear Cumpleaños (Highlights)
   const currentYear = new Date().getFullYear();

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from "vue";
+import { ref, onMounted, computed } from "vue";
 import Dialog from "primevue/dialog";
 import Select from "primevue/select";
 import DatePicker from "primevue/datepicker";
@@ -39,7 +39,7 @@ const form = ref({
   empleado_id: null as number | null,
   tipo_papeleta: null as string | null,
   hora_salida: null as Date | null,
-  hora_retorno: null as Date | null,
+  // hora_retorno eliminated
   motivo_salida: "",
   fundamentacion: "",
   fecha: new Date(), // Fecha actual por defecto
@@ -228,26 +228,15 @@ const loadTiposPapeleta = async () => {
 /**
  * Watcher: Auto-calculate return time based on selected type and start time.
  */
+// Watcher logic for auto-calculating return time removed as field is removed
+/*
 watch(
   [() => form.value.tipo_papeleta, () => form.value.hora_salida],
   ([newType, newTime]) => {
-    if (!newType || !newTime) return;
-
-    const selectedType = rawPapeletaTypes.value.find((t) => t.id === newType);
-    if (
-      selectedType &&
-      selectedType.tiempo_maximo_horas &&
-      selectedType.tiempo_maximo_horas > 0
-    ) {
-      // Calculate return time
-      const startTime = new Date(newTime);
-      const endTime = new Date(
-        startTime.getTime() + selectedType.tiempo_maximo_horas * 60 * 60 * 1000,
-      );
-      form.value.hora_retorno = endTime;
-    }
-  },
+     // ... logic removed
+  }
 );
+*/
 
 // Modelo computado para manejar la visibilidad del modal (v-model)
 const visibleModel = computed({
@@ -310,9 +299,7 @@ const handleSubmit = async () => {
       form.value.fecha,
       form.value.hora_salida,
     );
-    const fechaFin = form.value.hora_retorno
-      ? combineDateAndTime(form.value.fecha, form.value.hora_retorno)
-      : undefined;
+    const fechaFin = undefined; // No return time logic needed for now or handled differently defined by policy types if needed later
 
     const payload: CreatePermisoPersonalRequest = {
       empleado_id: String(employee.user_id), // Enviar DNI
@@ -376,7 +363,6 @@ const resetForm = () => {
     empleado_id: null,
     tipo_papeleta: null,
     hora_salida: null,
-    hora_retorno: null,
     motivo_salida: "",
     fundamentacion: "",
     fecha: new Date(),
@@ -459,17 +445,6 @@ onMounted(() => {
         >
         <DatePicker
           v-model="form.hora_salida"
-          timeOnly
-          showIcon
-          placeholder="00:00"
-          class="w-full"
-        />
-      </div>
-
-      <div class="field col-12 md:col-4">
-        <label class="font-bold block mb-2">Hora Retorno</label>
-        <DatePicker
-          v-model="form.hora_retorno"
           timeOnly
           showIcon
           placeholder="00:00"

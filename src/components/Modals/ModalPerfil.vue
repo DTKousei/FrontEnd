@@ -328,17 +328,10 @@ const handleChangePassword = async () => {
 
   try {
     loading.value = true;
-    const dni = authStore.user?.dni;
-
-    if (!dni) {
-      Swal.fire("Error", "No se pudo identificar al usuario", "error");
-      return;
-    }
-
-    // Call service
-    await authService.changePasswordByDNI(dni, {
-      currentPassword: passwordForm.current, // Assuming backend requires this for security
-      newPassword: passwordForm.new,
+    // Call service using session endpoint (fixes mismatch issues)
+    await authService.changePassword({
+      contrasena_actual: passwordForm.current,
+      contrasena_nueva: passwordForm.new,
     });
 
     Swal.fire({
