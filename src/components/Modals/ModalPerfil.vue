@@ -75,6 +75,19 @@
                   </div>
                 </div>
 
+                <!-- Fecha de Nacimiento -->
+                <div class="form-group">
+                  <label>Fecha de Nacimiento</label>
+                  <div class="input-wrapper">
+                    <i class="fas fa-calendar-alt"></i>
+                    <input
+                      type="date"
+                      v-model="profileForm.fecha_nacimiento"
+                      placeholder="Seleccione fecha"
+                    />
+                  </div>
+                </div>
+
                 <!-- Correo -->
                 <div class="form-group full-width">
                   <label>Correo Electrónico</label>
@@ -140,11 +153,21 @@
               <div class="input-wrapper">
                 <i class="fas fa-key"></i>
                 <input
-                  type="password"
+                  :type="passwordVisibility.current ? 'text' : 'password'"
                   v-model="passwordForm.current"
                   placeholder="Ingrese su contraseña actual"
                   required
+                  class="password-input"
                 />
+                <i
+                  class="fas password-toggle"
+                  :class="
+                    passwordVisibility.current ? 'fa-eye-slash' : 'fa-eye'
+                  "
+                  @click="
+                    passwordVisibility.current = !passwordVisibility.current
+                  "
+                ></i>
               </div>
             </div>
 
@@ -153,12 +176,18 @@
               <div class="input-wrapper">
                 <i class="fas fa-lock"></i>
                 <input
-                  type="password"
+                  :type="passwordVisibility.new ? 'text' : 'password'"
                   v-model="passwordForm.new"
                   placeholder="Mínimo 6 caracteres"
                   minlength="6"
                   required
+                  class="password-input"
                 />
+                <i
+                  class="fas password-toggle"
+                  :class="passwordVisibility.new ? 'fa-eye-slash' : 'fa-eye'"
+                  @click="passwordVisibility.new = !passwordVisibility.new"
+                ></i>
               </div>
             </div>
 
@@ -167,11 +196,21 @@
               <div class="input-wrapper">
                 <i class="fas fa-check-circle"></i>
                 <input
-                  type="password"
+                  :type="passwordVisibility.confirm ? 'text' : 'password'"
                   v-model="passwordForm.confirm"
                   placeholder="Repita la nueva contraseña"
                   required
+                  class="password-input"
                 />
+                <i
+                  class="fas password-toggle"
+                  :class="
+                    passwordVisibility.confirm ? 'fa-eye-slash' : 'fa-eye'
+                  "
+                  @click="
+                    passwordVisibility.confirm = !passwordVisibility.confirm
+                  "
+                ></i>
               </div>
             </div>
 
@@ -196,6 +235,7 @@ import { ref, reactive, watch } from "vue";
 import { useAuthStore } from "@/stores/authStore";
 import { authService } from "@/api/services/auth.service";
 import { userService } from "@/api/services/user.service";
+import { DepartmentService } from "@/api/services/department.service"; // Import DepartmentService
 import Swal from "sweetalert2";
 
 const props = defineProps<{
@@ -214,6 +254,12 @@ const passwordForm = reactive({
   confirm: "",
 });
 
+const passwordVisibility = reactive({
+  current: false,
+  new: false,
+  confirm: false,
+});
+
 const profileForm = reactive({
   id: 0,
   nombre: "",
@@ -224,6 +270,7 @@ const profileForm = reactive({
   cargo: "",
   estado: "Activo",
   rol: "",
+  fecha_nacimiento: "", // Add date of birth
 });
 
 const loadingData = ref(false);
@@ -254,10 +301,39 @@ const loadUserProfile = async () => {
       profileForm.email = userData.email || "";
       profileForm.telefono = userData.telefono || "";
       // Handle department object or string
-      profileForm.departamento =
-        typeof userData.departamento === "object"
-          ? userData.departamento?.nombre
-          : userData.departamento || "-";
+      if (
+        typeof userData.departamento === "object" &&
+        userData.departamento?.nombre
+      ) {
+        profileForm.departamento = userData.departamento.nombre;
+      } else if (userData.departamento_id) {
+        try {
+          const deptResponse = await DepartmentService.getById(
+            userData.departamento_id,
+          );
+          profileForm.departamento = deptResponse.data.nombre || "-";
+        } catch (err) {
+          console.error("Error fetching department", err);
+          profileForm.departamento = "-";
+        }
+      } else {
+        profileForm.departamento =
+          typeof userData.departamento === "string"
+            ? userData.departamento
+            : "-";
+      }
+
+      // Handle Birthdate
+      if (userData.fecha_nacimiento) {
+        // Ensure YYYY-MM-DD format for input type="date"
+        // If generic ISO string, take first 10 chars
+        profileForm.fecha_nacimiento = userData.fecha_nacimiento.substring(
+          0,
+          10,
+        );
+      } else {
+        profileForm.fecha_nacimiento = "";
+      }
       profileForm.cargo = userData.cargo || "-";
       // Logic for state if available, default to Activo for now or check 'activo' flag
       profileForm.estado = "Activo";
@@ -283,6 +359,7 @@ const handleUpdateProfile = async () => {
     await userService.update(profileForm.id, {
       email: profileForm.email,
       telefono: profileForm.telefono,
+      fecha_nacimiento: profileForm.fecha_nacimiento || undefined, // Send if present
     });
 
     Swal.fire({
@@ -309,6 +386,10 @@ const close = () => {
   passwordForm.new = "";
   passwordForm.confirm = "";
   activeTab.value = "datos";
+  // Reset visibility
+  passwordVisibility.current = false;
+  passwordVisibility.new = false;
+  passwordVisibility.confirm = false;
 };
 
 const handleChangePassword = async () => {
@@ -527,7 +608,7 @@ const handleChangePassword = async () => {
   position: relative;
 }
 
-.input-wrapper i {
+.input-wrapper i:not(.password-toggle) {
   position: absolute;
   left: 15px;
   top: 50%;
@@ -541,6 +622,26 @@ const handleChangePassword = async () => {
   border: 1px solid #ddd;
   border-radius: 8px;
   transition: border-color 0.3s;
+}
+
+.input-wrapper input.password-input {
+  padding-right: 40px;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 12px;
+  left: auto; /* Reset left */
+  top: 50%;
+  transform: translateY(-50%);
+  color: #95a5a6;
+  cursor: pointer;
+  z-index: 10;
+  transition: color 0.3s;
+}
+
+.password-toggle:hover {
+  color: var(--primary);
 }
 
 .input-wrapper input:focus {

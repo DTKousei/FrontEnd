@@ -17,7 +17,6 @@ interface Metrics {
   puntual: number;
   tardanzas: number;
   faltas: number;
-  horas_extras: number;
 }
 
 const props = defineProps<{
@@ -48,7 +47,7 @@ const chartOptions = ref<ApexOptions>({
             formatter: function (w: any) {
               return w.globals.seriesTotals.reduce(
                 (a: any, b: any) => a + b,
-                0
+                0,
               );
             },
           },

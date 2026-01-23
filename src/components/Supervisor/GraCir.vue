@@ -17,7 +17,6 @@ interface Metrics {
   puntual: number;
   tardanzas: number;
   faltas: number;
-  horas_extras: number;
 }
 
 const props = defineProps<{

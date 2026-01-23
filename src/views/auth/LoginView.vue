@@ -44,12 +44,17 @@
             <i class="fas fa-lock"></i>
             <input
               v-model="password"
-              type="password"
+              :type="showPassword ? 'text' : 'password'"
               id="password"
-              class="form-control"
+              class="form-control password-input"
               placeholder="Ingrese su contraseña"
               autocomplete="current-password"
             />
+            <i
+              class="fas password-toggle"
+              :class="showPassword ? 'fa-eye-slash' : 'fa-eye'"
+              @click="showPassword = !showPassword"
+            ></i>
           </div>
           <div class="error-message" id="password-error">
             Este campo es requerido
@@ -85,6 +90,7 @@ import Swal from "sweetalert2";
 
 const email = ref("");
 const password = ref("");
+const showPassword = ref(false);
 const isLoading = ref(false); // Add loading state
 const errorMessage = ref(""); // Add error state
 
@@ -314,13 +320,35 @@ body {
   position: relative;
 }
 
-.input-wrapper i {
+.input-wrapper i:not(.password-toggle) {
   position: absolute;
   left: 15px;
   top: 50%;
   transform: translateY(-50%);
   color: #7f8c8d;
   font-size: 1.1rem;
+  pointer-events: none; /* Prevent clicks on the left icon */
+}
+
+.password-toggle {
+  position: absolute;
+  right: 15px;
+  left: auto; /* Ensure left is not applied */
+  top: 50%;
+  transform: translateY(-50%);
+  color: #7f8c8d;
+  font-size: 1.1rem;
+  cursor: pointer;
+  z-index: 10;
+  transition: color 0.3s;
+}
+
+.password-toggle:hover {
+  color: var(--secondary);
+}
+
+.form-control.password-input {
+  padding-right: 45px;
 }
 
 .form-control {

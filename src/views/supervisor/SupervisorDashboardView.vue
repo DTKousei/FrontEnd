@@ -51,12 +51,12 @@
 
           <div class="card">
             <div class="card-header">
-              <div class="card-title">Horas Extras</div>
+              <div class="card-title">Horas Trabajadas</div>
               <div class="card-icon extra">
-                <i class="fas fa-calendar-plus"></i>
+                <i class="fas fa-briefcase"></i>
               </div>
             </div>
-            <div class="card-value">{{ metrics.horas_extras_formato }}</div>
+            <div class="card-value">{{ metrics.horas_trabajadas_formato }}</div>
             <div class="card-footer">Este mes</div>
           </div>
         </div>
@@ -249,8 +249,7 @@ const metrics = ref({
   puntual: 0,
   tardanzas: 0,
   faltas: 0,
-  horas_extras: 0,
-  horas_extras_formato: "00:00",
+  horas_trabajadas_formato: "00:00",
 });
 
 watch(selectedDate, () => {
@@ -312,10 +311,9 @@ const loadData = async (forceRecalculate = false) => {
         puntual: reportData.resumen.dias_trabajados || 0,
         tardanzas: reportData.resumen.dias_tarde || 0,
         faltas: reportData.resumen.dias_falta || 0,
-        horas_extras: Math.round(reportData.resumen.total_horas_extras || 0),
         // @ts-ignore
-        horas_extras_formato:
-          reportData.resumen.total_horas_extras_formato || "00:00",
+        horas_trabajadas_formato:
+          reportData.resumen.total_horas_trabajadas_formato || "00:00",
       };
     }
 
