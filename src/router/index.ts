@@ -77,13 +77,13 @@ const routes: Array<RouteRecordRaw> = [
       path: '/mis-asistencias',
       name: 'MisAsistencias',
       component: () => import('@/views/employee/MyAttendanceView.vue'),
-      meta: { requiresAuth: true, roles: ['EMPLEADO', 'ADMINISTRADOR'] }
+      meta: { requiresAuth: true, roles: ['EMPLEADO', 'ADMINISTRADOR', 'SUPERVISOR'] }
   },
   {
       path: '/mis-papeletas',
       name: 'MisPapeletas',
       component: () => import('@/views/employee/MyPermissionsView.vue'),
-      meta: { requiresAuth: true, roles: ['EMPLEADO', 'ADMINISTRADOR'] }
+      meta: { requiresAuth: true, roles: ['EMPLEADO', 'ADMINISTRADOR', 'SUPERVISOR'] }
   },
   // --- Supervisor ---
   {

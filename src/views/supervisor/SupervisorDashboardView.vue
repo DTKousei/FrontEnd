@@ -5,48 +5,44 @@
       <HeaderView />
       <div class="page-content">
         <h1 class="text-3xl font-bold text-blue-800 mb-4">
-          Dashboard de Supervisor
+          Dashboard de Equipo ({{ departmentName }})
         </h1>
-
-        <div class="dashboard-grid mb-4">
-          <!-- Stats Cards Row (Full Width effectively in 2-col visual but logically separate) -->
-        </div>
 
         <!-- Tarjetas de Resumen (Cards) -->
         <div class="cards mb-4">
           <div class="card">
             <div class="card-header">
-              <div class="card-title">Días Presente</div>
+              <div class="card-title">Días Trabajados (Total)</div>
               <div class="card-icon present">
                 <i class="fas fa-user-check"></i>
               </div>
             </div>
             <div class="card-value">
-              {{ metrics.puntual + metrics.tardanzas }}
+              {{ metrics.puntual }}
             </div>
-            <div class="card-footer">Este mes</div>
+            <div class="card-footer">Este mes (Equipo)</div>
           </div>
 
           <div class="card">
             <div class="card-header">
-              <div class="card-title">Ausencias</div>
+              <div class="card-title">Ausencias (Total)</div>
               <div class="card-icon absent">
                 <i class="fas fa-user-times"></i>
               </div>
             </div>
             <div class="card-value">{{ metrics.faltas }}</div>
-            <div class="card-footer">Este mes</div>
+            <div class="card-footer">Este mes (Equipo)</div>
           </div>
 
           <div class="card">
             <div class="card-header">
-              <div class="card-title">Tardanzas</div>
+              <div class="card-title">Tardanzas (Total)</div>
               <div class="card-icon late">
                 <i class="fas fa-clock"></i>
               </div>
             </div>
             <div class="card-value">{{ metrics.tardanzas }}</div>
-            <div class="card-footer">Este mes</div>
+            <div class="card-footer">Este mes (Equipo)</div>
           </div>
 
           <div class="card">
@@ -57,99 +53,30 @@
               </div>
             </div>
             <div class="card-value">{{ metrics.horas_trabajadas_formato }}</div>
-            <div class="card-footer">Este mes</div>
+            <div class="card-footer">Este mes (Equipo)</div>
           </div>
         </div>
 
         <div class="dashboard-grid">
-          <!-- Quadrant 1: Line Chart -->
-          <div class="dashboard-card">
-            <!-- Header handled inside component or here -->
-            <GraLinea :attendances="attendances" />
+          <!-- Quadrant 1: Team Attendance Chart -->
+          <div class="dashboard-card" style="grid-column: span 2">
+            <TeamAttendanceChart :stats="dailyStats" />
           </div>
 
-          <!-- Quadrant 2: Incident Balances (Saldos) -->
-          <div class="dashboard-card">
-            <div class="flex justify-content-between align-items-center mb-3">
-              <h3 class="text-xl font-semibold m-0">Detalle de Incidencias</h3>
-            </div>
-            <DataTable
-              :value="saldos"
-              :loading="loadingSaldos"
-              responsiveLayout="scroll"
-              class="p-datatable-sm"
-              stripedRows
-            >
-              <template #empty>No hay datos de saldos disponibles.</template>
-              <Column field="tipo_nombre" header="Tipo"></Column>
-              <Column header="Límite Anual">
-                <template #body="slotProps">
-                  {{
-                    slotProps.data.limites.dias !== null
-                      ? slotProps.data.limites.dias + " días"
-                      : slotProps.data.limites.solicitudes !== null
-                        ? slotProps.data.limites.solicitudes + " solicitudes"
-                        : "Ilimitado"
-                  }}
-                </template>
-              </Column>
-              <Column header="Consumido">
-                <template #body="slotProps">
-                  <span class="text-yellow-600 font-bold">
-                    {{
-                      slotProps.data.consumido.dias > 0
-                        ? slotProps.data.consumido.dias + " días"
-                        : slotProps.data.consumido.solicitudes > 0
-                          ? slotProps.data.consumido.solicitudes + " sol."
-                          : "-"
-                    }}
-                  </span>
-                </template>
-              </Column>
-              <Column header="Restante">
-                <template #body="slotProps">
-                  <span
-                    :class="{
-                      'text-green-600 font-bold':
-                        (slotProps.data.restante.dias ?? 1) > 0,
-                      'text-red-600': (slotProps.data.restante.dias ?? 1) <= 0,
-                    }"
-                  >
-                    {{
-                      slotProps.data.restante.dias !== null
-                        ? slotProps.data.restante.dias + " días"
-                        : slotProps.data.restante.solicitudes !== null
-                          ? slotProps.data.restante.solicitudes + " sol."
-                          : "∞"
-                    }}
-                  </span>
-                </template>
-              </Column>
-            </DataTable>
-          </div>
-
-          <!-- Quadrant 3: Attendance Log -->
+          <!-- Quadrant 2: Recent Team Attendances -->
           <div class="dashboard-card">
             <div class="flex justify-content-between align-items-center mb-3">
               <h3 class="text-xl font-semibold m-0">
-                Mi Registro de Asistencia - Este Mes
+                Asistencia Reciente del Equipo
               </h3>
               <div class="flex gap-2">
-                <Calendar
-                  v-model="selectedDate"
-                  view="month"
-                  dateFormat="mm/yy"
-                  :maxDate="maxDate"
-                  showIcon
-                  class="w-8rem"
-                />
                 <Button
                   icon="pi pi-refresh"
                   rounded
                   text
                   @click="loadData(true)"
                   :loading="loading"
-                  tooltip="Recargar"
+                  v-tooltip="'Recargar'"
                 />
               </div>
             </div>
@@ -162,19 +89,26 @@
               class="p-datatable-sm"
               stripedRows
             >
+              <Column header="Empleado">
+                <template #body="slotProps">
+                  <div class="flex flex-column">
+                    <span class="font-bold text-sm">{{
+                      slotProps.data.nombre_completo || slotProps.data.user_id
+                    }}</span>
+                  </div>
+                </template>
+              </Column>
               <Column field="fecha" header="Fecha">
                 <template #body="slotProps">
                   {{ formatDate(slotProps.data.fecha) }}
                 </template>
               </Column>
-              <Column field="entrada_real" header="Entrada">
+              <Column header="Entrada/Salida">
                 <template #body="slotProps">
-                  {{ slotProps.data.entrada_real || "-" }}
-                </template>
-              </Column>
-              <Column field="salida_real" header="Salida">
-                <template #body="slotProps">
-                  {{ slotProps.data.salida_real || "-" }}
+                  <div class="text-xs">
+                    <div>E: {{ slotProps.data.entrada_real || "-" }}</div>
+                    <div>S: {{ slotProps.data.salida_real || "-" }}</div>
+                  </div>
                 </template>
               </Column>
               <Column field="estado_asistencia" header="Estado">
@@ -188,11 +122,11 @@
             </DataTable>
           </div>
 
-          <!-- Quadrant 4: Punctuality Chart -->
+          <!-- Quadrant 3: Team Punctuality Distribution -->
           <div class="dashboard-card">
             <div class="mb-3">
               <h3 class="text-xl font-semibold m-0">
-                Mi Puntualidad - Este Mes
+                Distribución de Asistencia (Mes)
               </h3>
             </div>
             <div class="flex justify-content-center">
@@ -206,45 +140,34 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted } from "vue";
 import AdminNavbar from "@/components/Admin/NavbarView.vue";
 import HeaderView from "@/components/header/HeaderView.vue";
 import DataTable from "primevue/datatable";
 import Column from "primevue/column";
 import Button from "primevue/button";
 import Tag from "primevue/tag";
-import Calendar from "primevue/calendar";
-import GraLinea from "@/components/Supervisor/GraLinea.vue";
 import GraCir from "@/components/Supervisor/GraCir.vue";
+import TeamAttendanceChart from "@/components/Supervisor/TeamAttendanceChart.vue";
 import { attendanceService } from "@/api/services/attendance.service";
-import { incidentService } from "@/api/services/incident.service";
-import type { Attendance } from "@/api/types/attendance.types";
+import { DepartmentService } from "@/api/services/department.service";
+import { useAuthStore } from "@/stores/authStore";
 
-import type { Incidencia, SaldoItem } from "@/api/types/incidents.types";
+// Tipos
+interface DailyStat {
+  date: string;
+  present: number;
+  absent: number;
+  late: number;
+}
 
-const attendances = ref<Attendance[]>([]);
-const incidents = ref<Incidencia[]>([]);
-const saldos = ref<SaldoItem[]>([]);
+const authStore = useAuthStore();
+const departmentName = ref("Mi Área");
 const loading = ref(false);
-const loadingIncidents = ref(false);
-const loadingSaldos = ref(false);
-const maxDate = ref(new Date());
 
-const getCurrentUserDNI = () => {
-  try {
-    const userStr = localStorage.getItem("user");
-    if (userStr) {
-      const user = JSON.parse(userStr);
-      return user.usuario; // Suponiendo 'usuario' es DNI
-    }
-  } catch (e) {
-    console.error("Error al leer usuario", e);
-  }
-  return null;
-};
-
-const selectedDate = ref(new Date());
-
+// Datos
+const attendances = ref<any[]>([]); // Usando 'any' para el ítem enriquecido del Reporte Diario
+const dailyStats = ref<DailyStat[]>([]);
 const metrics = ref({
   puntual: 0,
   tardanzas: 0,
@@ -252,119 +175,188 @@ const metrics = ref({
   horas_trabajadas_formato: "00:00",
 });
 
-watch(selectedDate, () => {
-  loadData(false);
-});
+// ... (imports)
 
-const loadData = async (forceRecalculate = false) => {
-  const dni = getCurrentUserDNI();
-  if (!dni) return;
+const loadData = async (_force = false) => {
+  // FIXED: Access 'dni' directly as 'user_id' might not be explicitly defined in the store type
+  const userDni = authStore.user?.dni || authStore.user?.user_id;
+
+  console.log("SupervisorDashboard: Starting loadData", {
+    userDni,
+    user: authStore.user,
+  });
+
+  if (!userDni) {
+    console.warn("SupervisorDashboard: No user DNI found");
+    return;
+  }
 
   loading.value = true;
-  loadingIncidents.value = true;
 
   try {
-    const now = new Date();
-    if (!selectedDate.value) selectedDate.value = now;
-    const sel = selectedDate.value;
-    const firstDay = new Date(sel.getFullYear(), sel.getMonth(), 1);
-    const lastDayOfMonth = new Date(sel.getFullYear(), sel.getMonth() + 1, 0);
+    const dni = String(userDni);
 
-    let endDate = lastDayOfMonth;
-    if (lastDayOfMonth > now) {
-      endDate = now;
-    }
+    // 1. Obtener el Departamento del Supervisor
+    let deptId: number | null = null;
+    let deptNameVal = "";
 
-    const formatYMD = (d: Date) => d.toISOString().split("T")[0];
-
-    // FIX: Calcular asistencia automáticamente SOLO si se solicita (botón refrescar)
-    if (forceRecalculate) {
-      try {
-        await attendanceService.calculateAttendance({
-          fecha_inicio: formatYMD(firstDay),
-          fecha_fin: formatYMD(endDate),
-        });
-      } catch (calcError) {
-        console.warn("Error recalculando asistencia:", calcError);
-      }
-    }
-
-    const reportResponse = await attendanceService.getUserDailyReport(dni, {
-      fecha_inicio: formatYMD(firstDay),
-      fecha_fin: formatYMD(endDate),
-    });
-
-    const reportData = reportResponse.data;
-    // @ts-ignore
-    let data = reportData.detalle || [];
-
-    data.sort((a: any, b: any) => {
-      const da = new Date(a.fecha || a.timestamp);
-      const db = new Date(b.fecha || b.timestamp);
-      return db.getTime() - da.getTime();
-    });
-
-    attendances.value = data;
-
-    if (reportData.resumen) {
-      metrics.value = {
-        puntual: reportData.resumen.dias_trabajados || 0,
-        tardanzas: reportData.resumen.dias_tarde || 0,
-        faltas: reportData.resumen.dias_falta || 0,
-        // @ts-ignore
-        horas_trabajadas_formato:
-          reportData.resumen.total_horas_trabajadas_formato || "00:00",
-      };
-    }
-
-    const incResponse = await incidentService.getAllIncidencias({
-      // @ts-ignore
-      search: dni,
-    });
-    // @ts-ignore
-    const allIncidents = incResponse.data?.data || incResponse.data || [];
-    incidents.value = allIncidents
-      .filter((i: any) => {
-        const emp = i.empleado;
-        if (emp && (emp.user_id === dni || emp.nro_documento === dni))
-          return true;
-        return false;
-      })
-      .sort((a: any, b: any) => {
-        const da = new Date(a.fecha_inicio);
-        const db = new Date(b.fecha_inicio);
-        return db.getTime() - da.getTime();
-      });
-
-    // 3. Obtener Saldos de Incidencias (Nuevo Endpoint)
-    loadingSaldos.value = true;
     try {
-      const saldosResponse = await incidentService.getSaldos(
-        dni,
-        sel.getFullYear(),
-      );
-      // Extraemos saldos del respuesta. La respuesta es { anio: ..., data: [{ empleado_id, saldos: [...] }] }
-      // Como pedimos por DNI especifico, deberíamos tomar el primer elemento de data
-      if (
-        saldosResponse.data &&
-        saldosResponse.data.data &&
-        saldosResponse.data.data.length > 0
-      ) {
-        saldos.value = saldosResponse.data.data[0].saldos;
-      } else {
-        saldos.value = [];
+      console.log(`SupervisorDashboard: Fetching department for DNI ${dni}`);
+      const deptRes = await DepartmentService.getByUserDni(dni);
+      console.log("SupervisorDashboard: Dept response", deptRes.data);
+
+      if (deptRes.data) {
+        deptId = deptRes.data.id;
+        deptNameVal = deptRes.data.nombre;
       }
     } catch (e) {
-      console.error("Error cargando saldos", e);
-      saldos.value = [];
-    } finally {
-      loadingSaldos.value = false;
+      console.warn(
+        "No se pudo obtener el departamento del supervisor vía DNI, verificando store...",
+        e,
+      );
+      if (authStore.user?.departamento_id) {
+        deptId = authStore.user.departamento_id;
+      }
     }
+
+    if (!deptId) {
+      console.error("El supervisor no tiene departamento asignado.");
+      departmentName.value = "Sin Departamento";
+      loading.value = false;
+      return;
+    }
+    departmentName.value = deptNameVal || "Mi Equipo";
+
+    // 2. Obtener Usuarios del Departamento
+    const usersRes = await DepartmentService.getUsers(deptId);
+    // @ts-ignore
+    const teamUsers = usersRes.data?.data || usersRes.data || [];
+
+    // debugInfo.value.teamSize = teamUsers.length;
+
+    const teamUserIds = new Set<string>(
+      teamUsers.map((u: any) => String(u.user_id || u.dni).trim()),
+    );
+    // Mapa para nombres
+    const userNames = new Map<string, string>();
+    teamUsers.forEach((u: any) => {
+      userNames.set(String(u.user_id || u.dni).trim(), u.nombre);
+    });
+
+    if (teamUserIds.size === 0) {
+      console.warn("No se encontraron usuarios en el departamento.");
+      loading.value = false;
+      return;
+    }
+
+    // 3. Obtener Reporte Diario (para todos)
+    const now = new Date();
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+    const formatYMD = (d: Date) => d.toISOString().split("T")[0];
+
+    console.log(
+      `SupervisorDashboard: Fetching reports from ${formatYMD(firstDay)} to ${formatYMD(now)}`,
+    );
+
+    const promises = Array.from(teamUserIds).map(async (userId) => {
+      try {
+        // FIXED: Using getUserDailyReport correctly
+        const report = await attendanceService.getUserDailyReport(userId, {
+          fecha_inicio: formatYMD(firstDay),
+          fecha_fin: formatYMD(now),
+        });
+        return report.data?.detalle || [];
+      } catch (error) {
+        console.error(`Error fetching report for user ${userId}:`, error);
+        return [];
+      }
+    });
+
+    const allTeamReportsNested = await Promise.all(promises);
+    const teamReports = allTeamReportsNested
+      .flat()
+      .filter((r: any) => r.estado_asistencia !== "SIN_HORARIO");
+
+    console.log(
+      `SupervisorDashboard: Total reports fetched (active): ${teamReports.length}`,
+    );
+
+    // 4. Calcular Métricas y Estadísticas
+    let totalPuntual = 0;
+    let totalTardanza = 0;
+    let totalFalta = 0;
+    let totalSeconds = 0;
+
+    const dateMap = new Map<
+      string,
+      { present: number; late: number; absent: number }
+    >();
+
+    teamReports.sort(
+      (a: any, b: any) =>
+        new Date(b.fecha).getTime() - new Date(a.fecha).getTime(),
+    );
+
+    attendances.value = teamReports.slice(0, 50).map((r: any) => ({
+      ...r,
+      nombre_completo: userNames.get(String(r.user_id).trim()) || r.user_id,
+    }));
+
+    teamReports.forEach((r: any) => {
+      // ... same logic
+      const date = r.fecha;
+      if (!dateMap.has(date)) {
+        dateMap.set(date, { present: 0, late: 0, absent: 0 });
+      }
+      const dayStat = dateMap.get(date)!;
+
+      const status = (r.estado_asistencia || "").toUpperCase();
+
+      if (status === "ASISTENCIA" || status === "PRESENTE") {
+        totalPuntual++;
+        dayStat.present++;
+      } else if (status === "TARDANZA") {
+        totalTardanza++;
+        dayStat.late++;
+      } else if (status === "FALTA" || status === "AUSENCIA") {
+        totalFalta++;
+        dayStat.absent++;
+      }
+
+      if (r.horas_trabajadas) {
+        if (typeof r.horas_trabajadas === "number") {
+          totalSeconds += r.horas_trabajadas * 3600;
+        } else if (
+          typeof r.horas_trabajadas === "string" &&
+          r.horas_trabajadas.includes(":")
+        ) {
+          const [h, m] = r.horas_trabajadas.split(":").map(Number);
+          totalSeconds += h * 3600 + m * 60;
+        }
+      }
+    });
+
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const hStr = h < 10 ? `0${h}` : `${h}`;
+    const mStr = m < 10 ? `0${m}` : `${m}`;
+
+    metrics.value = {
+      puntual: totalPuntual,
+      tardanzas: totalTardanza,
+      faltas: totalFalta,
+      horas_trabajadas_formato: `${hStr}:${mStr}`,
+    };
+
+    const sortedDates = Array.from(dateMap.keys()).sort();
+    dailyStats.value = sortedDates.map((d) => ({
+      date: d,
+      ...dateMap.get(d)!,
+    }));
   } catch (error) {
-    console.error("Error cargando datos del dashboard", error);
+    console.error("Error cargando datos del equipo de supervisión", error);
   } finally {
     loading.value = false;
-    loadingIncidents.value = false;
   }
 };
 
@@ -392,7 +384,7 @@ const getSeverity = (status: string) => {
 };
 
 onMounted(() => {
-  loadData(false);
+  loadData();
 });
 </script>
 
@@ -407,13 +399,6 @@ onMounted(() => {
   --dark: #34495e;
 }
 
-/* * {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-} */
-
 body {
   background-color: #f5f7fa;
   color: #333;
@@ -424,90 +409,13 @@ body {
   min-height: 100vh;
 }
 
-/* Sidebar */
-.sidebar {
-  width: 250px;
-  background-color: var(--primary);
-  color: white;
-  transition: all 0.3s;
-}
-
-.logo {
-  padding: 20px;
-  text-align: center;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.logo h2 {
-  font-size: 1.5rem;
-}
-
-.nav-links {
-  padding: 20px 0;
-}
-
-.nav-links li {
-  list-style: none;
-}
-
-.nav-links a {
-  display: flex;
-  align-items: center;
-  padding: 15px 20px;
-  color: white;
-  text-decoration: none;
-  transition: all 0.3s;
-}
-
-.nav-links a:hover,
-.nav-links a.active {
-  background-color: rgba(255, 255, 255, 0.1);
-  border-left: 4px solid var(--secondary);
-}
-
-.nav-links i {
-  margin-right: 10px;
-  font-size: 1.2rem;
-}
-
-/* Main Content */
-.main-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Header */
-.header {
-  background-color: white;
-  padding: 15px 30px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-}
-
-.user-info {
-  display: flex;
-  align-items: center;
-}
-
-.user-info img {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  margin-right: 10px;
-}
-.container {
-  display: flex;
-  min-height: 100vh;
-}
 .main-content {
   flex: 1;
   display: flex;
   flex-direction: column;
   background-color: #f5f7fa;
 }
+
 .page-content {
   padding: 30px;
 }

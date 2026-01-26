@@ -181,6 +181,11 @@ const getWeekRange = (date: Date) => {
   return { start, end };
 };
 
+// ... imports
+import { authService } from "@/api/services/auth.service"; // Add import
+
+// ...
+
 const fetchDashboardStats = async () => {
   try {
     const today = new Date();
@@ -196,9 +201,8 @@ const fetchDashboardStats = async () => {
       console.warn("Auto-calculation for today failed or already done:", err);
     }
 
-    // 2. Fetch de Datos (Reporte Hoy, Usuarios, Depts)
-
-    const [reportRes, usersRes, deptRes] = await Promise.all([
+    // 2. Fetch de Datos (Reporte Hoy, Usuarios, Depts, AuthUsers)
+    const [reportRes, usersRes, deptRes, authUsersRes] = await Promise.all([
       safeFetch(
         attendanceService.getDailyReport({
           fecha_inicio: fToday,
@@ -206,21 +210,54 @@ const fetchDashboardStats = async () => {
         }),
         { data: [] },
       ),
-      safeFetch(userService.getAll(), { data: [] }),
+      safeFetch(userService.getAll(), { data: [] }), // Remove { activo: true } as it's unreliable
       safeFetch(DepartmentService.getAll(), { data: [] }),
+      safeFetch(authService.getAllUsers(), { data: [] }), // Fetch Auth Users for status
     ]);
 
-    // 3. Procesar Usuarios y Depts map
-    let usersList: any[] = [];
+    // 3. Procesar Auth Users (Map for status)
+    const activeUserIds = new Set<string>();
+
+    let aUsers: any[] = [];
+    if (authUsersRes.data) {
+      // Handle different response structures similar to personalView.vue
+      if (Array.isArray(authUsersRes.data.users)) {
+        aUsers = authUsersRes.data.users;
+      } else if (Array.isArray(authUsersRes.data.data)) {
+        aUsers = authUsersRes.data.data;
+      } else if (Array.isArray(authUsersRes.data)) {
+        aUsers = authUsersRes.data;
+      }
+    }
+
+    aUsers.forEach((u: any) => {
+      // Check for esta_activo flag
+      if (u.esta_activo) {
+        activeUserIds.add(String(u.usuario || u.user_id).trim());
+      }
+    });
+
+    // 4. Procesar Usuarios (Biometric)
+    let allBiometricUsers: any[] = [];
     if (usersRes.data) {
       // @ts-ignore
-      usersList = Array.isArray(usersRes.data.data)
+      allBiometricUsers = Array.isArray(usersRes.data.data)
         ? usersRes.data.data
         : Array.isArray(usersRes.data)
           ? usersRes.data
           : [];
     }
-    totalPersonnel.value = usersList.length;
+
+    // Filter Logic:
+    // We only count users that exist in BOTH lists (Biometric and Auth) AND are active in Auth.
+    // However, if a user is in Biometric but not in Auth, standard logic usually implies they are not 'System Users' yet?
+    // Based on personalView, we join them.
+    // Let's filter biometric users to only those who are active in Auth.
+    const activeUsersList = allBiometricUsers.filter((u) =>
+      activeUserIds.has(String(u.user_id).trim()),
+    );
+
+    totalPersonnel.value = activeUsersList.length;
 
     const deptMap = new Map<number, string>();
     const safeDeptRes = deptRes as any;
@@ -234,7 +271,7 @@ const fetchDashboardStats = async () => {
       });
     }
 
-    // 4. Procesar Registros
+    // 5. Procesar Registros
     const records = reportRes.data || [];
 
     let p = 0; // Puntual
@@ -243,10 +280,14 @@ const fetchDashboardStats = async () => {
     const areaCounts = new Map<string, number>();
 
     records.forEach((rec: any) => {
-      // Identificar Área
-      const user = usersList.find(
+      // CHECK: Only process record if user is in our ACTIVE list
+      const user = activeUsersList.find(
         (u: any) => String(u.user_id) === String(rec.user_id),
       );
+
+      // Skip if user is not active
+      if (!user) return;
+
       let deptName = "Sin Área";
       if (user) {
         if (user.departamento_id && deptMap.has(user.departamento_id)) {
@@ -293,6 +334,8 @@ const fetchDashboardStats = async () => {
     totalPresent.value = p + l;
     totalLate.value = l;
     totalAbsent.value = a;
+    // Note: 'a' (Faltas/Absent) will now ONLY count absences for active users.
+    // Inactive users who generate 'FALTA' will be filtered out by the (!user) check above.
 
     // Actualizar Pie Chart
     pieLabels.value = Array.from(areaCounts.keys());

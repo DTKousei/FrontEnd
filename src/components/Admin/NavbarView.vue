@@ -42,20 +42,32 @@
           ><i class="fas fa-cog"></i> Configuración</router-link
         >
       </li>
-      <li v-if="hasRole(['EMPLEADO'])">
+      <!-- Supervisor Menu Split -->
+
+      <!-- Section: MI ESPACIO (Personal) -->
+      <li v-if="hasRole(['SUPERVISOR', 'EMPLEADO'])" class="nav-section-header">
+        <span v-if="hasRole(['SUPERVISOR'])">MI ESPACIO</span>
+      </li>
+
+      <li v-if="hasRole(['EMPLEADO', 'SUPERVISOR'])">
         <router-link to="/mis-asistencias"
           ><i class="fas fa-clock"></i> Mis Asistencias</router-link
         >
       </li>
-      <li v-if="hasRole(['EMPLEADO'])">
+      <li v-if="hasRole(['EMPLEADO', 'SUPERVISOR'])">
         <router-link to="/mis-papeletas"
           ><i class="fas fa-file-alt"></i> Mis Papeletas</router-link
         >
       </li>
-      <!-- Supervisor Menu -->
+
+      <!-- Section: GESTIÓN (Supervisor) -->
+      <li v-if="hasRole(['SUPERVISOR'])" class="nav-section-header">
+        <span>GESTIÓN</span>
+      </li>
+
       <li v-if="hasRole(['SUPERVISOR'])">
         <router-link to="/supervisor/dashboard"
-          ><i class="fas fa-tachometer-alt"></i> Dashboard</router-link
+          ><i class="fas fa-tachometer-alt"></i> Dashboard Equipo</router-link
         >
       </li>
       <li v-if="hasRole(['SUPERVISOR'])">
@@ -135,5 +147,15 @@ const hasRole = (roles: string[]) => {
 .nav-links i {
   margin-right: 10px;
   font-size: 1.2rem;
+}
+
+.nav-section-header {
+  padding: 10px 20px 5px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 1px;
+  margin-top: 10px;
 }
 </style>
