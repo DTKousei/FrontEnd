@@ -137,6 +137,7 @@ import AsisRecView from "@/components/tables/AsisRecView.vue";
 import LineaAsisView from "@/components/Graficas/LineaAsisView.vue";
 import DatePicker from "primevue/datepicker";
 import PieAsisView from "@/components/Graficas/PieAsisView.vue";
+import { authService } from "@/api/services/auth.service"; // Importar servicio de autenticación
 
 const totalPresent = ref(0);
 const totalAbsent = ref(0);
@@ -147,17 +148,17 @@ const pieSeries = ref<number[]>([]);
 const pieLabels = ref<string[]>([]);
 const selectedChartDate = ref(new Date());
 
-// Helper para manejar errores individualmente
+// Ayudante para manejar errores individualmente
 const safeFetch = async (promise: Promise<any>, fallback: any) => {
   try {
     return await promise;
   } catch (e) {
-    console.warn("Fetch failed, using fallback", e);
+    console.warn("La carga falló, usando valor de respaldo", e);
     return fallback;
   }
 };
 
-// Computed para mostrar el rango seleccionado
+// Computada para mostrar el rango seleccionado
 const dateRangeText = computed(() => {
   const { start, end } = getWeekRange(selectedChartDate.value);
   return `${start.toLocaleDateString("es-ES")} - ${end.toLocaleDateString(
@@ -169,9 +170,9 @@ const getWeekRange = (date: Date) => {
   const d = new Date(date);
   const day = d.getDay();
   // Ajustar para que el 0 sea Domingo, pero queremos Lunes (1) como inicio.
-  // diff: si es lunes (1) -> 1 - 1 = 0. si es domingo (0) -> 0 - 1 = -1 (lo cual iría al lunes pasado? no, domingo suele ser final o inicio).
+  // diff: si es lunes (1) -> 1 - 1 = 0. si es domingo (0) -> 0 - 1 = -1.
   // Asumiremos Domingo es el día 0. Queremos el Lunes PREVIO o el mismo si es Lunes.
-  // Si day es 0 (domingo), diff = -6 (lunes pasado).
+  // Si el día es 0 (domingo), diff = -6 (lunes pasado).
   const diff = d.getDate() - day + (day === 0 ? -6 : 1);
 
   const start = new Date(d.setDate(diff));
@@ -180,11 +181,6 @@ const getWeekRange = (date: Date) => {
 
   return { start, end };
 };
-
-// ... imports
-import { authService } from "@/api/services/auth.service"; // Add import
-
-// ...
 
 const fetchDashboardStats = async () => {
   try {
@@ -198,10 +194,10 @@ const fetchDashboardStats = async () => {
         fecha_fin: fToday,
       });
     } catch (err) {
-      console.warn("Auto-calculation for today failed or already done:", err);
+      console.warn("Cálculo automático para hoy falló o ya se realizó:", err);
     }
 
-    // 2. Fetch de Datos (Reporte Hoy, Usuarios, Depts, AuthUsers)
+    // 2. Obtener Datos (Reporte de Hoy, Usuarios, Departamentos, Usuarios de Auth)
     const [reportRes, usersRes, deptRes, authUsersRes] = await Promise.all([
       safeFetch(
         attendanceService.getDailyReport({
@@ -210,17 +206,17 @@ const fetchDashboardStats = async () => {
         }),
         { data: [] },
       ),
-      safeFetch(userService.getAll(), { data: [] }), // Remove { activo: true } as it's unreliable
+      safeFetch(userService.getAll(), { data: [] }), // Se elimina { activo: true } ya que no es confiable
       safeFetch(DepartmentService.getAll(), { data: [] }),
-      safeFetch(authService.getAllUsers(), { data: [] }), // Fetch Auth Users for status
+      safeFetch(authService.getAllUsers(), { data: [] }), // Obtener usuarios de Auth para el estado
     ]);
 
-    // 3. Procesar Auth Users (Map for status)
+    // 3. Procesar Usuarios de Auth (Mapa de estado)
     const activeUserIds = new Set<string>();
 
     let aUsers: any[] = [];
     if (authUsersRes.data) {
-      // Handle different response structures similar to personalView.vue
+      // Manejar diferentes estructuras de respuesta similares a personalView.vue
       if (Array.isArray(authUsersRes.data.users)) {
         aUsers = authUsersRes.data.users;
       } else if (Array.isArray(authUsersRes.data.data)) {
@@ -231,13 +227,13 @@ const fetchDashboardStats = async () => {
     }
 
     aUsers.forEach((u: any) => {
-      // Check for esta_activo flag
+      // Verificar la bandera esta_activo
       if (u.esta_activo) {
         activeUserIds.add(String(u.usuario || u.user_id).trim());
       }
     });
 
-    // 4. Procesar Usuarios (Biometric)
+    // 4. Procesar Usuarios (Biométrico)
     let allBiometricUsers: any[] = [];
     if (usersRes.data) {
       // @ts-ignore
@@ -248,11 +244,11 @@ const fetchDashboardStats = async () => {
           : [];
     }
 
-    // Filter Logic:
-    // We only count users that exist in BOTH lists (Biometric and Auth) AND are active in Auth.
-    // However, if a user is in Biometric but not in Auth, standard logic usually implies they are not 'System Users' yet?
-    // Based on personalView, we join them.
-    // Let's filter biometric users to only those who are active in Auth.
+    // Lógica de Filtrado:
+    // Solo contamos usuarios que existen en AMBAS listas (Biométrico y Auth) Y están activos en Auth.
+    // Sin embargo, si un usuario está en Biométrico pero no en Auth, la lógica estándar implica que aún no son 'Usuarios del Sistema'.
+    // Basado en personalView, los unimos.
+    // Filtremos usuarios biométricos solo a aquellos que están activos en Auth.
     const activeUsersList = allBiometricUsers.filter((u) =>
       activeUserIds.has(String(u.user_id).trim()),
     );
@@ -280,12 +276,12 @@ const fetchDashboardStats = async () => {
     const areaCounts = new Map<string, number>();
 
     records.forEach((rec: any) => {
-      // CHECK: Only process record if user is in our ACTIVE list
+      // VERIFICAR: Solo procesar el registro si el usuario está en nuestra lista de ACTIVOS
       const user = activeUsersList.find(
         (u: any) => String(u.user_id) === String(rec.user_id),
       );
 
-      // Skip if user is not active
+      // Omitir si el usuario no está activo
       if (!user) return;
 
       let deptName = "Sin Área";
@@ -324,24 +320,24 @@ const fetchDashboardStats = async () => {
         a++;
       }
 
-      // Pie Chart: Conteo por Área (Solo presentes/tardanzas)
+      // Gráfico Circular: Conteo por Área (Solo presentes/tardanzas)
       if (isPresent && deptName !== "Sin Área") {
         areaCounts.set(deptName, (areaCounts.get(deptName) || 0) + 1);
       }
     });
 
-    // Actualizar Refs Cards
+    // Actualizar Referencias de Tarjetas
     totalPresent.value = p + l;
     totalLate.value = l;
     totalAbsent.value = a;
-    // Note: 'a' (Faltas/Absent) will now ONLY count absences for active users.
-    // Inactive users who generate 'FALTA' will be filtered out by the (!user) check above.
+    // Nota: 'a' (Faltas/Ausentes) ahora SOLO contará ausencias para usuarios activos.
+    // Los usuarios inactivos que generen 'FALTA' serán filtrados por la verificación (!user) anterior.
 
-    // Actualizar Pie Chart
+    // Actualizar Gráfico Circular
     pieLabels.value = Array.from(areaCounts.keys());
     pieSeries.value = Array.from(areaCounts.values());
   } catch (error) {
-    console.error("Error fetching dashboard stats:", error);
+    console.error("Error obteniendo estadísticas del dashboard:", error);
   }
 };
 
@@ -353,9 +349,9 @@ const fetchChartStats = async () => {
     const fStart = start.toLocaleDateString("en-CA");
     const fEnd = end.toLocaleDateString("en-CA");
 
-    // Fetch en paralelo: Reportes, Usuarios y Departamentos
-    console.log(`[Chart Debug] Selected Date: ${selectedChartDate.value}`);
-    console.log(`[Chart Debug] Range: ${fStart} to ${fEnd}`);
+    // Obtener en paralelo: Reportes, Usuarios y Departamentos
+    console.log(`[Chart Debug] Fecha seleccionada: ${selectedChartDate.value}`);
+    console.log(`[Chart Debug] Rango: ${fStart} a ${fEnd}`);
 
     // Asegurar cálculo de asistencia antes de pedir reporte
     try {
@@ -364,7 +360,7 @@ const fetchChartStats = async () => {
         fecha_fin: fEnd,
       });
     } catch (err) {
-      console.warn("Error calculating attendance range:", err);
+      console.warn("Error calculando rango de asistencia:", err);
     }
 
     const [reportRes, usersRes, deptRes] = await Promise.all([
@@ -380,7 +376,7 @@ const fetchChartStats = async () => {
     ]);
 
     const rawRecords = reportRes.data || [];
-    console.log(`[Chart Debug] Records found: ${rawRecords.length}`);
+    console.log(`[Chart Debug] Registros encontrados: ${rawRecords.length}`);
 
     let usersList: any[] = [];
     if (usersRes.data) {
@@ -414,7 +410,7 @@ const fetchChartStats = async () => {
 
       let deptName = "Sin Área";
       if (user) {
-        // Prioridad 1: ID de departamento macheado con lista de departamentos
+        // Prioridad 1: ID de departamento coincidente con lista de departamentos
         if (user.departamento_id && deptMap.has(user.departamento_id)) {
           deptName = deptMap.get(user.departamento_id)!;
         }
@@ -426,7 +422,7 @@ const fetchChartStats = async () => {
         ) {
           deptName = user.departamento.nombre;
         }
-        // Prioridad 3: String directo
+        // Prioridad 3: Cadena directa
         else if (typeof user.departamento === "string") {
           deptName = user.departamento;
         }
@@ -442,7 +438,7 @@ const fetchChartStats = async () => {
       };
     });
   } catch (error) {
-    console.error("Error fetching chart stats:", error);
+    console.error("Error obteniendo estadísticas del gráfico:", error);
   }
 };
 

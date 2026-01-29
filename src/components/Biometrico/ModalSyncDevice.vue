@@ -5,7 +5,7 @@ import Button from "primevue/button";
 import Dropdown from "primevue/dropdown";
 import Swal from "sweetalert2";
 import { deviceService } from "@/api/services/device.service";
-import { userService } from "@/api/services/user.service";
+
 import { attendanceService } from "@/api/services/attendance.service";
 import type { Device } from "@/api/types/devices.types";
 
@@ -48,7 +48,7 @@ const loadDevices = async () => {
     Swal.fire(
       "Error",
       "No se pudieron cargar los dispositivos biométricos",
-      "error"
+      "error",
     );
   } finally {
     loadingDevices.value = false;
@@ -64,12 +64,12 @@ const handleSync = async () => {
   try {
     syncing.value = true;
     // La API espera el ID del dispositivo
-    await userService.syncAllFromDevice(selectedDevice.value.id);
+    await attendanceService.syncDevice(selectedDevice.value.id);
 
     await Swal.fire(
       "Éxito",
       "Sincronización completada correctamente",
-      "success"
+      "success",
     );
     emit("sync-complete");
     visibleModel.value = false;
@@ -78,7 +78,7 @@ const handleSync = async () => {
     Swal.fire(
       "Error",
       "Error durante la sincronización. Verifique la conexión con el dispositivo.",
-      "error"
+      "error",
     );
   } finally {
     syncing.value = false;
@@ -99,7 +99,7 @@ const handleSyncToday = async () => {
     await Swal.fire(
       "Éxito",
       "Sincronización de asistencias de hoy completada correctamente",
-      "success"
+      "success",
     );
     emit("sync-complete");
     visibleModel.value = false;
@@ -108,7 +108,7 @@ const handleSyncToday = async () => {
     Swal.fire(
       "Error",
       "Error durante la sincronización de asistencias de hoy. Verifique la conexión con el dispositivo.",
-      "error"
+      "error",
     );
   } finally {
     syncingToday.value = false;

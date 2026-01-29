@@ -132,14 +132,18 @@ const loadRecentIncidents = async () => {
     }
   } catch (err) {
     console.error("Error cargando incidencias recientes:", err);
-    error.value = "Error al cargar datos.";
+    // @ts-ignore
+    error.value = `Error al cargar datos: ${err.message || err}`;
   } finally {
     loading.value = false;
   }
 };
 
 onMounted(() => {
-  loadRecentIncidents();
+  // Add a small delay to prevent 429 (Rate Limit) errors when loading multiple components at once
+  setTimeout(() => {
+    loadRecentIncidents();
+  }, 1000);
 });
 </script>
 

@@ -61,18 +61,6 @@
                 </option>
               </select>
             </div>
-
-            <div class="filter-group">
-              <label for="tipo-reporte">Tipo de Reporte</label>
-              <select id="tipo-reporte">
-                <option value="">Todos los tipos</option>
-                <option value="asistencia">Asistencia General</option>
-                <option value="tardanzas">Tardanzas</option>
-                <option value="inasistencias">Inasistencias</option>
-                <option value="horas-extras">Horas Extras</option>
-                <option value="incidencias">Incidencias</option>
-              </select>
-            </div>
           </div>
           <!-- tabla de usuarios -->
           <!-- Tabla de Selección de Usuarios -->

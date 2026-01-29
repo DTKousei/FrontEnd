@@ -77,6 +77,8 @@
             <DataTable
               :value="saldos"
               :loading="loadingSaldos"
+              paginator
+              :rows="5"
               responsiveLayout="scroll"
               class="p-datatable-sm"
               stripedRows
@@ -197,6 +199,16 @@
                   {{ slotProps.data.salida_real || "-" }}
                 </template>
               </Column>
+              <Column header="Ver" :exportable="false" style="min-width: 4rem">
+                <template #body="slotProps">
+                  <Button
+                    icon="pi pi-eye"
+                    class="p-button-rounded p-button-text p-button-info"
+                    @click="openLogsModal(slotProps.data)"
+                    v-tooltip.top="'Ver Marcaciones'"
+                  />
+                </template>
+              </Column>
               <Column field="estado_asistencia" header="Estado">
                 <template #body="slotProps">
                   <Tag
@@ -275,6 +287,29 @@
             />
           </template>
         </Dialog>
+
+        <!-- Modal de Marcaciones -->
+        <Dialog
+          v-model:visible="displayLogsModal"
+          modal
+          header="Detalle de Marcaciones"
+          :style="{ width: '600px' }"
+          dismissableMask
+        >
+          <ReporrtDiaView
+            v-if="displayLogsModal"
+            :userId="selectedLogUser"
+            :fecha="selectedLogDate"
+          />
+          <template #footer>
+            <Button
+              label="Cerrar"
+              icon="pi pi-times"
+              @click="displayLogsModal = false"
+              text
+            />
+          </template>
+        </Dialog>
       </div>
     </div>
   </div>
@@ -296,6 +331,7 @@ import Calendar from "primevue/calendar"; // Import Calendar
 import Dialog from "primevue/dialog"; // Import Dialog
 import GrafiLineas from "@/components/Employed/GrafiLineas.vue";
 import DistAsisView from "@/components/Graficas/DistAsisView.vue"; // Reusing Pie Chart
+import ReporrtDiaView from "@/components/tables/reporrtDiaView.vue"; // Added Component
 import { attendanceService } from "@/api/services/attendance.service";
 import { incidentService } from "@/api/services/incident.service"; // Import Incident Service
 import type { Attendance } from "@/api/types/attendance.types";
@@ -315,6 +351,21 @@ const selectedSaldo = ref<SaldoItem | null>(null);
 const openDetailModal = (saldo: SaldoItem) => {
   selectedSaldo.value = saldo;
   displayDetailModal.value = true;
+};
+
+// Modal Logs Logic
+const displayLogsModal = ref(false);
+const selectedLogUser = ref("");
+const selectedLogDate = ref("");
+
+const openLogsModal = (data: any) => {
+  const dni = getCurrentUserDNI();
+  if (!dni) return;
+
+  selectedLogUser.value = dni;
+  // data.fecha is YYYY-MM-DD from API usually, ensure it's correct
+  selectedLogDate.value = data.fecha;
+  displayLogsModal.value = true;
 };
 
 const getCurrentUserDNI = () => {
@@ -377,7 +428,12 @@ const loadData = async (forceRecalculate = false) => {
       endDate = now;
     }
 
-    const formatYMD = (d: Date) => d.toISOString().split("T")[0];
+    const formatYMD = (d: Date) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
 
     // FIX: Calcular asistencia automÃ¡ticamente SOLO si se solicita (botÃ³n refrescar)
     // Esto evita la latencia en la carga inicial, pero permite al usuario corregir estados.

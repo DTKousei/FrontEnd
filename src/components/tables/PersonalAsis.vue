@@ -9,6 +9,8 @@ import Avatar from "primevue/avatar";
 import IconField from "primevue/iconfield";
 import InputIcon from "primevue/inputicon";
 import InputText from "primevue/inputtext"; // Added InputText
+import Dialog from "primevue/dialog"; // Added Dialog
+import ReporrtDiaView from "./reporrtDiaView.vue"; // Added Component
 import { attendanceService } from "@/api/services/attendance.service";
 import { userService } from "@/api/services/user.service";
 import { authService } from "@/api/services/auth.service";
@@ -38,6 +40,17 @@ const selectedDate = ref<Date>(new Date());
 const filters = ref({
   global: { value: null, matchMode: "contains" },
 });
+
+const displayModal = ref(false);
+const selectedUserId = ref("");
+const selectedFecha = ref("");
+
+const openModal = (userId: string) => {
+  if (!userId) return;
+  selectedUserId.value = userId;
+  selectedFecha.value = formatDateForApi(selectedDate.value);
+  displayModal.value = true;
+};
 
 const getSeverity = (status: string) => {
   switch (status?.toUpperCase()) {
@@ -282,6 +295,18 @@ onMounted(() => {
         </template>
       </Column>
 
+      <!-- Actions -->
+      <Column header="Ver" :exportable="false" style="min-width: 4rem">
+        <template #body="{ data }">
+          <Button
+            icon="pi pi-eye"
+            class="p-button-rounded p-button-text p-button-info"
+            @click="openModal(data.user_id)"
+            v-tooltip.top="'Ver Marcaciones'"
+          />
+        </template>
+      </Column>
+
       <!-- Estado -->
       <Column header="Estado" sortable field="estado_asistencia">
         <template #body="{ data }">
@@ -293,6 +318,29 @@ onMounted(() => {
         </template>
       </Column>
     </DataTable>
+
+    <!-- Modal de Marcaciones -->
+    <Dialog
+      v-model:visible="displayModal"
+      modal
+      header="Detalle de Marcaciones"
+      :style="{ width: '600px' }"
+      dismissableMask
+    >
+      <ReporrtDiaView
+        v-if="displayModal"
+        :userId="selectedUserId"
+        :fecha="selectedFecha"
+      />
+      <template #footer>
+        <Button
+          label="Cerrar"
+          icon="pi pi-times"
+          @click="displayModal = false"
+          text
+        />
+      </template>
+    </Dialog>
   </div>
 </template>
 

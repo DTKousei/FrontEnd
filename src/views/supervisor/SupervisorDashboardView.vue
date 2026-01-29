@@ -111,6 +111,16 @@
                   </div>
                 </template>
               </Column>
+              <Column header="Ver" :exportable="false" style="min-width: 4rem">
+                <template #body="slotProps">
+                  <Button
+                    icon="pi pi-eye"
+                    class="p-button-rounded p-button-text p-button-info"
+                    @click="openLogsModal(slotProps.data)"
+                    v-tooltip.top="'Ver Marcaciones'"
+                  />
+                </template>
+              </Column>
               <Column field="estado_asistencia" header="Estado">
                 <template #body="slotProps">
                   <Tag
@@ -136,6 +146,29 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal de Marcaciones -->
+    <Dialog
+      v-model:visible="displayLogsModal"
+      modal
+      header="Detalle de Marcaciones"
+      :style="{ width: '600px' }"
+      dismissableMask
+    >
+      <ReporrtDiaView
+        v-if="displayLogsModal"
+        :userId="selectedLogUser"
+        :fecha="selectedLogDate"
+      />
+      <template #footer>
+        <Button
+          label="Cerrar"
+          icon="pi pi-times"
+          @click="displayLogsModal = false"
+          text
+        />
+      </template>
+    </Dialog>
   </div>
 </template>
 
@@ -146,9 +179,11 @@ import HeaderView from "@/components/header/HeaderView.vue";
 import DataTable from "primevue/datatable";
 import Column from "primevue/column";
 import Button from "primevue/button";
+import Dialog from "primevue/dialog";
 import Tag from "primevue/tag";
 import GraCir from "@/components/Supervisor/GraCir.vue";
 import TeamAttendanceChart from "@/components/Supervisor/TeamAttendanceChart.vue";
+import ReporrtDiaView from "@/components/tables/reporrtDiaView.vue"; // Added Component
 import { attendanceService } from "@/api/services/attendance.service";
 import { DepartmentService } from "@/api/services/department.service";
 import { useAuthStore } from "@/stores/authStore";
@@ -174,6 +209,23 @@ const metrics = ref({
   faltas: 0,
   horas_trabajadas_formato: "00:00",
 });
+
+// Modal Logs Logic
+const displayLogsModal = ref(false);
+const selectedLogUser = ref("");
+const selectedLogDate = ref("");
+
+const openLogsModal = (data: any) => {
+  console.log("openLogsModal triggered with data:", data);
+  if (!data.user_id) {
+    console.warn("openLogsModal: user_id is missing in data object");
+    return;
+  }
+
+  selectedLogUser.value = String(data.user_id);
+  selectedLogDate.value = data.fecha;
+  displayLogsModal.value = true;
+};
 
 // ... (imports)
 
@@ -252,7 +304,12 @@ const loadData = async (_force = false) => {
     // 3. Obtener Reporte Diario (para todos)
     const now = new Date();
     const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-    const formatYMD = (d: Date) => d.toISOString().split("T")[0];
+    const formatYMD = (d: Date) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
 
     console.log(
       `SupervisorDashboard: Fetching reports from ${formatYMD(firstDay)} to ${formatYMD(now)}`,
@@ -265,7 +322,9 @@ const loadData = async (_force = false) => {
           fecha_inicio: formatYMD(firstDay),
           fecha_fin: formatYMD(now),
         });
-        return report.data?.detalle || [];
+        const records = report.data?.detalle || [];
+        // Inject userId into each record to ensure it is available for the modal
+        return records.map((r: any) => ({ ...r, user_id: userId }));
       } catch (error) {
         console.error(`Error fetching report for user ${userId}:`, error);
         return [];

@@ -62,5 +62,12 @@ export const attendanceService = {
   // GET /api/asistencias/usuario/{user_id}/diario
   getUserDailyReport(userId: string, params: { fecha_inicio: string; fecha_fin: string }) {
     return api.get<{ resumen: any; detalle: any[] }>(`/asistencias/usuario/${userId}/diario`, { params });
+  },
+
+  // GET /api/asistencias/marcaciones/{user_id}?fecha=YYYY-MM-DD
+  getDailyPunches(userId: string, date: string) {
+    return api.get<any[]>(`/asistencias/marcaciones/${userId}`, { 
+      params: { fecha: date } 
+    });
   }
 };
