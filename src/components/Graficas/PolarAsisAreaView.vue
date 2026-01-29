@@ -1,11 +1,17 @@
 <template>
   <div class="chart-wrapper">
-    <apexchart
-      type="polarArea"
-      height="350"
-      :options="chartOptions"
-      :series="series"
-    />
+    <!-- El título se maneja dentro del gráfico, pero podríamos tener un header externo si se prefiere -->
+    <div class="chart-header">
+      <!-- <h3>Asistencia por Área</h3> -->
+    </div>
+    <div id="chart-area-bar">
+      <apexchart
+        type="bar"
+        height="350"
+        :options="chartOptions"
+        :series="series"
+      />
+    </div>
   </div>
 </template>
 
@@ -13,107 +19,145 @@
 import { computed, ref, watch } from "vue";
 import type { ApexOptions } from "apexcharts";
 
-// Definimos la estructura básica de un registro de asistencia
-// Ajusta 'estado' y 'departamento'/'area' según la respuesta real de tu API
-interface AttendanceRecord {
-  estado: string;
-  departamento?: string;
+interface DataRecord {
+  estado?: string;
+  departamento?: string | { nombre: string; [key: string]: any };
   area?: string;
   [key: string]: any;
 }
 
 const props = defineProps<{
-  data: AttendanceRecord[];
+  data: DataRecord[];
 }>();
 
-const series = ref<number[]>([]);
-const labels = ref<string[]>([]);
+// Series ahora será un array de objetos para gráfico de barras
+const series = ref<{ name: string; data: number[] }[]>([]);
+const labels = ref<string[]>([]); // Categorías (Nombres de Áreas)
 
 const chartOptions = computed<ApexOptions>(() => ({
   chart: {
-    type: "polarArea",
+    type: "bar", // Cambiado a Barra
+    height: 350,
+    fontFamily: "Segoe UI, sans-serif",
+    toolbar: {
+      show: false,
+    },
   },
-  labels: labels.value,
-  stroke: {
-    colors: ["#fff"],
-  },
-  fill: {
-    opacity: 0.8,
-  },
-  legend: {
-    position: "bottom",
-  },
-  responsive: [
-    {
-      breakpoint: 480,
-      options: {
-        chart: {
-          width: 200,
-        },
-        legend: {
-          position: "bottom",
-        },
+  plotOptions: {
+    bar: {
+      borderRadius: 4,
+      horizontal: true, // Barras horizontales
+      distributed: true, // Colores distintos por barra
+      dataLabels: {
+        position: "bottom",
       },
     },
-  ],
+  },
+  colors: [
+    "#2E93fA",
+    "#66DA26",
+    "#546E7A",
+    "#E91E63",
+    "#FF9800",
+    "#1ABC9C",
+    "#9B59B6",
+    "#34495E",
+    "#F1C40F",
+    "#E74C3C",
+  ], // Paleta variada
+  dataLabels: {
+    enabled: true,
+    textAnchor: "start",
+    style: {
+      colors: ["#fff"],
+    },
+    formatter: function (val: number, opt: any) {
+      return opt.w.globals.labels[opt.dataPointIndex] + ":  " + val;
+    },
+    offsetX: 0,
+    dropShadow: {
+      enabled: true,
+    },
+  },
+  stroke: {
+    width: 1,
+    colors: ["#fff"],
+  },
+  xaxis: {
+    categories: labels.value,
+    labels: {
+      style: {
+        fontSize: "12px",
+      },
+    },
+  },
+  yaxis: {
+    labels: {
+      show: false,
+    },
+  },
   tooltip: {
+    theme: "light",
     y: {
       formatter: function (val: number) {
-        return val + " asistentes";
+        return val + " empleados";
       },
     },
   },
   title: {
-    text: "Asistencia por Área",
-    align: "center",
+    align: "left",
     style: {
       fontSize: "16px",
       fontWeight: "bold",
       color: "#263238",
     },
   },
+  legend: {
+    show: false,
+  },
 }));
 
-const processData = (records: AttendanceRecord[]) => {
-  console.log("PolarChart - Raw Data:", records);
+const processData = (records: DataRecord[]) => {
   const deptCounts: Record<string, number> = {};
 
   records.forEach((record) => {
-    // Filtrar solo Asistencia (Puntual) y Tardanza
-    // Asumimos que los strings pueden variar, ajusta según tu backend (ej. 'Puntual', 'Tardanza')
-    const estado = (record.estado || "").toLowerCase();
-    const isPresent =
-      estado.includes("puntual") ||
-      estado.includes("asistencia") ||
-      estado.includes("tardanza") ||
-      estado === "p" ||
-      estado === "t";
-
-    if (!isPresent) return;
-
+    // 3. Obtener nombre del departamento de forma robusta
     let deptName = "Otros";
-    if (record.departamento) {
+    if (record.departamento && typeof record.departamento === "object") {
+      deptName = (record.departamento as any).nombre || "Otros";
+    } else if (typeof record.departamento === "string") {
       deptName = record.departamento;
     } else if (record.area) {
       deptName = record.area;
     }
 
+    // Normalizar nombre
+    deptName = deptName.trim();
+    if (!deptName || deptName === "-") deptName = "Sin Asignar";
+
     if (!deptCounts[deptName]) deptCounts[deptName] = 0;
     deptCounts[deptName]++;
   });
 
-  console.log("PolarChart - Processed Counts:", deptCounts);
-  labels.value = Object.keys(deptCounts);
-  series.value = Object.values(deptCounts);
+  // Convertir a arrays para ApexCharts
+  const keys = Object.keys(deptCounts);
+  const values = Object.values(deptCounts);
+
+  labels.value = keys;
+  series.value = [
+    {
+      name: "Empleados",
+      data: values,
+    },
+  ];
 };
 
-// Watch debe ir DESPUÉS de definir processData
 watch(
   () => props.data,
   (newData) => {
     processData(newData);
   },
-  { deep: true, immediate: true }
+  { deep: true, immediate: true },
 );
 </script>
 
@@ -123,5 +167,6 @@ watch(
   padding: 10px;
   background: #fff;
   border-radius: 8px;
+  /* box-shadow opcional si no lo tiene el contenedor padre */
 }
 </style>

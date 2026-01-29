@@ -41,7 +41,7 @@ const papeletaTypes = ref<{ label: string; value: string }[]>([]);
 const loadingEmployees = ref(false);
 
 const loadingSubmit = ref(false);
-const rawPapeletaTypes = ref<any[]>([]); // Store full permission types for metadata access
+const rawPapeletaTypes = ref<any[]>([]); // Almacenar tipos de permisos completos para acceder a metadatos
 
 // Datos del Formulario
 const form = ref({
@@ -70,7 +70,7 @@ const signatureConfig = computed(() => {
   return getSignatureConfig({}, employee || {});
 });
 
-// Helper para buscar al jefe de un departamento específico
+// Función auxiliar para buscar al jefe de un departamento específico utilizando una coincidencia parcial del nombre
 const findChiefOfDept = (deptNamePartial: string) => {
   const dept = departments.value.find((d) =>
     d.nombre.toLowerCase().includes(deptNamePartial.toLowerCase()),
@@ -146,6 +146,7 @@ const secondSignerName = computed(() => {
 /**
  * Carga la lista de empleados.
  * Filtra solo aquellos que tienen asistencia registrada hoy (PRESENTE, TARDANZA, etc.).
+ * Nota: En este contexto, carga todos pero se usa la lógica para empleados.
  */
 const loadEmployees = async () => {
   try {
@@ -215,7 +216,7 @@ const loadTiposPapeleta = async () => {
     // @ts-ignore
     const tipos = response.data?.data || response.data || [];
     if (Array.isArray(tipos)) {
-      rawPapeletaTypes.value = tipos; // Save raw types
+      rawPapeletaTypes.value = tipos; // Guardar tipos completos
       papeletaTypes.value = tipos.map((t: any) => ({
         label: t.nombre,
         value: t.id,
@@ -227,8 +228,8 @@ const loadTiposPapeleta = async () => {
 };
 
 /**
- * Watcher: Auto-calculate return time based on selected type and start time.
- * DISABLED: User request to manually enter return time and validate instead.
+ * Observador (Watcher): Calcular automáticamente la hora de retorno basada en el tipo seleccionado y la hora de inicio.
+ * DESHABILITADO: Solicitud del usuario para ingresar manualmente la hora de retorno y validar en su lugar.
  */
 /*
 watch(
@@ -312,21 +313,21 @@ const handleSubmit = async () => {
   loadingSubmit.value = true;
 
   try {
-    // 1. Validar Asistencia del Día (Client-side filtering needed as date params might not be supported)
+    // 1. Validar Asistencia del Día (Se requiere filtrado del lado del cliente ya que los parámetros de fecha pueden no ser soportados)
     const todayStr = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
 
     // Fetch recent attendance for the user (assuming default sort is mostly useful or we fetch enough)
     // We remove date params from the request if the backend doesn't support them
     const attendanceResponse = await attendanceService.getAll({
       user_id: String(employee.user_id),
-      limit: 20, // Fetch recent records
+      limit: 20, // Obtener registros recientes
     });
 
     // @ts-ignore
     const allAttendances =
       attendanceResponse.data?.data || attendanceResponse.data || [];
 
-    // Filter locally for today
+    // Filtrar localmente para el día de hoy
     const attendanceList = allAttendances.filter((a: any) => {
       if (!a.timestamp) return false;
       return a.timestamp.startsWith(todayStr);
@@ -453,7 +454,7 @@ const handleSubmit = async () => {
     });
 
     emit("save");
-    handleCancel(); // Close and reset
+    handleCancel(); // Cerrar y reiniciar formulario
   } catch (error: any) {
     console.error("Error creando permiso:", error);
     Swal.fire({

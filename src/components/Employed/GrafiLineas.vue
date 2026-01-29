@@ -20,7 +20,7 @@ const props = defineProps<{
   attendances: any[];
 }>();
 
-// Helper to get last 7 days labels and dates
+// Helper para obtener las etiquetas y fechas de los últimos 7 días
 const getLast7Days = () => {
   const days = [];
   const today = new Date();
@@ -32,7 +32,7 @@ const getLast7Days = () => {
   return days;
 };
 
-// Process Data
+// Procesar Datos para el gráfico
 const chartData = computed(() => {
   const days = getLast7Days();
   const dayLabels = days.map((d) =>
@@ -40,17 +40,17 @@ const chartData = computed(() => {
   ); // Lun, Mar...
 
   const dataPoints = days.map((day) => {
-    // Find attendance for this day
-    const dayStr = day.toISOString().split("T")[0]; // YYYY-MM-DD
+    // Encontrar la asistencia para este día específico
+    const dayStr = day.toISOString().split("T")[0]; // Formato YYYY-MM-DD
 
-    // Filter attendances for this day
-    // Supports both old structure (timestamp) and new structure (fecha + entrada_real)
+    // Filtrar asistencias para este día
+    // Soporta tanto la estructura antigua (timestamp) como la nueva (fecha + entrada_real)
     const dailyAtt = props.attendances.find((a) => {
-      // Check for 'fecha' (from daily report)
+      // Verificar 'fecha' (desde el reporte diario procesado)
       if (a.fecha) {
         return a.fecha.startsWith(dayStr);
       }
-      // Check for 'timestamp' (from raw attendance)
+      // Verificar 'timestamp' (desde datos crudos de asistencia)
       if (a.timestamp) {
         return a.timestamp.startsWith(dayStr);
       }
@@ -61,11 +61,11 @@ const chartData = computed(() => {
 
     let timeValue = null;
 
-    // Case A: New structure (Daily Report)
+    // Caso A: Nueva estructura (Reporte Diario)
     if (dailyAtt.fecha) {
-      if (!dailyAtt.entrada_real) return null; // No entry time
-      // entrada_real might be "08:05:00" or ISO. Assuming "HH:MM:SS" or ISO.
-      // If it's just time "HH:MM:SS", we parse it.
+      if (!dailyAtt.entrada_real) return null; // Sin hora de entrada registrada
+      // entrada_real puede ser "08:05:00" o formato ISO. Asumimos "HH:MM:SS" o ISO.
+      // Si es solo hora "HH:MM:SS", la parseamos manualmente.
       const timeStr = String(dailyAtt.entrada_real);
       if (timeStr.includes("T")) {
         // ISO
@@ -77,13 +77,12 @@ const chartData = computed(() => {
         timeValue = h + m / 60;
       }
     }
-    // Case B: Old structure (Raw Attendance)
+    // Caso B: Estructura antigua (Asistencia Cruda)
     else if (dailyAtt.timestamp) {
-      // If we have multiple raw records, find the earliest one for this day
-      // But here we just found *one*. Ideally we should filter *all* matching for the day and sort.
-      // Let's re-implement filter logical properly if raw list is passed.
+      // Si tenemos múltiples registros crudos, encontramos el más temprano para este día.
+      // Aquí re-implementamos la lógica de filtrado correctamente si se pasa una lista cruda.
 
-      // RE-DO FILTER LOGIC for Raw List
+      // REHACER LÓGICA DE FILTRADO para Lista Cruda
       const allForDay = props.attendances.filter(
         (a) => a.timestamp && a.timestamp.startsWith(dayStr),
       );
@@ -128,7 +127,7 @@ const chartOptions = computed<ApexOptions>(() => ({
     width: 3,
   },
   title: {
-    text: "", // Handled in template
+    text: "", // Manejado en el template HTML
     align: "left",
   },
   grid: {
@@ -155,8 +154,8 @@ const chartOptions = computed<ApexOptions>(() => ({
     },
   },
   yaxis: {
-    min: 7, // Start at 7:00 AM approximately
-    max: 9, // End at 09:00 AM (or dynamic?)
+    min: 7, // Comienza el eje Y a las 7:00 AM aproximadamente
+    max: 9, // Termina a las 09:00 AM (¿o dinámico?)
     labels: {
       formatter: (value) => {
         if (value === null) return "";

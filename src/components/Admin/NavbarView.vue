@@ -42,7 +42,7 @@
           ><i class="fas fa-cog"></i> Configuración</router-link
         >
       </li>
-      <!-- Supervisor Menu Split -->
+      <!-- Sección: Menú para Supervisores (División) -->
 
       <!-- Section: MI ESPACIO (Personal) -->
       <li v-if="hasRole(['SUPERVISOR', 'EMPLEADO'])" class="nav-section-header">
@@ -84,7 +84,8 @@ import { useAuthStore } from "@/stores/authStore";
 
 const authStore = useAuthStore();
 
-// Use computed to reactively check roles from the store
+// Función auxiliar para verificar roles desde el store de autenticación
+// Devuelve true si el rol actual del usuario está incluido en la lista de roles permitidos
 const hasRole = (roles: string[]) => {
   const currentRole = (authStore.user?.rol || "").toUpperCase().trim();
   return roles.includes(currentRole);
@@ -92,7 +93,7 @@ const hasRole = (roles: string[]) => {
 </script>
 
 <style>
-/* Global Variables for Navbar context if not defined */
+/* Variables Globales para el contexto de la Barra de Navegación (si no están definidas en root) */
 :root {
   --primary: #2c5aa0;
   --secondary: #3498db;

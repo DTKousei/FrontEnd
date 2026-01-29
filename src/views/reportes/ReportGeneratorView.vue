@@ -155,10 +155,10 @@
         <div class="charts-container">
           <div class="chart-card">
             <div class="chart-header">
-              <div class="chart-title">Asistencia por Área (Polar)</div>
+              <div class="chart-title">Personal por Área</div>
             </div>
-            <!-- Gráfico Polar -->
-            <PolarAsisAreaView :data="attendanceRecords" />
+            <!-- Gráfico Polar (Ahora Barra) -->
+            <PolarAsisAreaView :data="users" />
           </div>
 
           <div class="chart-card">
@@ -271,7 +271,6 @@ const {
   departments: storeDepartments,
   loadingUsers: storeLoadingUsers,
   metrics: storeMetrics,
-  attendanceRecords: storeAttendanceRecords,
 } = storeToRefs(store);
 
 const allUsers = ref<BiometricUser[]>([]); // Usuarios procesados
@@ -280,7 +279,6 @@ const selectedUsers = ref<BiometricUser[]>([]);
 const loadingUsers = computed(() => storeLoadingUsers.value);
 const departments = computed(() => storeDepartments.value);
 const metrics = computed(() => storeMetrics.value);
-const attendanceRecords = computed(() => storeAttendanceRecords.value);
 
 // Estado para Filtros
 const selectedArea = ref<string>("");

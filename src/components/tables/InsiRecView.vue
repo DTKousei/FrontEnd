@@ -56,7 +56,7 @@ const employeeNames = ref<Record<string, string>>({});
 
 // Función para obtener nombres de empleados
 const fetchEmployeeNames = async (userIds: string[]) => {
-  // Evitar duplicados
+  // Evitar consultas duplicadas para el mismo ID de usuario
   const uniqueIds = [...new Set(userIds)];
 
   for (const id of uniqueIds) {
@@ -99,8 +99,8 @@ const getStatusClass = (tipo: string | undefined) => {
 const formatDate = (dateString: string) => {
   if (!dateString) return "-";
   // Ajuste para evitar desfase de zona horaria (UTC -> Local)
-  // Al crear new Date('YYYY-MM-DD'), JS usa UTC. Al mostrar local en Perú (UTC-5), resta horas y cambia de día.
-  // Usamos getUTC* para mantener la fecha original del string.
+  // Al crear new Date('YYYY-MM-DD'), JS usa UTC. Al mostrar la fecha en hora local de Perú (UTC-5), se restan horas y puede cambiar el día.
+  // Usamos getUTC* para mantener la fecha original tal como viene del string.
   const date = new Date(dateString);
   const day = String(date.getUTCDate()).padStart(2, "0");
   const month = String(date.getUTCMonth() + 1).padStart(2, "0");
@@ -112,9 +112,9 @@ const formatDate = (dateString: string) => {
 const loadRecentIncidents = async () => {
   try {
     loading.value = true;
-    // Asumimos que la API soporta ordenamiento por fecha desc. Si no, habría que ordenar en cliente.
-    // Usualmente los endpoints de listado devuelven los más recientes primero o requieren un sort param.
-    // Aquí solcitamos limite de 5.
+    // Se asume que la API soporta ordenamiento por fecha descendente. De lo contrario, se debe ordenar en el cliente.
+    // Generalmente los endpoints de listado devuelven los registros más recientes primero o requieren un parámetro de ordenamiento.
+    // Aquí solicitamos un límite de 5 registros.
     const response = await incidentService.getAllIncidencias({ limit: 5 });
 
     if (response.data && Array.isArray(response.data.data)) {
@@ -140,7 +140,7 @@ const loadRecentIncidents = async () => {
 };
 
 onMounted(() => {
-  // Add a small delay to prevent 429 (Rate Limit) errors when loading multiple components at once
+  // Añadir un pequeño retraso para prevenir errores 429 (Límite de Peticiones) al cargar múltiples componentes a la vez
   setTimeout(() => {
     loadRecentIncidents();
   }, 1000);
