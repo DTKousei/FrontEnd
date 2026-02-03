@@ -1,5 +1,5 @@
 import type { Permiso } from "@/api/types/permissions.types";
-import type { BiometricUser } from "@/api/types/users.types";
+
 
 /**
  * Determina las etiquetas y campos de firma según el rol del solicitante.
@@ -9,7 +9,7 @@ import type { BiometricUser } from "@/api/types/users.types";
  * 2. Supervisor -> Firma RRHH + Firma Director (en slot 'institucion')
  * 3. Jefe RRHH -> Firma Jefe Administración (en slot 'institucion')
  */
-export const getSignatureConfig = (permiso: Permiso, solicitante?: BiometricUser | any) => {
+export const getSignatureConfig = (_permiso: Permiso, solicitante?: any) => {
   // Intentar determinar si el solicitante es jefe/supervisor o RRHH
   // Esto depende de cómo tengas estructurados los roles o datos del usuario.
   // Asumiremos que 'solicitante' tiene propiedades como 'cargo', 'es_jefe', etc.

@@ -1,5 +1,5 @@
 
-import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosError } from 'axios';
+import axios, { type AxiosInstance, type AxiosError } from 'axios';
 
 // Factory function to create API instances with specific base URLs
 export const createApi = (baseURL: string): AxiosInstance => {
