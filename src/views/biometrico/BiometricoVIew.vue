@@ -58,7 +58,11 @@
             <div class="action-desc">Marcar hora de salida</div>
           </div>
 
-          <div class="action-card emergencia" data-action="emergencia">
+          <div
+            class="action-card emergencia"
+            data-action="emergencia"
+            @click="handleEmergency"
+          >
             <div class="action-icon">
               <i class="fas fa-first-aid"></i>
             </div>
@@ -100,7 +104,9 @@ import PersonalAsis from "@/components/tables/PersonalAsis.vue";
 import ModalRegisManu from "@/components/Admin/ModalRegisManu.vue";
 import ModalSyncDevice from "@/components/Biometrico/ModalSyncDevice.vue"; // Import
 import { ref } from "vue";
+import { useRouter } from "vue-router";
 
+const router = useRouter();
 const showManualModal = ref(false);
 const showSyncModal = ref(false); // Sync Modal State
 const manualModalType = ref<"ENTRADA" | "SALIDA">("ENTRADA");
@@ -112,6 +118,10 @@ const handleManualOpen = (type: "ENTRADA" | "SALIDA") => {
 
 const handleSyncOpen = () => {
   showSyncModal.value = true;
+};
+
+const handleEmergency = () => {
+  router.push({ name: "Incidencias" });
 };
 
 const handleSuccess = () => {

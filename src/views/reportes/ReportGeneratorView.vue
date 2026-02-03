@@ -179,11 +179,14 @@
             <div class="report-title">Reporte de Asistencia Mensual</div>
             <div class="report-description">
               Resumen completo de asistencia, tardanzas e inasistencias del mes
-              actual por empleado y área.
+              actual por área.
             </div>
             <div class="report-meta">
               <span>Actualizado: Hoy</span>
-              <button class="btn btn-outline btn-sm">
+              <button
+                class="btn btn-outline btn-sm"
+                @click="openAreaReportModal"
+              >
                 <i class="fas fa-download"></i> Descargar
               </button>
             </div>
@@ -208,23 +211,6 @@
               </button>
             </div>
           </div>
-
-          <div class="report-card" data-report="horas-extras">
-            <div class="report-icon">
-              <i class="fas fa-business-time"></i>
-            </div>
-            <div class="report-title">Control de Horas Extras</div>
-            <div class="report-description">
-              Reporte de horas extras trabajadas con análisis por empleado, área
-              y justificación.
-            </div>
-            <div class="report-meta">
-              <span>Actualizado: Esta semana</span>
-              <button class="btn btn-outline btn-sm">
-                <i class="fas fa-download"></i> Descargar
-              </button>
-            </div>
-          </div>
         </div>
 
         <!-- Historial de Reportes Generados -->
@@ -239,11 +225,44 @@
     :users="allUsers"
     @generate-report="onSaldosGenerate"
   />
+
+  <Dialog
+    v-model:visible="showAreaReportModal"
+    modal
+    header="Reporte Mensual por Área"
+    :style="{ width: '30rem' }"
+  >
+    <div class="field">
+      <label for="areaSelect" class="font-bold block mb-2"
+        >Seleccione el Área</label
+      >
+      <!-- Usando select nativo para consistencia si Select no está configurado globalmente, o importarlo -->
+      <select
+        id="areaSelect"
+        v-model="areaReportTarget"
+        class="w-full p-2 border rounded"
+      >
+        <option value="" disabled>Seleccione un área</option>
+        <option v-for="dept in departments" :key="dept.id" :value="dept.id">
+          {{ dept.nombre }}
+        </option>
+      </select>
+    </div>
+    <div class="flex justify-end gap-2 mt-4">
+      <button class="btn btn-outline" @click="showAreaReportModal = false">
+        Cancelar
+      </button>
+      <button class="btn btn-primary" @click="generateAreaReport">
+        Generar Reporte
+      </button>
+    </div>
+  </Dialog>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from "vue";
 import Swal from "sweetalert2";
+import Dialog from "primevue/dialog";
 
 import ModalDetall from "@/components/Modals/ModalDetall.vue";
 import ReportPerView from "@/components/tables/ReportPerView.vue";
@@ -261,6 +280,8 @@ import { storeToRefs } from "pinia";
 // Referencias
 const reportRegisRef = ref();
 const showSaldosModal = ref(false);
+const showAreaReportModal = ref(false);
+const areaReportTarget = ref<number | string>("");
 
 // Estado para Datos
 // Estado para Datos
@@ -271,6 +292,7 @@ const {
   departments: storeDepartments,
   loadingUsers: storeLoadingUsers,
   metrics: storeMetrics,
+  attendanceRecords: storeAttendanceRecords,
 } = storeToRefs(store);
 
 const allUsers = ref<BiometricUser[]>([]); // Usuarios procesados
@@ -278,17 +300,66 @@ const users = ref<BiometricUser[]>([]); // Usuarios filtrados por UI
 const selectedUsers = ref<BiometricUser[]>([]);
 const loadingUsers = computed(() => storeLoadingUsers.value);
 const departments = computed(() => storeDepartments.value);
-const metrics = computed(() => storeMetrics.value);
+// const metrics = computed(() => storeMetrics.value); // Reemplazado por lógica local
 
 // Estado para Filtros
 const selectedArea = ref<string>("");
 const now = new Date();
 const y = now.getFullYear();
 const m = String(now.getMonth() + 1).padStart(2, "0");
-const lastDay = new Date(y, now.getMonth() + 1, 0).getDate();
 
 const fechaDesde = ref<string>(`${y}-${m}-01`);
-const fechaHasta = ref<string>(`${y}-${m}-${lastDay}`);
+// FIX: Fecha hasta por defecto HOY para evitar conteo de faltas a futuro
+const fechaHasta = ref<string>(
+  `${y}-${m}-${now.getDate().toString().padStart(2, "0")}`,
+);
+
+// Metrics Computed Locally (Filtered by Active Users & Date Range matches store params)
+const metrics = computed(() => {
+  // Debug logs
+  console.log("Computing Metrics...");
+  console.log("Store Records Count:", storeAttendanceRecords.value?.length);
+  console.log("Active Users Count:", users.value?.length);
+
+  // If store attendance records are empty, fallback to store metrics (backend totals)
+  if (
+    !storeAttendanceRecords.value ||
+    storeAttendanceRecords.value.length === 0
+  ) {
+    console.log("No records in store, returning storeMetrics");
+    return storeMetrics.value;
+  }
+
+  // Get Active User IDs
+  const activeIds = new Set(users.value.map((u) => String(u.user_id).trim()));
+
+  // Filter Records: Only active users
+  const filteredRecords = storeAttendanceRecords.value.filter((r) => {
+    return activeIds.has(String(r.user_id).trim());
+  });
+
+  // Recalculate Totals
+  let puntual = 0;
+  let tardanzas = 0;
+  let faltas = 0;
+  let horas_extras = 0;
+
+  filteredRecords.forEach((r) => {
+    // The store returns aggregated data per user, not daily records
+    // Structure: { user_id, puntual, tardanzas, faltas, horas_extras, ... }
+    if (r.puntual) puntual += Number(r.puntual);
+    if (r.tardanzas) tardanzas += Number(r.tardanzas);
+    if (r.faltas) faltas += Number(r.faltas);
+    if (r.horas_extras) horas_extras += Number(r.horas_extras);
+  });
+
+  return {
+    puntual,
+    tardanzas,
+    faltas,
+    horas_extras: Number(horas_extras.toFixed(2)),
+  };
+});
 
 /*
 // Metrics and Records are now in store and computed
@@ -540,6 +611,73 @@ const onSaldosGenerate = async (data: {
   } catch (error) {
     console.error("Error exporting saldos:", error);
     Swal.fire("Error", "Error al generar el reporte", "error");
+  }
+};
+
+const openAreaReportModal = () => {
+  areaReportTarget.value = "";
+  showAreaReportModal.value = true;
+};
+
+const generateAreaReport = async () => {
+  if (!areaReportTarget.value) {
+    Swal.fire("Atención", "Por favor seleccione un área.", "warning");
+    return;
+  }
+
+  const areaId = Number(areaReportTarget.value);
+  const areaObj = departments.value.find((d) => d.id === areaId);
+  const areaName = areaObj ? areaObj.nombre : "Desconocido";
+
+  // Filtrar usuarios activos de esa área
+  const usersInArea = allUsers.value.filter(
+    (u) => u.departamento_id === areaId,
+  );
+
+  if (usersInArea.length === 0) {
+    Swal.fire(
+      "Sin Usuarios",
+      "No hay usuarios activos asignados a esta área.",
+      "info",
+    );
+    return;
+  }
+
+  const now = new Date();
+  const mes = String(now.getMonth() + 1).padStart(2, "0");
+  const anio = String(now.getFullYear());
+
+  const payload = {
+    mes,
+    anio,
+    area: areaName,
+    user_ids: usersInArea.map((u) => u.user_id),
+  };
+
+  showAreaReportModal.value = false;
+
+  try {
+    Swal.fire({
+      title: "Generando Reporte Mensual",
+      text: `Procesando asistencia de ${usersInArea.length} empleados de ${areaName}...`,
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading(),
+    });
+
+    await reportService.exportPdf(payload);
+
+    if (reportRegisRef.value) {
+      reportRegisRef.value.loadReports();
+    }
+
+    Swal.fire(
+      "Éxito",
+      "Reporte mensual generado correctamente. Revise el historial.",
+      "success",
+    );
+  } catch (error) {
+    console.error("Error generating area report:", error);
+    Swal.fire("Error", "Hubo un problema al generar el reporte.", "error");
   }
 };
 
