@@ -353,7 +353,7 @@ const loadMetadata = async () => {
 const loadIncidencias = async () => {
   try {
     loading.value = true;
-    const response = await incidentService.getAllIncidencias();
+    const response = await incidentService.getAllIncidencias({ limit: 1000 });
     // @ts-ignore
     const data = response.data?.data || response.data || [];
     incidencias.value = data.map((inc: any) => ({

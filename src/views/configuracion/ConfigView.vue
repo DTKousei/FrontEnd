@@ -40,13 +40,6 @@
             </button>
             <button
               class="config-tab"
-              :class="{ active: activeTab === 'permisos' }"
-              @click="activeTab = 'permisos'"
-            >
-              Permisos y Roles
-            </button>
-            <button
-              class="config-tab"
               :class="{ active: activeTab === 'notificaciones' }"
               @click="activeTab = 'notificaciones'"
             >
@@ -153,13 +146,13 @@
               <input
                 type="text"
                 id="direccion"
-                value="Av. Principal 123, Sucre"
+                value="PLaza San Martin, Sucre"
               />
             </div>
 
             <div class="form-group">
               <label for="telefono">Teléfono</label>
-              <input type="tel" id="telefono" value="+51 074 123456" />
+              <input type="tel" id="telefono" value="+51 " />
             </div>
 
             <div class="form-group">
@@ -275,96 +268,6 @@
           :class="{ active: activeTab === 'biometrico' }"
         >
           <TestConexView />
-        </div>
-
-        <!-- Sección Permisos y Roles -->
-        <div
-          class="config-section"
-          :class="{ active: activeTab === 'permisos' }"
-        >
-          <h2 class="section-title">Permisos y Roles</h2>
-          <p class="section-description">
-            Gestiona los niveles de acceso y permisos para diferentes roles de
-            usuario.
-          </p>
-
-          <table class="permissions-table">
-            <thead>
-              <tr>
-                <th>Módulo/Función</th>
-                <th class="permission-check">Administrador</th>
-                <th class="permission-check">Supervisor</th>
-                <th class="permission-check">Empleado</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>Ver Dashboard</td>
-                <td class="permission-check">
-                  <input type="checkbox" checked disabled />
-                </td>
-                <td class="permission-check">
-                  <input type="checkbox" checked />
-                </td>
-                <td class="permission-check">
-                  <input type="checkbox" checked />
-                </td>
-              </tr>
-              <tr>
-                <td>Registro de Asistencia</td>
-                <td class="permission-check">
-                  <input type="checkbox" checked disabled />
-                </td>
-                <td class="permission-check">
-                  <input type="checkbox" checked />
-                </td>
-                <td class="permission-check">
-                  <input type="checkbox" checked />
-                </td>
-              </tr>
-              <tr>
-                <td>Gestión de Personal</td>
-                <td class="permission-check">
-                  <input type="checkbox" checked />
-                </td>
-                <td class="permission-check"><input type="checkbox" /></td>
-                <td class="permission-check"><input type="checkbox" /></td>
-              </tr>
-              <tr>
-                <td>Registro de Incidencias</td>
-                <td class="permission-check">
-                  <input type="checkbox" checked />
-                </td>
-                <td class="permission-check">
-                  <input type="checkbox" checked />
-                </td>
-                <td class="permission-check"><input type="checkbox" /></td>
-              </tr>
-              <tr>
-                <td>Reportes e Informes</td>
-                <td class="permission-check">
-                  <input type="checkbox" checked />
-                </td>
-                <td class="permission-check">
-                  <input type="checkbox" checked />
-                </td>
-                <td class="permission-check"><input type="checkbox" /></td>
-              </tr>
-              <tr>
-                <td>Configuración del Sistema</td>
-                <td class="permission-check">
-                  <input type="checkbox" checked />
-                </td>
-                <td class="permission-check"><input type="checkbox" /></td>
-                <td class="permission-check"><input type="checkbox" /></td>
-              </tr>
-            </tbody>
-          </table>
-
-          <div class="form-actions">
-            <button class="btn btn-outline">Restablecer por Defecto</button>
-            <button class="btn btn-primary">Guardar Permisos</button>
-          </div>
         </div>
 
         <!-- Sección Notificaciones (Feriados y Alertas) -->

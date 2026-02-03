@@ -322,6 +322,38 @@ const generatePassword = (dni: string, nombre: string) => {
   return `${dni}${cleanName}@`;
 };
 
+const validateNumber = (field: "dni" | "telefono", event: Event) => {
+  const input = event.target as HTMLInputElement;
+  // Reemplazar cualquier caracter no numérico
+  const value = input.value.replace(/\D/g, "");
+
+  if (input.value !== value) {
+    input.value = value;
+  }
+  form.value[field] = value;
+};
+
+const allowOnlyNumbers = (event: KeyboardEvent) => {
+  if (
+    [
+      "Backspace",
+      "Tab",
+      "ArrowLeft",
+      "ArrowRight",
+      "Delete",
+      "Enter",
+      "Home",
+      "End",
+    ].includes(event.key) ||
+    (event.ctrlKey && ["a", "c", "v", "x"].includes(event.key.toLowerCase()))
+  ) {
+    return;
+  }
+  if (!/^\d$/.test(event.key)) {
+    event.preventDefault();
+  }
+};
+
 const handleSubmit = async () => {
   // Validación Básica
   if (
@@ -658,6 +690,9 @@ const visibleModel = computed({
           placeholder="Número de documento"
           maxlength="8"
           class="w-full"
+          inputmode="numeric"
+          @input="(e) => validateNumber('dni', e)"
+          @keypress="allowOnlyNumbers"
         />
         <small class="text-gray-500">Debe tener 8 dígitos</small>
       </div>
@@ -789,6 +824,9 @@ const visibleModel = computed({
           v-model="form.telefono"
           placeholder="999 999 999"
           class="w-full"
+          inputmode="numeric"
+          @input="(e) => validateNumber('telefono', e)"
+          @keypress="allowOnlyNumbers"
         />
       </div>
 

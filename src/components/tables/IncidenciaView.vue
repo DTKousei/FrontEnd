@@ -59,9 +59,11 @@ const getSeverity = (statusName: string | undefined) => {
       :loading="props.loading"
       paginator
       :rows="10"
+      :rowsPerPageOptions="[5, 10, 20, 50]"
       stripedRows
       :globalFilterFields="[
         'empleado_id',
+        'empleado_nombre',
         'tipo_incidencia.nombre',
         'estado.nombre',
       ]"
